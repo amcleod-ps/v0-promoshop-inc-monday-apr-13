@@ -15,7 +15,9 @@ export default async function HomePage() {
     getSupabaseBrands(),
   ])
 
-  // Transform Supabase hero slides to the format expected by HeroSlideshow
+  // Image URLs from Supabase already have ?v=<updated_at> cache-busting
+  // appended by lib/supabase/data.ts so swapping a row instantly busts the
+  // browser, CDN, and next/image caches.
   const slides = heroSlides.length > 0
     ? heroSlides.map((slide) => ({
         src: slide.image_url || "",
@@ -26,7 +28,7 @@ export default async function HomePage() {
         cta_url: slide.cta_url,
         bg_color: slide.bg_color,
       }))
-    : HOME_CONTENT.slideshow // Fallback to static content if no Supabase slides
+    : HOME_CONTENT.slideshow
 
   // Transform Supabase brands for the logo scroll
   const brands = supabaseBrands.length > 0

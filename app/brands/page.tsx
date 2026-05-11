@@ -11,17 +11,16 @@ export default async function BrandsPage() {
   // Fetch brands from Supabase
   const supabaseBrands = await getSupabaseBrands()
 
-  // Transform Supabase brands to match existing Brand interface, or fallback to static
   const brands = supabaseBrands.length > 0
     ? supabaseBrands.map((b) => ({
         id: b.id,
         slug: b.slug,
         name: b.name,
-        description: "", // Supabase schema doesn't have description field, will show empty
+        description: b.description ?? "",
         logoUrl: b.logo_url,
         website: b.website_url,
-        categories: [] as string[],
-        featured: false,
+        categories: b.categories ?? [],
+        featured: b.featured,
       }))
     : BRANDS.map((b) => ({ ...b, logoUrl: b.logoUrl ?? null, website: b.website ?? null }))
 

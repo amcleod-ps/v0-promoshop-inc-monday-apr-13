@@ -5,7 +5,13 @@ import { QuoteProvider } from '@/lib/quote-context'
 import { LocaleProvider } from '@/lib/locale-context'
 import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { ThemeVarsProvider } from '@/components/theme-vars-provider'
+import { SiteImagesProvider } from '@/components/site-images-provider'
+import { getSiteImagesMap } from '@/lib/supabase/images'
 import './globals.css'
+
+// Force every page render to fetch fresh data so URL changes made in the
+// Supabase Table Editor are visible on the next request.
+export const dynamic = 'force-dynamic'
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
@@ -48,11 +54,13 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const siteImages = await getSiteImagesMap()
+
   return (
     <html lang="en" className={`bg-background ${montserrat.variable} ${bebasNeue.variable} ${dmSans.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
@@ -60,7 +68,9 @@ export default function RootLayout({
           <LocaleProvider>
             <QuoteProvider>
               <ThemeVarsProvider>
-                {children}
+                <SiteImagesProvider value={siteImages}>
+                  {children}
+                </SiteImagesProvider>
               </ThemeVarsProvider>
             </QuoteProvider>
           </LocaleProvider>

@@ -3,16 +3,10 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { BRANDS, getBrandBySlug } from "@/lib/brands"
-import { PRODUCTS } from "@/lib/products"
+import { getBrandBySlug } from "@/lib/brands"
+import { getAllProducts } from "@/lib/supabase/products"
 import { BrandHero } from "@/components/brand-hero"
 import { BrandProductsGrid } from "@/components/brand-products-grid"
-
-export function generateStaticParams() {
-  return BRANDS.map((brand) => ({
-    slug: brand.slug,
-  }))
-}
 
 interface BrandPageProps {
   params: Promise<{ slug: string }>
@@ -26,9 +20,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
     notFound()
   }
 
-  // Filter products by this brand
-  const brandProducts = PRODUCTS.filter((p) => 
-    p.brands.some((b) => b.toLowerCase() === brand.name.toLowerCase())
+  const products = await getAllProducts()
+  const brandProducts = products.filter((p) =>
+    p.brands.some((b) => b.toLowerCase() === brand.name.toLowerCase()),
   )
 
   return (
