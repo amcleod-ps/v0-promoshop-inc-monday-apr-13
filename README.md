@@ -38,16 +38,21 @@ The dev server runs on http://localhost:3000.
 
 ### Environment variables
 
-Copy `.env.example` to `.env.local` and fill in two values from the
+Copy `.env.example` to `.env.local` and fill in three values from the
 Supabase project (Dashboard → Settings → API):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role secret>
 ```
 
-The `NEXT_PUBLIC_` prefix is mandatory — without it the values are not
-exposed to the browser and the site will fail to load any data.
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by
+  every public page. The `NEXT_PUBLIC_` prefix is mandatory; without it,
+  the values aren't exposed to the browser and the site fails to load.
+- `SUPABASE_SERVICE_ROLE_KEY` — used **server-side only** by the hidden
+  `/admin-dashboard` page to upload files and update rows. Bypasses Row
+  Level Security. Never use the `NEXT_PUBLIC_` prefix on this one.
 
 ### Useful scripts
 
@@ -92,8 +97,44 @@ After running all three, the dashboard's Table Editor shows:
 
 ## Image management
 
-Every public-facing image lives in Supabase and is keyed by a
-human-readable label so you can find it by reading the table:
+Two ways to replace any image on the site:
+
+### Option 1 — `/admin-dashboard` (recommended for non-developers)
+
+Open `https://<your-domain>/admin-dashboard` in a browser. The page is
+unlinked (no nav link, robots-disallowed), so visitors don't find it.
+
+For each image on the site you see:
+
+- A thumbnail of the current image
+- A label that tells you what it is
+  (e.g., "Brand logo: Patagonia", "VSSL Rift Tumbler 16 oz — Sahara — Image 1")
+- A file picker and a **Replace** button
+
+Click **Choose File**, pick the new image, click **Replace**. The page
+uploads the file to Supabase Storage and updates the database row
+that points at it. The change is live on the next page request.
+
+The dashboard groups images by type:
+
+- **Site images** — singletons: site logo, About-page hero, team
+  photos, brand lifestyle backdrops
+- **Brand logos** — one per brand
+- **Hero slides** — the homepage slideshow
+- **Product images** — every product gallery image, collapsible by SKU
+
+Requires `SUPABASE_SERVICE_ROLE_KEY` to be set on Vercel.
+
+The dashboard intentionally has no access control. Treat the URL as the
+secret. If it leaks, anyone who hits it can replace any image on the
+site (but nothing else — they cannot read quote requests, modify
+non-image columns, or alter the schema, since the service role key
+never leaves the Vercel server).
+
+### Option 2 — Supabase Dashboard directly
+
+If you'd rather work in the Supabase Table Editor, every public-facing
+image lives in Supabase and is keyed by a human-readable label:
 
 ### Where to edit each image
 
