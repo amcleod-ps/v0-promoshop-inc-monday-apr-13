@@ -1,25 +1,24 @@
 # PromoShop Inc. — Corporate site
 
-Next.js 16 / React 19 marketing site for PromoShop Inc., deployed to Azure
-App Service. Content is editable from an in-browser admin surface that reads
-and writes to Cosmos DB (metadata + overrides) and Azure Blob Storage
-(binary assets).
+Next.js 16 / React 19 marketing site for PromoShop Inc., hosted on Vercel
+with a Supabase Postgres database for hero slides, brand listings, and
+quote-request submissions.
 
 ---
 
 ## Stack
 
-| Layer | Service / tooling |
+| Layer | Service |
 | --- | --- |
-| Runtime | Next.js 16 (App Router) on Node 20 |
-| Hosting | Azure App Service (Linux) |
-| Auth | Microsoft Entra External ID via MSAL; falls back to a signed-cookie session in dev |
-| Data | Azure Cosmos DB (SQL API) — containers: `products`, `brands`, `imageRegistry`, `quotes` |
-| Assets | Azure Blob Storage — containers: `products`, `brands`, `hero`, `team`, `quotes-archive` |
-| Secrets | Azure Key Vault (App Service reads via managed identity) |
-| Observability | Application Insights + Log Analytics |
-| IaC | Bicep under `infra/`, orchestrated with `azd` |
-| CI/CD | GitHub Actions — `.github/workflows/azure-deploy.yml` (OIDC) |
+| Framework | Next.js 16 (App Router) on Node 20+ |
+| UI | React 19, Tailwind CSS v4, Radix UI primitives |
+| Hosting | Vercel |
+| Database | Supabase Postgres (via `@supabase/ssr` + `@supabase/supabase-js`) |
+| Analytics | Vercel Web Analytics |
+
+There is no separate admin UI in the application. Brands, hero slides,
+and quote requests are managed directly through the Supabase Dashboard
+(Table Editor).
 
 ---
 
@@ -30,101 +29,94 @@ pnpm install
 pnpm dev
 ```
 
-The site runs without any Azure credentials: Cosmos falls back to in-memory
-seed data and admin image uploads fall back to localStorage base64 overrides
-(capped at 2.5 MB per file). Sign-in uses the fallback session unless MSAL
-env vars are set.
+The dev server runs on http://localhost:3000. Pages that read from
+Supabase will return empty lists if the environment variables are not
+configured, and the site falls back to the seed content compiled into
+the build (see `lib/seed-data/`).
+
+### Environment variables
+
+Copy `.env.example` to `.env.local` and fill in the two values from your
+Supabase project (Dashboard → Settings → API):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
+```
+
+The `NEXT_PUBLIC_` prefix is required so the values are exposed to the
+browser. No other environment variables are needed.
 
 ### Useful scripts
 
 | Command | Purpose |
 | --- | --- |
 | `pnpm dev` | Dev server on :3000 |
-| `pnpm build` | Production build (runs type-check) |
-| `pnpm start` | Serve the built app |
+| `pnpm build` | Production build (includes type-check) |
+| `pnpm start` | Serve the production build |
 | `pnpm lint` | ESLint |
-| `pnpm tsx scripts/seed-cosmos.ts` | Seed brands, products, image registry into a configured Cosmos account |
-| `pnpm tsx scripts/migrate-images.ts` | Copy every registry image into Blob Storage and rewrite the Cosmos override URLs |
 
 ---
 
-## Environment variables
+## Supabase setup
 
-All values are optional locally; production reads them from Key Vault.
+The complete schema lives in `supabase/migrations/0001_init.sql`. To
+provision a fresh Supabase project:
 
-| Name | Purpose |
-| --- | --- |
-| `AZURE_STORAGE_CONNECTION_STRING` | Shared-key connection string. When set, SAS tokens are signed with the account key (dev / one-shot scripts). |
-| `AZURE_STORAGE_ACCOUNT` | Storage account name. Used with managed identity / `DefaultAzureCredential` in production; SAS tokens are minted via a cached user-delegation key. |
-| `COSMOS_ENDPOINT` | `https://<account>.documents.azure.com:443/` |
-| `COSMOS_KEY` | Primary key (dev only — production uses AAD). |
-| `COSMOS_DATABASE` | Defaults to `promoshop`. |
-| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | MSAL server-side verification. |
-| `NEXT_PUBLIC_MSAL_CLIENT_ID` / `NEXT_PUBLIC_MSAL_AUTHORITY` / `NEXT_PUBLIC_MSAL_REDIRECT_URI` | Browser-side MSAL config. |
-| `SESSION_SECRET` | HMAC key for the fallback session cookie. |
-| `MIGRATE_CONCURRENCY` | Optional — parallelism for `scripts/migrate-images.ts` (default 6). |
+1. Create a new project at https://supabase.com.
+2. Open SQL Editor → New query.
+3. Paste the contents of `supabase/migrations/0001_init.sql`.
+4. Click **Run**.
 
-If neither storage variable is set, `isBlobConfigured()` returns `false`,
-`/api/admin/upload` returns 503, and the admin UI transparently falls back
-to base64 overrides in localStorage.
+The schema creates three tables, all with Row-Level Security enabled:
 
----
+| Table | Public read | Public write |
+| --- | --- | --- |
+| `brands` | rows where `is_active = true` | none |
+| `hero_slides` | rows where `is_active = true` | none |
+| `quote_requests` | none | INSERT only (new submissions) |
 
-## Admin image uploads
+To populate the site after running the migration:
 
-Flow for a single upload from the Image Manager panel
-(`/admin/images`):
-
-1. Client asks `/api/admin/upload` for a short-lived PUT SAS and a 7-day GET
-   SAS. Both tokens are signed from a single cached user-delegation key
-   (`lib/storage/blob.ts`) — so the common case is zero extra round-trips
-   per upload once the key is warm.
-2. Client `PUT`s the file directly to Azure Blob Storage via
-   `XMLHttpRequest`, streaming `upload.onprogress` events into a visible
-   progress bar next to the file name. One transient-retry with a short
-   back-off covers network blips.
-3. On success the client writes the returned read-URL to Cosmos through
-   `/api/admin/image-overrides` (single PUT) and mirrors it to
-   localStorage so the rest of the site sees it instantly.
-4. Import / Reset-all use the bulk endpoint
-   (`POST /api/admin/image-overrides`) so a 60-slot import is one request
-   instead of 60.
-
-Slot → container mapping lives in `CONTAINER_BY_GROUP` in
-`lib/storage/blob.ts`. Keep it in sync with the `group` strings declared in
-`lib/image-registry.ts` — unmapped groups silently route to `products`.
+- **Brands**: Supabase Dashboard → Table Editor → `brands` → Insert row.
+  Set `is_active = true` and assign each brand a unique `slug`.
+- **Hero slides**: same flow against the `hero_slides` table.
+- **Quote requests**: created automatically when visitors submit the
+  `/my-quote` form. View them in Supabase Dashboard → Table Editor →
+  `quote_requests`.
 
 ---
 
-## Deploy
+## Deployment
 
-Production deploy is driven by `.github/workflows/azure-deploy.yml`
-(OIDC federated credentials; no long-lived secrets). The workflow is a
-no-op when the Azure secrets aren't configured on the repo, so PR branches
-and forks build cleanly without deploying.
+The site deploys automatically on every push to `main` via the
+Vercel-GitHub integration. Preview deployments are created for every
+pull request.
 
-Infrastructure changes go through `azd up` against the Bicep in `infra/`.
+In Vercel → Project → Settings → Environment Variables, set the two
+variables above for the Production, Preview, and Development scopes.
 
 ---
 
-## Layout
+## Project layout
 
 ```
-app/            Next.js App Router (routes + API handlers)
-components/     Client components (admin panels, marketing UI)
-docs/           Runbooks, Azure architecture notes, admin guide
-hooks/          Shared React hooks
-infra/          Bicep + azd configuration
-lib/            Server + shared code
-  auth/         MSAL + fallback session
-  cms/          Static marketing content
-  db/           Cosmos client, fallback layer, repositories
-  storage/      Blob storage SAS minting
-  image-*.ts    Slot registry + override cache
-public/         Static assets
-scripts/        One-shot migration / seeding utilities
-styles/         Tailwind globals
+app/                # Next.js App Router pages
+  page.tsx          # Homepage (hero slideshow + brand scroll)
+  brands/           # Brand listing + per-brand pages
+  studio/           # Product catalog
+  my-quote/         # Quote request flow
+  about/            # About page
+  sign-in/ sign-up/ # Customer auth gate (localStorage-backed)
+  actions/          # Server actions (quote submission)
+components/         # UI components
+hooks/              # Custom React hooks
+lib/
+  supabase/         # Supabase clients + typed queries
+  auth/             # Customer-auth provider (client-only)
+  cms/              # Static CMS content for marketing copy
+  seed-data/        # Compiled-in brand & product catalog
+public/             # Static assets
+supabase/
+  migrations/       # Versioned schema SQL
 ```
-
-See `docs/azure-architecture.md` for the full architecture and
-`docs/ADMIN-GUIDE.md` for how content editors use the admin surface.
