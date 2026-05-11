@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { replaceImage, type ReplaceTarget } from "./actions"
 
 interface ImageRowProps {
@@ -11,14 +11,44 @@ interface ImageRowProps {
   hint?: string | null
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
+
 export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [status, setStatus] = useState<{ kind: "idle" | "success" | "error"; message: string }>({
-    kind: "idle",
-    message: "",
-  })
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [status, setStatus] = useState<{
+    kind: "idle" | "success" | "error"
+    message: string
+  }>({ kind: "idle", message: "" })
   const [isPending, startTransition] = useTransition()
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl)
+
+  // Create / revoke an object URL so the user sees what they picked
+  // before clicking Replace.
+  useEffect(() => {
+    if (!file) {
+      setFilePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setFilePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.files?.[0] ?? null
+    setFile(next)
+    setStatus({ kind: "idle", message: "" })
+  }
+
+  const clearFile = () => {
+    setFile(null)
+    setStatus({ kind: "idle", message: "" })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +72,8 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
 
   return (
     <div style={styles.row}>
-      <div style={styles.preview}>
+      <div style={styles.previewColumn}>
+        <div style={styles.previewLabel}>Current</div>
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -52,9 +83,25 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
             style={styles.thumbnail}
           />
         ) : (
-          <div style={styles.thumbnailEmpty}>No image</div>
+          <div style={styles.thumbnailEmpty}>No image set</div>
         )}
       </div>
+
+      {file ? (
+        <div style={styles.previewColumn}>
+          <div style={{ ...styles.previewLabel, color: "#0066cc" }}>New (preview)</div>
+          {filePreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={filePreview}
+              alt="Preview of new upload"
+              style={{ ...styles.thumbnail, borderColor: "#0066cc" }}
+            />
+          ) : (
+            <div style={styles.thumbnailEmpty}>…</div>
+          )}
+        </div>
+      ) : null}
 
       <div style={styles.body}>
         <div style={styles.label}>{label}</div>
@@ -68,13 +115,24 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
             type="file"
             accept="image/*"
             disabled={isPending}
-            onChange={(e) => {
-              const next = e.target.files?.[0] ?? null
-              setFile(next)
-              setStatus({ kind: "idle", message: "" })
-            }}
+            onChange={handleFile}
             style={styles.fileInput}
           />
+          {file ? (
+            <>
+              <span style={styles.fileMeta}>
+                {file.name} · {formatBytes(file.size)}
+              </span>
+              <button
+                type="button"
+                onClick={clearFile}
+                disabled={isPending}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </button>
+            </>
+          ) : null}
           <button
             type="submit"
             disabled={!file || isPending}
@@ -99,9 +157,14 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
           ) : null}
         </form>
 
-        {currentUrl ? (
-          <a href={currentUrl} target="_blank" rel="noreferrer" style={styles.link}>
-            Open current image in new tab
+        {previewUrl ? (
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={styles.link}
+          >
+            Open this image in a new tab
           </a>
         ) : null}
       </div>
@@ -119,8 +182,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#fff",
     alignItems: "flex-start",
   },
-  preview: {
-    flex: "0 0 140px",
+  previewColumn: { flex: "0 0 140px" },
+  previewLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "#777",
+    marginBottom: 4,
   },
   thumbnail: {
     width: 140,
@@ -145,10 +214,22 @@ const styles: Record<string, React.CSSProperties> = {
   body: { flex: 1, minWidth: 0 },
   label: { fontWeight: 700, marginBottom: 2, fontSize: 15 },
   meta: { fontSize: 12, color: "#666", marginBottom: 8 },
-  id: { fontFamily: "monospace", background: "#f5f5f5", padding: "1px 6px", borderRadius: 3 },
+  id: {
+    fontFamily: "monospace",
+    background: "#f5f5f5",
+    padding: "1px 6px",
+    borderRadius: 3,
+  },
   hint: { color: "#888" },
-  form: { display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 6 },
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 6,
+  },
   fileInput: { fontSize: 13 },
+  fileMeta: { fontSize: 12, color: "#444" },
   button: {
     padding: "6px 14px",
     fontSize: 13,
@@ -156,6 +237,15 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#111",
     color: "#fff",
     border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  cancelButton: {
+    padding: "6px 10px",
+    fontSize: 12,
+    background: "transparent",
+    color: "#444",
+    border: "1px solid #ccc",
     borderRadius: 4,
     cursor: "pointer",
   },

@@ -94,11 +94,24 @@ export async function replaceImage(
       break
     }
     case "brand": {
-      const { error } = await supabase
+      // Brand logos are referenced from TWO places at render time:
+      //   * brands.logo_url            (canonical column)
+      //   * site_images."brand.X.logo" (legacy override slot the site
+      //                                 still checks first via useImageSrc)
+      // Both must point at the new file or the override shadows the
+      // canonical column and the site keeps rendering the old logo.
+      const { error: e1 } = await supabase
         .from("brands")
         .update({ logo_url: url })
         .eq("slug", id)
-      if (error) dbError = error.message
+      if (e1) {
+        dbError = e1.message
+        break
+      }
+      await supabase
+        .from("site_images")
+        .update({ url })
+        .eq("key", `brand.${id}.logo`)
       break
     }
     case "hero_slide": {

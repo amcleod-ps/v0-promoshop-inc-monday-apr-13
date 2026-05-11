@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { ImageRow } from "./image-row"
+import { DashboardList, type ProductGroup } from "./dashboard-list"
 
 export const dynamic = "force-dynamic"
 
@@ -9,30 +9,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-interface SiteImageRow {
-  key: string
-  label: string
-  url: string | null
-  alt_text: string | null
-}
-interface BrandRow {
-  slug: string
-  name: string
-  logo_url: string | null
-  sort_order: number
-}
-interface HeroSlideRow {
-  id: string
-  title: string
-  image_url: string | null
-  sort_order: number
-}
-interface ProductImageRow {
+interface ProductImageJoinedRow {
   id: string
   label: string
   url: string | null
   sort_order: number
   product_sku: string
+  products: { name: string } | { name: string }[] | null
 }
 
 export default async function AdminDashboardPage() {
@@ -45,52 +28,40 @@ export default async function AdminDashboardPage() {
         <h1 style={pageStyles.h1}>Image Dashboard</h1>
         <div style={pageStyles.error}>
           <strong>Server is not configured.</strong>
-          <p>
-            {err instanceof Error ? err.message : "Unknown error."}
-          </p>
+          <p>{err instanceof Error ? err.message : "Unknown error."}</p>
           <p>
             Add <code>SUPABASE_SERVICE_ROLE_KEY</code> to the Vercel project
             (Settings → Environment Variables) and redeploy. The value is the
             <em> service_role </em> secret on the Supabase Dashboard → Project
-            Settings → API page. After saving it on Vercel, refresh this page.
+            Settings → API page.
           </p>
         </div>
       </main>
     )
   }
 
-  const [siteImagesRes, brandsRes, heroSlidesRes, productImagesRes] = await Promise.all([
-    supabase
-      .from("site_images")
-      .select("key, label, url, alt_text")
-      .order("label", { ascending: true }),
-    supabase
-      .from("brands")
-      .select("slug, name, logo_url, sort_order")
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("hero_slides")
-      .select("id, title, image_url, sort_order")
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("product_images")
-      .select("id, label, url, sort_order, product_sku")
-      .order("product_sku", { ascending: true })
-      .order("sort_order", { ascending: true }),
-  ])
-
-  const siteImages = (siteImagesRes.data as SiteImageRow[] | null) ?? []
-  const brands = (brandsRes.data as BrandRow[] | null) ?? []
-  const heroSlides = (heroSlidesRes.data as HeroSlideRow[] | null) ?? []
-  const productImages = (productImagesRes.data as ProductImageRow[] | null) ?? []
-
-  // Group product images by SKU for readability — there are ~250 of them.
-  const productGroups = new Map<string, ProductImageRow[]>()
-  for (const img of productImages) {
-    const list = productGroups.get(img.product_sku) ?? []
-    list.push(img)
-    productGroups.set(img.product_sku, list)
-  }
+  const [siteImagesRes, brandsRes, heroSlidesRes, productImagesRes] =
+    await Promise.all([
+      supabase
+        .from("site_images")
+        .select("key, label, url, alt_text")
+        .order("label", { ascending: true }),
+      supabase
+        .from("brands")
+        .select("slug, name, logo_url")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("hero_slides")
+        .select("id, title, image_url, sort_order")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_images")
+        .select(
+          "id, label, url, sort_order, product_sku, products(name)",
+        )
+        .order("product_sku", { ascending: true })
+        .order("sort_order", { ascending: true }),
+    ])
 
   const errors = [
     siteImagesRes.error,
@@ -99,14 +70,77 @@ export default async function AdminDashboardPage() {
     productImagesRes.error,
   ].filter(Boolean) as Array<{ message: string }>
 
+  const siteImages = siteImagesRes.data ?? []
+  const brands = brandsRes.data ?? []
+  const heroSlides = heroSlidesRes.data ?? []
+  const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
+
+  const productGroupMap = new Map<string, ProductGroup>()
+  for (const img of productImages) {
+    const productName = Array.isArray(img.products)
+      ? img.products[0]?.name ?? ""
+      : img.products?.name ?? ""
+    const group =
+      productGroupMap.get(img.product_sku) ??
+      ({ sku: img.product_sku, name: productName, images: [] } as ProductGroup)
+    if (!group.name && productName) group.name = productName
+    group.images.push({
+      id: img.id,
+      label: img.label,
+      url: img.url,
+      product_sku: img.product_sku,
+    })
+    productGroupMap.set(img.product_sku, group)
+  }
+  const productGroups = Array.from(productGroupMap.values())
+
+  const totalImages =
+    siteImages.length +
+    brands.length +
+    heroSlides.length +
+    productGroups.reduce((n, g) => n + g.images.length, 0)
+
   return (
     <main style={pageStyles.main}>
       <h1 style={pageStyles.h1}>Image Dashboard</h1>
-      <p style={pageStyles.intro}>
-        Replace any image on the site. Pick a file, click <strong>Replace</strong>,
-        and the change is live on the next page request. There is no undo —
-        the previous file stays in Storage but the database row points at the
-        new one.
+
+      <details style={pageStyles.help}>
+        <summary style={pageStyles.helpSummary}>
+          How to use this page
+        </summary>
+        <ol style={pageStyles.helpList}>
+          <li>
+            Use the search box to find an image. Search by product name,
+            brand name, label, or SKU. The list filters as you type.
+          </li>
+          <li>
+            For the row you want to change, click <strong>Choose File</strong>{" "}
+            and pick a new image from your computer.
+          </li>
+          <li>
+            A blue preview shows the new image. If it&apos;s wrong, click{" "}
+            <strong>Cancel</strong> and pick a different file.
+          </li>
+          <li>
+            Click <strong>Replace</strong>. When you see{" "}
+            <em>“Saved. Live on the site.”</em>, the change is live —
+            refresh the public site to see it.
+          </li>
+        </ol>
+        <p style={pageStyles.helpNote}>
+          Notes: maximum file size is 10 MB. JPG, PNG, WebP, GIF, and SVG
+          all work. There is no undo, but the previous file stays in Supabase
+          Storage so it can be re-pasted into the URL column from the
+          Supabase Dashboard if needed.
+        </p>
+      </details>
+
+      <p style={pageStyles.summaryLine}>
+        Managing <strong>{totalImages}</strong> images across{" "}
+        <strong>{siteImages.length}</strong> site images,{" "}
+        <strong>{brands.length}</strong> brand logos,{" "}
+        <strong>{heroSlides.length}</strong> hero slides, and{" "}
+        <strong>{productGroups.length}</strong> products.
       </p>
 
       {errors.length > 0 ? (
@@ -125,118 +159,23 @@ export default async function AdminDashboardPage() {
         </div>
       ) : null}
 
-      <Section
-        title={`Site images (${siteImages.length})`}
-        description="Logos, About-page hero, team photos, brand lifestyle backdrops, and other singleton images."
-      >
-        {siteImages.length === 0 ? (
-          <Empty />
-        ) : (
-          siteImages.map((row) => (
-            <ImageRow
-              key={row.key}
-              target="site_images"
-              id={row.key}
-              label={row.label}
-              currentUrl={row.url}
-              hint={row.alt_text}
-            />
-          ))
-        )}
-      </Section>
-
-      <Section
-        title={`Brand logos (${brands.length})`}
-        description="Logo that appears in the homepage brand scroll and on every brand page."
-      >
-        {brands.length === 0 ? (
-          <Empty />
-        ) : (
-          brands.map((row) => (
-            <ImageRow
-              key={row.slug}
-              target="brand"
-              id={row.slug}
-              label={`Brand logo: ${row.name}`}
-              currentUrl={row.logo_url}
-            />
-          ))
-        )}
-      </Section>
-
-      <Section
-        title={`Hero slides (${heroSlides.length})`}
-        description="The slideshow images on the homepage."
-      >
-        {heroSlides.length === 0 ? (
-          <Empty />
-        ) : (
-          heroSlides.map((row) => (
-            <ImageRow
-              key={row.id}
-              target="hero_slide"
-              id={row.id}
-              label={row.title}
-              currentUrl={row.image_url}
-            />
-          ))
-        )}
-      </Section>
-
-      <Section
-        title={`Product images (${productImages.length})`}
-        description="Gallery images for every product, grouped by SKU. Each label includes the product name, colour, and image number."
-      >
-        {productImages.length === 0 ? (
-          <Empty />
-        ) : (
-          Array.from(productGroups.entries()).map(([sku, imgs]) => (
-            <details key={sku} style={pageStyles.details}>
-              <summary style={pageStyles.summary}>
-                <strong>{sku}</strong> — {imgs.length} image{imgs.length === 1 ? "" : "s"}
-              </summary>
-              <div style={pageStyles.detailsBody}>
-                {imgs.map((img) => (
-                  <ImageRow
-                    key={img.id}
-                    target="product_image"
-                    id={img.id}
-                    label={img.label}
-                    currentUrl={img.url}
-                  />
-                ))}
-              </div>
-            </details>
-          ))
-        )}
-      </Section>
+      {totalImages === 0 && errors.length === 0 ? (
+        <div style={pageStyles.error}>
+          <strong>No data in any image table yet.</strong>
+          <p>
+            Apply the three SQL migrations in <code>supabase/migrations/</code>
+            {" "}from the Supabase SQL Editor (0001 → 0002 → 0003) and refresh.
+          </p>
+        </div>
+      ) : (
+        <DashboardList
+          siteImages={siteImages}
+          brands={brands}
+          heroSlides={heroSlides}
+          productGroups={productGroups}
+        />
+      )}
     </main>
-  )
-}
-
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: React.ReactNode
-}) {
-  return (
-    <section style={pageStyles.section}>
-      <h2 style={pageStyles.h2}>{title}</h2>
-      <p style={pageStyles.sectionDescription}>{description}</p>
-      <div style={pageStyles.list}>{children}</div>
-    </section>
-  )
-}
-
-function Empty() {
-  return (
-    <p style={{ color: "#666", fontStyle: "italic", padding: 12 }}>
-      No rows in this table yet. Run the seed migration in Supabase.
-    </p>
   )
 }
 
@@ -252,11 +191,31 @@ const pageStyles: Record<string, React.CSSProperties> = {
     minHeight: "100vh",
   },
   h1: { fontSize: 28, fontWeight: 800, margin: "0 0 8px" },
-  intro: { color: "#444", marginBottom: 24, lineHeight: 1.5 },
-  section: { marginBottom: 40 },
-  h2: { fontSize: 20, fontWeight: 700, margin: "0 0 4px" },
-  sectionDescription: { color: "#666", fontSize: 14, marginBottom: 14 },
-  list: { display: "flex", flexDirection: "column", gap: 10 },
+  summaryLine: { color: "#444", marginBottom: 24, fontSize: 14 },
+  help: {
+    background: "#fff",
+    border: "1px solid #ddd",
+    borderRadius: 6,
+    padding: "12px 16px",
+    marginBottom: 16,
+  },
+  helpSummary: {
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: 14,
+  },
+  helpList: {
+    margin: "12px 0 8px 24px",
+    lineHeight: 1.55,
+    color: "#333",
+    fontSize: 14,
+  },
+  helpNote: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#666",
+    lineHeight: 1.5,
+  },
   error: {
     background: "#fff5f5",
     border: "1px solid #f3c4c4",
@@ -265,12 +224,4 @@ const pageStyles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     marginBottom: 24,
   },
-  details: {
-    border: "1px solid #ddd",
-    borderRadius: 6,
-    background: "#fff",
-    padding: "8px 12px",
-  },
-  summary: { cursor: "pointer", padding: "4px 0", fontSize: 14 },
-  detailsBody: { marginTop: 10, display: "flex", flexDirection: "column", gap: 10 },
 }
