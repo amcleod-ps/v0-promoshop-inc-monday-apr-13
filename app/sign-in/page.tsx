@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
-import { setFallbackUser, useAuth } from "@/lib/auth/AuthProvider"
+import { setFallbackUser } from "@/lib/auth/AuthProvider"
 
 export default function SignInPage() {
   return (
@@ -18,7 +18,6 @@ export default function SignInPage() {
 function SignInPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, mode } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -32,21 +31,6 @@ function SignInPageInner() {
     setError("")
     setIsLoading(true)
 
-    // Real MSAL mode: kick to Entra External ID. Don't require form values
-    // (the upstream flow collects them); we still honour what's typed as a
-    // login_hint for a smoother UX.
-    if (mode === "msal") {
-      try {
-        await signIn("signIn")
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Sign-in failed.")
-        setIsLoading(false)
-      }
-      // loginRedirect navigates away; no further state updates here.
-      return
-    }
-
-    // Fallback (localStorage mock) — pixel-identical UX to pre-Phase-2.
     await new Promise(resolve => setTimeout(resolve, 1000))
     if (email && password) {
       setFallbackUser({

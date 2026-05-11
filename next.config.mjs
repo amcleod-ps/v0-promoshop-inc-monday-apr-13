@@ -29,6 +29,13 @@ const nextConfig = {
         hostname: 'user-images.githubusercontent.com',
         pathname: '/**',
       },
+      {
+        // Supabase Storage — every image uploaded from /admin-dashboard
+        // lands at <project-ref>.supabase.co/storage/v1/object/public/...
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
 }

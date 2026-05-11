@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, ShoppingBag, Phone, Heart, User, Settings } from "lucide-react"
+import { Menu, X, ShoppingBag, Phone, Heart, User } from "lucide-react"
 import { useLocale } from "@/lib/locale-context"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { SiteImage } from "@/components/site-image"
@@ -22,9 +22,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
   const { locale, config, setLocale } = useLocale()
-  const { isAuthenticated, roles } = useAuth()
-
-  const isAdmin = isAuthenticated && roles.includes("admin")
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -80,12 +78,6 @@ export function Header() {
               <Link href="/sign-in" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
                 <User className="w-3 h-3" />
                 Login / Register
-              </Link>
-            )}
-            {isAdmin && (
-              <Link href="/admin" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
-                <Settings className="w-3 h-3" />
-                Admin
               </Link>
             )}
             <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
@@ -204,15 +196,6 @@ export function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Login / Register
-                </Link>
-              )}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="block py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin
                 </Link>
               )}
             </div>
