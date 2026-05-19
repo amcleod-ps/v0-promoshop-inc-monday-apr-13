@@ -6,7 +6,9 @@ import { LocaleProvider } from '@/lib/locale-context'
 import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { ThemeVarsProvider } from '@/components/theme-vars-provider'
 import { SiteImagesProvider } from '@/components/site-images-provider'
+import { SiteContentProvider } from '@/components/site-content-provider'
 import { getSiteImagesMap } from '@/lib/supabase/images'
+import { getSiteContentMap } from '@/lib/supabase/content'
 import './globals.css'
 
 // Force every page render to fetch fresh data so URL changes made in the
@@ -59,7 +61,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const siteImages = await getSiteImagesMap()
+  const [siteImages, siteContent] = await Promise.all([
+    getSiteImagesMap(),
+    getSiteContentMap(),
+  ])
 
   return (
     <html lang="en" className={`bg-background ${montserrat.variable} ${bebasNeue.variable} ${dmSans.variable}`}>
@@ -69,7 +74,9 @@ export default async function RootLayout({
             <QuoteProvider>
               <ThemeVarsProvider>
                 <SiteImagesProvider value={siteImages}>
-                  {children}
+                  <SiteContentProvider value={siteContent}>
+                    {children}
+                  </SiteContentProvider>
                 </SiteImagesProvider>
               </ThemeVarsProvider>
             </QuoteProvider>

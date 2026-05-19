@@ -6,10 +6,27 @@ import { BrandLogo } from "@/components/brand-logo"
 import { getSupabaseBrands } from "@/lib/supabase/data"
 import { BRANDS } from "@/lib/brands"
 import { BrandsSearchClient } from "@/components/brands-search-client"
+import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 
 export default async function BrandsPage() {
-  // Fetch brands from Supabase
-  const supabaseBrands = await getSupabaseBrands()
+  // Fetch brands and editable copy from Supabase
+  const [supabaseBrands, content] = await Promise.all([
+    getSupabaseBrands(),
+    getSiteContentMap(),
+  ])
+  const eyebrow = resolveSiteText(content, "brands.page.eyebrow", "Our Partners")
+  const heading = resolveSiteText(content, "brands.page.heading", "Meet Our Brands")
+  const intro = resolveSiteText(
+    content,
+    "brands.page.body",
+    "We partner with the world's best brands to bring you quality promotional products that represent your company with pride.",
+  )
+  const ctaHeading = resolveSiteText(content, "brands.cta.heading", "Looking for a Specific Brand?")
+  const ctaBody = resolveSiteText(
+    content,
+    "brands.cta.body",
+    "We work with hundreds of brands. If you don't see what you're looking for, reach out and we'll source it for you.",
+  )
 
   const brands = supabaseBrands.length > 0
     ? supabaseBrands.map((b) => ({
@@ -33,14 +50,13 @@ export default async function BrandsPage() {
         <div className="mx-auto max-w-7xl">
           <div className="text-center max-w-3xl mx-auto">
             <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-4">
-              Our Partners
+              {eyebrow}
             </p>
             <h1 className="font-montserrat font-bold text-3xl lg:text-5xl text-[#1a1a1a] leading-tight mb-4 uppercase tracking-wide">
-              Meet Our Brands
+              {heading}
             </h1>
             <p className="text-base text-[#666] leading-relaxed font-visby mb-8">
-              We partner with the world&apos;s best brands to bring you quality promotional products 
-              that represent your company with pride.
+              {intro}
             </p>
           </div>
         </div>
@@ -53,11 +69,10 @@ export default async function BrandsPage() {
       <section className="py-16 px-6 lg:px-8 bg-white">
         <div className="mx-auto max-w-4xl text-center">
           <h2 className="font-montserrat font-bold text-2xl lg:text-3xl text-[#1a1a1a] mb-4">
-            Looking for a Specific Brand?
+            {ctaHeading}
           </h2>
           <p className="text-[#666] mb-8 max-w-xl mx-auto font-visby">
-            We work with hundreds of brands. If you don&apos;t see what you&apos;re looking for, 
-            reach out and we&apos;ll source it for you.
+            {ctaBody}
           </p>
           <Link
             href="/#contact"

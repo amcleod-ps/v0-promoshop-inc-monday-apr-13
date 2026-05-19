@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
-import { replaceImage, type ReplaceTarget } from "./actions"
+import { removeImage, replaceImage, type ReplaceTarget } from "./actions"
 
 interface ImageRowProps {
   target: ReplaceTarget
@@ -17,6 +17,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
 
+function removeConfirmMessage(target: ReplaceTarget): string {
+  if (target === "product_image") {
+    return "Delete this gallery image? This removes the row entirely; the file stays in Storage so it can be re-attached from the Supabase Dashboard."
+  }
+  return "Remove this image? The site will fall back to its default. You can upload a new image any time."
+}
+
 export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps) {
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
@@ -26,6 +33,7 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
   }>({ kind: "idle", message: "" })
   const [isPending, startTransition] = useTransition()
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl)
+  const [hiddenAfterDelete, setHiddenAfterDelete] = useState(false)
 
   // Create / revoke an object URL so the user sees what they picked
   // before clicking Replace.
@@ -68,6 +76,42 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
         setStatus({ kind: "error", message: result.error })
       }
     })
+  }
+
+  const handleRemove = () => {
+    if (typeof window !== "undefined" && !window.confirm(removeConfirmMessage(target))) {
+      return
+    }
+    setStatus({ kind: "idle", message: "Removing…" })
+    startTransition(async () => {
+      const result = await removeImage(target, id)
+      if (result.ok) {
+        setPreviewUrl(null)
+        setFile(null)
+        if (target === "product_image") {
+          // Row no longer exists in the database; collapse it out of the UI
+          // so the admin doesn't think the delete failed.
+          setHiddenAfterDelete(true)
+          return
+        }
+        setStatus({ kind: "success", message: "Removed. Default will show on the site." })
+      } else {
+        setStatus({ kind: "error", message: result.error })
+      }
+    })
+  }
+
+  if (hiddenAfterDelete) {
+    return (
+      <div style={{ ...styles.row, opacity: 0.55 }}>
+        <div style={styles.body}>
+          <div style={styles.label}>{label}</div>
+          <div style={{ ...styles.meta, color: "#0a7f3f" }}>
+            Deleted. Refresh the dashboard to confirm it&apos;s gone from the list.
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -140,6 +184,17 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
           >
             {isPending ? "Saving…" : "Replace"}
           </button>
+          {previewUrl ? (
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={isPending}
+              style={styles.removeButton}
+              title="Remove this image"
+            >
+              Remove
+            </button>
+          ) : null}
           {status.message ? (
             <span
               style={{
@@ -237,6 +292,16 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#111",
     color: "#fff",
     border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  removeButton: {
+    padding: "6px 12px",
+    fontSize: 13,
+    fontWeight: 600,
+    background: "#fff",
+    color: "#b00020",
+    border: "1px solid #b00020",
     borderRadius: 4,
     cursor: "pointer",
   },

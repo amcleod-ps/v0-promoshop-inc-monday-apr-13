@@ -1,11 +1,15 @@
 import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { DashboardList, type ProductGroup } from "./dashboard-list"
+import {
+  DashboardList,
+  type ProductGroup,
+  type SiteContentEntry,
+} from "./dashboard-list"
 
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Image Dashboard",
+  title: "Image & Content Dashboard",
   robots: { index: false, follow: false },
 }
 
@@ -18,6 +22,60 @@ interface ProductImageJoinedRow {
   products: { name: string } | { name: string }[] | null
 }
 
+interface SiteContentRow {
+  key: string
+  label: string
+  value: string
+}
+
+// Maps each `site_content` key prefix to (a) the group it shows up under in
+// the dashboard text editor and (b) whether the field is multi-line. The
+// `key` column lives in Supabase, but this mapping is editorial / display
+// metadata, so it stays in code.
+const CONTENT_KEY_RULES: Array<{
+  prefix: string
+  group: string
+  multiline?: boolean
+}> = [
+  { prefix: "home.hero.body", group: "Home page", multiline: true },
+  { prefix: "home.hero.cta", group: "Home page" },
+  { prefix: "home.", group: "Home page" },
+  { prefix: "about.hero.eyebrow", group: "About page" },
+  { prefix: "about.hero.heading", group: "About page" },
+  { prefix: "about.hero.body", group: "About page", multiline: true },
+  { prefix: "about.", group: "About page" },
+  { prefix: "team.section.", group: "Team section" },
+  { prefix: "team.", group: "Team members" },
+  { prefix: "brands.cta.body", group: "Brands page", multiline: true },
+  { prefix: "brands.page.body", group: "Brands page", multiline: true },
+  { prefix: "brands.", group: "Brands page" },
+  { prefix: "contact.section.subheading", group: "Contact section", multiline: true },
+  { prefix: "contact.", group: "Contact section" },
+  { prefix: "footer.ada", group: "Footer", multiline: true },
+  { prefix: "footer.tagline", group: "Footer", multiline: true },
+  { prefix: "footer.", group: "Footer" },
+]
+
+function classifyContentKey(key: string): { group: string; multiline: boolean } {
+  for (const rule of CONTENT_KEY_RULES) {
+    if (key.startsWith(rule.prefix)) {
+      return { group: rule.group, multiline: rule.multiline ?? false }
+    }
+  }
+  return { group: "Other", multiline: false }
+}
+
+const CONTENT_GROUP_ORDER = [
+  "Home page",
+  "About page",
+  "Team section",
+  "Team members",
+  "Brands page",
+  "Contact section",
+  "Footer",
+  "Other",
+]
+
 export default async function AdminDashboardPage() {
   let supabase
   try {
@@ -25,7 +83,7 @@ export default async function AdminDashboardPage() {
   } catch (err) {
     return (
       <main style={pageStyles.main}>
-        <h1 style={pageStyles.h1}>Image Dashboard</h1>
+        <h1 style={pageStyles.h1}>Image &amp; Content Dashboard</h1>
         <div style={pageStyles.error}>
           <strong>Server is not configured.</strong>
           <p>{err instanceof Error ? err.message : "Unknown error."}</p>
@@ -40,40 +98,59 @@ export default async function AdminDashboardPage() {
     )
   }
 
-  const [siteImagesRes, brandsRes, heroSlidesRes, productImagesRes] =
-    await Promise.all([
-      supabase
-        .from("site_images")
-        .select("key, label, url, alt_text")
-        .order("label", { ascending: true }),
-      supabase
-        .from("brands")
-        .select("slug, name, logo_url")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("hero_slides")
-        .select("id, title, image_url, sort_order")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("product_images")
-        .select(
-          "id, label, url, sort_order, product_sku, products(name)",
-        )
-        .order("product_sku", { ascending: true })
-        .order("sort_order", { ascending: true }),
-    ])
+  const [
+    siteImagesRes,
+    brandsRes,
+    heroSlidesRes,
+    productImagesRes,
+    siteContentRes,
+  ] = await Promise.all([
+    supabase
+      .from("site_images")
+      .select("key, label, url, alt_text")
+      .order("label", { ascending: true }),
+    supabase
+      .from("brands")
+      .select("slug, name, description, logo_url")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("hero_slides")
+      .select("id, title, subtitle, cta_text, cta_url, image_url, sort_order")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("product_images")
+      .select(
+        "id, label, url, sort_order, product_sku, products(name)",
+      )
+      .order("product_sku", { ascending: true })
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("site_content")
+      .select("key, label, value")
+      .order("key", { ascending: true }),
+  ])
+
+  // Filter out missing-table errors for site_content specifically — that's
+  // the expected state until migration 0004 is applied. We still want to
+  // surface other errors so the maintainer can debug them.
+  const siteContentMissing =
+    siteContentRes.error?.message?.includes("does not exist") ||
+    siteContentRes.error?.message?.includes("site_content") ||
+    false
 
   const errors = [
     siteImagesRes.error,
     brandsRes.error,
     heroSlidesRes.error,
     productImagesRes.error,
+    siteContentMissing ? null : siteContentRes.error,
   ].filter(Boolean) as Array<{ message: string }>
 
   const siteImages = siteImagesRes.data ?? []
   const brands = brandsRes.data ?? []
   const heroSlides = heroSlidesRes.data ?? []
   const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
+  const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
 
   const productGroupMap = new Map<string, ProductGroup>()
   for (const img of productImages) {
@@ -94,15 +171,34 @@ export default async function AdminDashboardPage() {
   }
   const productGroups = Array.from(productGroupMap.values())
 
+  const siteContent: SiteContentEntry[] = siteContentRaw
+    .map((row) => {
+      const { group, multiline } = classifyContentKey(row.key)
+      return {
+        key: row.key,
+        label: row.label,
+        value: row.value ?? "",
+        group,
+        multiline,
+      }
+    })
+    .sort((a, b) => {
+      const aGroup = CONTENT_GROUP_ORDER.indexOf(a.group)
+      const bGroup = CONTENT_GROUP_ORDER.indexOf(b.group)
+      if (aGroup !== bGroup) return aGroup - bGroup
+      return a.key.localeCompare(b.key)
+    })
+
   const totalImages =
     siteImages.length +
     brands.length +
     heroSlides.length +
     productGroups.reduce((n, g) => n + g.images.length, 0)
+  const totalText = siteContent.length + heroSlides.length * 4 + brands.length * 2
 
   return (
     <main style={pageStyles.main}>
-      <h1 style={pageStyles.h1}>Image Dashboard</h1>
+      <h1 style={pageStyles.h1}>Image &amp; Content Dashboard</h1>
 
       <details style={pageStyles.help}>
         <summary style={pageStyles.helpSummary}>
@@ -110,38 +206,49 @@ export default async function AdminDashboardPage() {
         </summary>
         <ol style={pageStyles.helpList}>
           <li>
-            Use the search box to find an image. Search by product name,
-            brand name, label, or SKU. The list filters as you type.
+            Pick a tab: <strong>Images</strong> to replace or remove pictures,
+            or <strong>Text content</strong> to edit headings, paragraphs, and
+            button labels.
           </li>
           <li>
-            For the row you want to change, click <strong>Choose File</strong>{" "}
-            and pick a new image from your computer.
+            Use the search box to find the row you want. Search matches the
+            label, the database key, and (for text) the current value.
           </li>
           <li>
-            A blue preview shows the new image. If it&apos;s wrong, click{" "}
-            <strong>Cancel</strong> and pick a different file.
+            On an <em>image</em> row: click <strong>Choose File</strong>, pick
+            an image, then <strong>Replace</strong>. Click <strong>Remove</strong>{" "}
+            to delete the current image — the row stays and shows the default.
           </li>
           <li>
-            Click <strong>Replace</strong>. When you see{" "}
-            <em>“Saved. Live on the site.”</em>, the change is live —
-            refresh the public site to see it.
+            On a <em>text</em> row: edit the value and click <strong>Save</strong>.
+            When you see <em>“Saved. Live on the site.”</em>, refresh the
+            public site to see the change.
           </li>
         </ol>
         <p style={pageStyles.helpNote}>
-          Notes: maximum file size is 10 MB. JPG, PNG, WebP, GIF, and SVG
-          all work. There is no undo, but the previous file stays in Supabase
-          Storage so it can be re-pasted into the URL column from the
-          Supabase Dashboard if needed.
+          Notes: maximum file size is 10 MB; JPG, PNG, WebP, GIF, and SVG all
+          work. Maximum text length is 5,000 characters per field. The
+          dashboard has no access control — anyone with the URL can edit
+          everything here, so treat the URL as the secret.
         </p>
       </details>
 
       <p style={pageStyles.summaryLine}>
-        Managing <strong>{totalImages}</strong> images across{" "}
-        <strong>{siteImages.length}</strong> site images,{" "}
-        <strong>{brands.length}</strong> brand logos,{" "}
-        <strong>{heroSlides.length}</strong> hero slides, and{" "}
-        <strong>{productGroups.length}</strong> products.
+        Managing <strong>{totalImages}</strong> images and{" "}
+        <strong>{totalText}</strong> editable text fields across the site.
       </p>
+
+      {siteContentMissing ? (
+        <div style={pageStyles.warning}>
+          <strong>Text editor migration not yet applied.</strong>
+          <p>
+            The text-editing tab works once you run the latest migration. In
+            the Supabase Dashboard → SQL Editor, paste the contents of{" "}
+            <code>supabase/migrations/0004_site_content.sql</code> and click
+            Run. Refresh this page afterwards. Image editing is unaffected.
+          </p>
+        </div>
+      ) : null}
 
       {errors.length > 0 ? (
         <div style={pageStyles.error}>
@@ -154,7 +261,7 @@ export default async function AdminDashboardPage() {
           <p>
             If the database is empty, run the migrations in
             <code> supabase/migrations/ </code> from the Supabase SQL Editor
-            (0001 → 0002 → 0003) and refresh.
+            (0001 → 0002 → 0003 → 0004) and refresh.
           </p>
         </div>
       ) : null}
@@ -163,8 +270,9 @@ export default async function AdminDashboardPage() {
         <div style={pageStyles.error}>
           <strong>No data in any image table yet.</strong>
           <p>
-            Apply the three SQL migrations in <code>supabase/migrations/</code>
-            {" "}from the Supabase SQL Editor (0001 → 0002 → 0003) and refresh.
+            Apply the SQL migrations in <code>supabase/migrations/</code>{" "}
+            from the Supabase SQL Editor (0001 → 0002 → 0003 → 0004) and
+            refresh.
           </p>
         </div>
       ) : (
@@ -173,6 +281,7 @@ export default async function AdminDashboardPage() {
           brands={brands}
           heroSlides={heroSlides}
           productGroups={productGroups}
+          siteContent={siteContent}
         />
       )}
     </main>
@@ -220,6 +329,14 @@ const pageStyles: Record<string, React.CSSProperties> = {
     background: "#fff5f5",
     border: "1px solid #f3c4c4",
     color: "#7a1818",
+    padding: 16,
+    borderRadius: 6,
+    marginBottom: 24,
+  },
+  warning: {
+    background: "#fffaf0",
+    border: "1px solid #f0c060",
+    color: "#73510a",
     padding: 16,
     borderRadius: 6,
     marginBottom: 24,

@@ -4,8 +4,17 @@ import { ContactSection } from "@/components/contact-section"
 import { ABOUT_CONTENT } from "@/lib/cms/about"
 import { SiteImage } from "@/components/site-image"
 import { TeamSection } from "@/components/team-section"
+import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getSiteContentMap()
+
+  const eyebrow = resolveSiteText(content, "about.hero.eyebrow", ABOUT_CONTENT.hero.eyebrow)
+  const heading = resolveSiteText(content, "about.hero.heading", ABOUT_CONTENT.hero.heading)
+  const body = ABOUT_CONTENT.hero.body.map((paragraph, i) =>
+    resolveSiteText(content, `about.hero.body.${i + 1}`, paragraph),
+  )
+
   return (
     <div className="min-h-screen bg-[#111111] text-white">
       <Header />
@@ -31,13 +40,13 @@ export default function AboutPage() {
             {/* Text — RIGHT on desktop */}
             <div className="py-16 lg:py-24 lg:pl-12 order-last">
               <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-4">
-                {ABOUT_CONTENT.hero.eyebrow}
+                {eyebrow}
               </p>
               <h1 className="font-montserrat font-black text-4xl lg:text-5xl text-white leading-tight mb-6 tracking-wide">
-                {ABOUT_CONTENT.hero.heading}
+                {heading}
               </h1>
               <div className="space-y-4">
-                {ABOUT_CONTENT.hero.body.map((paragraph, i) => (
+                {body.map((paragraph, i) => (
                   <p key={i} className="text-lg text-[#aaa] leading-relaxed font-visby">
                     {paragraph}
                   </p>

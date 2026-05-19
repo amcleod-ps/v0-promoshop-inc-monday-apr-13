@@ -21,7 +21,19 @@ interface ErrorResult {
 }
 export type ReplaceResult = SuccessResult | ErrorResult
 
+interface SimpleSuccess {
+  ok: true
+}
+export type SimpleResult = SimpleSuccess | ErrorResult
+
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+
+function bumpCaches() {
+  // Tell Next.js to rebuild every cached page so changes are visible
+  // immediately on the live site, not just the dashboard.
+  revalidatePath("/", "layout")
+  revalidatePath("/admin-dashboard")
+}
 
 /**
  * Replaces an image on the website. Steps:
@@ -83,15 +95,105 @@ export async function replaceImage(
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(upload.data.path)
   const url = pub.publicUrl
 
+  const writeErr = await writeImageUrl(target, id, url)
+  if (writeErr) return { ok: false, error: `Database update failed: ${writeErr}` }
+
+  bumpCaches()
+  return { ok: true, url }
+}
+
+/**
+ * "Removes" an image from the website by clearing its URL on the
+ * referencing row. For product images, which represent a specific gallery
+ * tile, the row itself is deleted so the gallery shrinks. The previously
+ * uploaded file stays in Supabase Storage so it can be re-attached from
+ * the Supabase Dashboard if removal was a mistake.
+ */
+export async function removeImage(
+  target: ReplaceTarget,
+  id: string,
+): Promise<SimpleResult> {
+  if (!id || typeof id !== "string") {
+    return { ok: false, error: "Missing row identifier." }
+  }
+
+  let supabase
+  try {
+    supabase = createAdminClient()
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Server is not configured.",
+    }
+  }
+
   let dbError: string | null = null
+  switch (target) {
+    case "site_images": {
+      const { error } = await supabase
+        .from("site_images")
+        .update({ url: "" })
+        .eq("key", id)
+      if (error) dbError = error.message
+      break
+    }
+    case "brand": {
+      // Mirror the replaceImage flow: clear both the canonical brand row
+      // AND the legacy site_images override so neither shadows the other.
+      const { error: e1 } = await supabase
+        .from("brands")
+        .update({ logo_url: null })
+        .eq("slug", id)
+      if (e1) {
+        dbError = e1.message
+        break
+      }
+      await supabase
+        .from("site_images")
+        .update({ url: "" })
+        .eq("key", `brand.${id}.logo`)
+      break
+    }
+    case "hero_slide": {
+      const { error } = await supabase
+        .from("hero_slides")
+        .update({ image_url: null })
+        .eq("id", id)
+      if (error) dbError = error.message
+      break
+    }
+    case "product_image": {
+      const { error } = await supabase
+        .from("product_images")
+        .delete()
+        .eq("id", id)
+      if (error) dbError = error.message
+      break
+    }
+    default: {
+      return { ok: false, error: `Unknown target: ${String(target)}` }
+    }
+  }
+
+  if (dbError) return { ok: false, error: `Database update failed: ${dbError}` }
+
+  bumpCaches()
+  return { ok: true }
+}
+
+async function writeImageUrl(
+  target: ReplaceTarget,
+  id: string,
+  url: string,
+): Promise<string | null> {
+  const supabase = createAdminClient()
   switch (target) {
     case "site_images": {
       const { error } = await supabase
         .from("site_images")
         .update({ url })
         .eq("key", id)
-      if (error) dbError = error.message
-      break
+      return error?.message ?? null
     }
     case "brand": {
       // Brand logos are referenced from TWO places at render time:
@@ -104,45 +206,161 @@ export async function replaceImage(
         .from("brands")
         .update({ logo_url: url })
         .eq("slug", id)
-      if (e1) {
-        dbError = e1.message
-        break
-      }
+      if (e1) return e1.message
       await supabase
         .from("site_images")
         .update({ url })
         .eq("key", `brand.${id}.logo`)
-      break
+      return null
     }
     case "hero_slide": {
       const { error } = await supabase
         .from("hero_slides")
         .update({ image_url: url })
         .eq("id", id)
-      if (error) dbError = error.message
-      break
+      return error?.message ?? null
     }
     case "product_image": {
       const { error } = await supabase
         .from("product_images")
         .update({ url })
         .eq("id", id)
-      if (error) dbError = error.message
-      break
+      return error?.message ?? null
     }
-    default: {
-      return { ok: false, error: `Unknown target: ${String(target)}` }
+    default:
+      return `Unknown target: ${String(target)}`
+  }
+}
+
+const MAX_TEXT_LEN = 5000
+
+/**
+ * Upserts a row in `site_content` with a new value. The site_content
+ * table backs every editable headline, paragraph, label, and CTA on the
+ * public site that isn't already a column on another table.
+ */
+export async function updateSiteContent(
+  key: string,
+  label: string,
+  value: string,
+): Promise<SimpleResult> {
+  if (!key) return { ok: false, error: "Missing content key." }
+  if (typeof value !== "string") return { ok: false, error: "Value must be text." }
+  if (value.length > MAX_TEXT_LEN) {
+    return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
+  }
+
+  let supabase
+  try {
+    supabase = createAdminClient()
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Server is not configured.",
     }
   }
 
-  if (dbError) {
-    return { ok: false, error: `Database update failed: ${dbError}` }
+  const { error } = await supabase
+    .from("site_content")
+    .upsert({ key, label, value }, { onConflict: "key" })
+
+  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+
+  bumpCaches()
+  return { ok: true }
+}
+
+export type HeroSlideField = "title" | "subtitle" | "cta_text" | "cta_url"
+
+const HERO_SLIDE_FIELDS: HeroSlideField[] = [
+  "title",
+  "subtitle",
+  "cta_text",
+  "cta_url",
+]
+
+/**
+ * Updates one editable text column on a hero_slides row. Used by the
+ * dashboard's hero-slide editor.
+ */
+export async function updateHeroSlideText(
+  id: string,
+  field: HeroSlideField,
+  value: string,
+): Promise<SimpleResult> {
+  if (!id) return { ok: false, error: "Missing slide id." }
+  if (!HERO_SLIDE_FIELDS.includes(field)) {
+    return { ok: false, error: `Unknown field: ${String(field)}` }
+  }
+  if (typeof value !== "string") return { ok: false, error: "Value must be text." }
+  if (value.length > MAX_TEXT_LEN) {
+    return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
   }
 
-  // Tell Next.js to rebuild every cached page so the new image is visible
-  // immediately on the live site, not just the dashboard.
-  revalidatePath("/", "layout")
-  revalidatePath("/admin-dashboard")
+  let supabase
+  try {
+    supabase = createAdminClient()
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Server is not configured.",
+    }
+  }
 
-  return { ok: true, url }
+  // Empty strings on optional columns should become NULL so the renderer
+  // treats them as "unset" rather than rendering an empty button.
+  const stored = field === "title" ? value : value.length === 0 ? null : value
+
+  const { error } = await supabase
+    .from("hero_slides")
+    .update({ [field]: stored })
+    .eq("id", id)
+
+  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+
+  bumpCaches()
+  return { ok: true }
+}
+
+export type BrandField = "name" | "description"
+const BRAND_FIELDS: BrandField[] = ["name", "description"]
+
+/**
+ * Updates one editable text column on a brand row (name or description).
+ */
+export async function updateBrandText(
+  slug: string,
+  field: BrandField,
+  value: string,
+): Promise<SimpleResult> {
+  if (!slug) return { ok: false, error: "Missing brand slug." }
+  if (!BRAND_FIELDS.includes(field)) {
+    return { ok: false, error: `Unknown field: ${String(field)}` }
+  }
+  if (typeof value !== "string") return { ok: false, error: "Value must be text." }
+  if (value.length > MAX_TEXT_LEN) {
+    return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
+  }
+
+  let supabase
+  try {
+    supabase = createAdminClient()
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Server is not configured.",
+    }
+  }
+
+  const stored = field === "description" && value.length === 0 ? null : value
+
+  const { error } = await supabase
+    .from("brands")
+    .update({ [field]: stored })
+    .eq("slug", slug)
+
+  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+
+  bumpCaches()
+  return { ok: true }
 }

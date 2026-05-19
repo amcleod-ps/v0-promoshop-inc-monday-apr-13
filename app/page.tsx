@@ -7,13 +7,21 @@ import { ContactSection } from "@/components/contact-section"
 import { HeroSlideshow } from "@/components/home/hero-slideshow"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { getHeroSlides, getSupabaseBrands } from "@/lib/supabase/data"
+import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 
 export default async function HomePage() {
-  // Fetch hero slides and brands from Supabase
-  const [heroSlides, supabaseBrands] = await Promise.all([
+  // Fetch hero slides, brands, and editable text content from Supabase
+  const [heroSlides, supabaseBrands, content] = await Promise.all([
     getHeroSlides(),
     getSupabaseBrands(),
+    getSiteContentMap(),
   ])
+
+  const heroBody = HOME_CONTENT.hero.body.map((paragraph, i) =>
+    resolveSiteText(content, `home.hero.body.${i + 1}`, paragraph),
+  )
+  const ctaPrimary = resolveSiteText(content, "home.hero.cta.primary", "Browse Our Brands")
+  const ctaSecondary = resolveSiteText(content, "home.hero.cta.secondary", "View All Products")
 
   // Image URLs from Supabase already have ?v=<updated_at> cache-busting
   // appended by lib/supabase/data.ts so swapping a row instantly busts the
@@ -52,7 +60,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-center">
             {/* Text + Logo Side */}
             <div className="py-16 lg:py-24 lg:pr-12">
-              {HOME_CONTENT.hero.body.map((paragraph, i) => (
+              {heroBody.map((paragraph, i) => (
                 <p
                   key={i}
                   className="text-5xl lg:text-6xl xl:text-7xl font-black text-[#e7e7e7] mb-6 last:mb-10 max-w-lg"
@@ -69,14 +77,14 @@ export default async function HomePage() {
                   href="/brands"
                   className="shimmer-cta inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-[#d93e36] transition-colors"
                 >
-                  Browse Our Brands
+                  {ctaPrimary}
                   <ArrowRight className="w-4 h-4 relative z-10" />
                 </Link>
                 <Link
                   href="/studio"
                   className="inline-flex items-center gap-2 border-2 border-[#ccc] text-[#ccc] px-8 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-white hover:text-[#111] transition-colors"
                 >
-                  View All Products
+                  {ctaSecondary}
                 </Link>
               </div>
             </div>

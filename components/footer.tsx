@@ -6,11 +6,21 @@ import { Instagram, Linkedin, Facebook, Twitter, ArrowRight } from "lucide-react
 import { useLocale } from "@/lib/locale-context"
 import { SiteImage } from "@/components/site-image"
 import { HOME_CONTENT } from "@/lib/cms/home"
+import { useSiteText } from "@/components/site-content-provider"
 
 export function Footer() {
   const [email, setEmail] = useState("")
   const [subscribed, setSubscribed] = useState(false)
   const { config } = useLocale()
+  const tagline = useSiteText(
+    "footer.tagline",
+    "Welcome to our store, where promoting your business is our business. Born from an expertise in building brands, we offer unique, quality promotional products.",
+  )
+  const newsletterHeading = useSiteText("footer.newsletter.heading", "Stay in the Loop")
+  const adaNotice = useSiteText(
+    "footer.ada",
+    "We understand the importance of accessibility for all visitors to our website and it is something we take seriously. We are working on bringing this website in-line with WCAG 2.1 A, AA standards to ensure we provide an experience that is accessible to all. Your patience is appreciated as we work through these changes.",
+  )
 
   const socialLinks = [
     { name: "Instagram", icon: Instagram, href: "#" },
@@ -49,13 +59,13 @@ export function Footer() {
               />
             </Link>
             <p className="text-sm font-visby text-[#555] leading-relaxed mb-6">
-              Welcome to our store, where promoting your business is our business. Born from an expertise in building brands, we offer unique, quality promotional products.
+              {tagline}
             </p>
 
             {/* Newsletter Signup */}
             <div className="mb-6">
               <h4 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-3">
-                Stay in the Loop
+                {newsletterHeading}
               </h4>
               {subscribed ? (
                 <p className="text-sm text-[#4a9b2f] font-semibold">Thanks for subscribing!</p>
@@ -160,7 +170,7 @@ export function Footer() {
         {/* ADA Compliance */}
         <div className="mt-8 p-4 bg-[#f3fafd] border border-[#bde7ff] rounded-lg">
           <p className="text-xs text-[#555] font-visby leading-relaxed">
-            <strong className="text-[#222]">ADA Compliance:</strong> We understand the importance of accessibility for all visitors to our website and it is something we take seriously. We are working on bringing this website in-line with WCAG 2.1 A, AA standards to ensure we provide an experience that is accessible to all. Your patience is appreciated as we work through these changes.
+            <strong className="text-[#222]">ADA Compliance:</strong> {adaNotice}
           </p>
         </div>
 

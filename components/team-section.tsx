@@ -2,25 +2,30 @@
 
 import { useTeamMembers } from "@/hooks/use-team-members"
 import { TeamMemberAvatar } from "@/components/team-member-avatar"
+import { useSiteText } from "@/components/site-content-provider"
 
 /**
  * Team grid rendered on /about. Uses the useTeamMembers() hook so the
- * admin dashboard's localStorage-backed overrides (add/remove/edit) show
- * up live. Behaves identically to the pre-existing grid when no override
- * is stored.
+ * admin dashboard's text overrides (name, role, description per member)
+ * and the section-level heading overrides show up live.
  */
 export function TeamSection() {
   const members = useTeamMembers()
+  const heading = useSiteText("team.section.heading", "Meet Our Team")
+  const subheading = useSiteText(
+    "team.section.subheading",
+    "These industry experts will ensure your promotions shine.",
+  )
 
   return (
     <section className="py-16 lg:py-20 px-6 lg:px-8 bg-[#111111]">
       <div className="mx-auto max-w-7xl">
         <div className="text-center mb-12">
           <h2 className="font-montserrat font-bold text-2xl lg:text-3xl text-white mb-3">
-            Meet Our Team
+            {heading}
           </h2>
           <p className="text-[#888] font-visby max-w-xl mx-auto">
-            These industry experts will ensure your promotions shine.
+            {subheading}
           </p>
         </div>
 
