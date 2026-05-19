@@ -34,8 +34,21 @@ function bustedUrl(url: string | null | undefined, updatedAt: string): string | 
   return `${url}?v=${encodeURIComponent(updatedAt)}`
 }
 
+async function maybeClient() {
+  try {
+    return await createClient()
+  } catch {
+    // Missing NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY env vars — return null
+    // so the page can render its static fallback content instead of
+    // throwing and 500-ing the whole route (and, via the root layout,
+    // every other route including /admin-dashboard).
+    return null
+  }
+}
+
 export async function getHeroSlides(): Promise<SupabaseHeroSlide[]> {
-  const supabase = await createClient()
+  const supabase = await maybeClient()
+  if (!supabase) return []
   const { data, error } = await supabase
     .from("hero_slides")
     .select("*")
@@ -51,7 +64,8 @@ export async function getHeroSlides(): Promise<SupabaseHeroSlide[]> {
 }
 
 export async function getSupabaseBrands(): Promise<SupabaseBrand[]> {
-  const supabase = await createClient()
+  const supabase = await maybeClient()
+  if (!supabase) return []
   const { data, error } = await supabase
     .from("brands")
     .select("*")

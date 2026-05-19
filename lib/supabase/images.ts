@@ -17,7 +17,16 @@ export type SiteImageMap = Record<string, SiteImage>
  * pick up changes the next time this map is fetched.
  */
 export async function getSiteImagesMap(): Promise<SiteImageMap> {
-  const supabase = await createClient()
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch {
+    // Missing NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY env vars in this
+    // environment. The site (and the admin dashboard, which surfaces its
+    // own configuration error) should still render — just without any
+    // image overrides.
+    return {}
+  }
   const { data, error } = await supabase
     .from("site_images")
     .select("key, label, url, alt_text, updated_at")

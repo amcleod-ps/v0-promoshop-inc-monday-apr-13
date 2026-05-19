@@ -3,9 +3,16 @@
 import { Mail, Phone, MapPin } from "lucide-react"
 import { useState } from "react"
 import { useLocale } from "@/lib/locale-context"
+import { useSiteText } from "@/components/site-content-provider"
 import { submitQuoteRequest } from "@/app/actions/quotes"
 
 export function ContactSection() {
+  const heading = useSiteText("contact.section.heading", "Contact Us")
+  const subheading = useSiteText(
+    "contact.section.subheading",
+    "Have questions? Need a custom quote? Our team is here to help bring your vision to life.",
+  )
+  const emailAddress = useSiteText("contact.section.email", "info@promoshopinc.com")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -56,10 +63,10 @@ export function ContactSection() {
       <div className="mx-auto max-w-7xl">
         <div className="text-center mb-12">
           <h2 className="font-montserrat font-bold text-2xl lg:text-3xl text-white mb-3">
-            Contact Us
+            {heading}
           </h2>
           <p className="text-[#888] max-w-xl mx-auto font-visby leading-relaxed">
-            Have questions? Need a custom quote? Our team is here to help bring your vision to life.
+            {subheading}
           </p>
         </div>
 
@@ -89,11 +96,11 @@ export function ContactSection() {
               </div>
               <div>
                 <h3 className="font-montserrat font-bold text-base text-white mb-2">Email</h3>
-                <a 
-                  href="mailto:info@promoshopinc.com" 
+                <a
+                  href={`mailto:${emailAddress}`}
                   className="text-[#888] hover:text-[#ef473f] transition-colors font-visby"
                 >
-                  info@promoshopinc.com
+                  {emailAddress}
                 </a>
               </div>
             </div>
