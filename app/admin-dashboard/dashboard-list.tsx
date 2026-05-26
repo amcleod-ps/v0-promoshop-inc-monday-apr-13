@@ -1,8 +1,17 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { ImageRow } from "./image-row"
 import { TextRow } from "./text-row"
+import {
+  AddBrandForm,
+  AddHeroSlideForm,
+  AddSiteImageForm,
+} from "./create-forms"
+import { ProductsTab, type ProductRow } from "./products-tab"
+import { TeamTab, type TeamMemberRow } from "./team-tab"
+import { ThemeTab, type ThemeEntry } from "./theme-tab"
+import { softDeleteBrand, softDeleteHeroSlide, deleteSiteImage } from "./create-actions"
 
 interface SiteImageRow {
   key: string
@@ -49,9 +58,14 @@ interface Props {
   heroSlides: HeroSlideRow[]
   productGroups: ProductGroup[]
   siteContent: SiteContentEntry[]
+  productRows: ProductRow[]
+  team: TeamMemberRow[]
+  theme: ThemeEntry[]
+  teamTableMissing: boolean
+  themeTableMissing: boolean
 }
 
-type Tab = "images" | "text"
+type Tab = "images" | "text" | "products" | "team" | "theme"
 
 export function DashboardList({
   siteImages,
@@ -59,6 +73,11 @@ export function DashboardList({
   heroSlides,
   productGroups,
   siteContent,
+  productRows,
+  team,
+  theme,
+  teamTableMissing,
+  themeTableMissing,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -143,60 +162,46 @@ export function DashboardList({
     filteredHeroSlidesText.length * 4 +
     filteredBrandsText.length * 2
 
+  const showSearch = tab === "images" || tab === "text"
+  const matchCountForTab =
+    tab === "images" ? totalImagesFiltered : tab === "text" ? totalTextFiltered : 0
+
   return (
     <>
       <div style={styles.tabs}>
-        <button
-          type="button"
-          onClick={() => setTab("images")}
-          style={{
-            ...styles.tabButton,
-            ...(tab === "images" ? styles.tabButtonActive : {}),
-          }}
-        >
-          Images
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("text")}
-          style={{
-            ...styles.tabButton,
-            ...(tab === "text" ? styles.tabButtonActive : {}),
-          }}
-        >
-          Text content
-        </button>
+        <TabButton label="Images" active={tab === "images"} onClick={() => setTab("images")} />
+        <TabButton label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
+        <TabButton label="Products" active={tab === "products"} onClick={() => setTab("products")} />
+        <TabButton label="Team" active={tab === "team"} onClick={() => setTab("team")} />
+        <TabButton label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
       </div>
 
-      <div style={styles.searchWrap}>
-        <input
-          type="text"
-          placeholder={
-            tab === "images"
-              ? "Search images by name, SKU, or label…"
-              : "Search text by heading, key, or current value…"
-          }
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          style={styles.search}
-          autoFocus
-        />
-        {q ? (
-          <button
-            type="button"
-            onClick={() => setQ("")}
-            style={styles.clearButton}
-          >
-            Clear
-          </button>
-        ) : null}
-        {q ? (
-          <span style={styles.matchCount}>
-            {tab === "images" ? totalImagesFiltered : totalTextFiltered} match
-            {(tab === "images" ? totalImagesFiltered : totalTextFiltered) === 1 ? "" : "es"}
-          </span>
-        ) : null}
-      </div>
+      {showSearch ? (
+        <div style={styles.searchWrap}>
+          <input
+            type="text"
+            placeholder={
+              tab === "images"
+                ? "Search images by name, SKU, or label…"
+                : "Search text by heading, key, or current value…"
+            }
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            style={styles.search}
+            autoFocus
+          />
+          {q ? (
+            <button type="button" onClick={() => setQ("")} style={styles.clearButton}>
+              Clear
+            </button>
+          ) : null}
+          {q ? (
+            <span style={styles.matchCount}>
+              {matchCountForTab} match{matchCountForTab === 1 ? "" : "es"}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {tab === "images" ? (
         <>
@@ -205,14 +210,11 @@ export function DashboardList({
             description="Site logo, About-page hero, team photos, and brand lifestyle backdrops."
             hidden={!!needle && filteredSiteImages.length === 0}
           >
+            {!needle ? <AddSiteImageForm /> : null}
             {filteredSiteImages.map((row) => (
-              <ImageRow
+              <SiteImageRowWithDelete
                 key={row.key}
-                target="site_images"
-                id={row.key}
-                label={row.label}
-                currentUrl={row.url}
-                hint={row.alt_text}
+                row={row}
               />
             ))}
           </Section>
@@ -222,6 +224,7 @@ export function DashboardList({
             description="One per brand. Used on the homepage scroll and every brand detail page."
             hidden={!!needle && filteredBrandImages.length === 0}
           >
+            {!needle ? <AddBrandForm /> : null}
             {filteredBrandImages.map((row) => (
               <ImageRow
                 key={row.slug}
@@ -238,6 +241,7 @@ export function DashboardList({
             description="The slideshow on the homepage. Edit the slide text on the Text content tab."
             hidden={!!needle && filteredHeroSlides.length === 0}
           >
+            {!needle ? <AddHeroSlideForm /> : null}
             {filteredHeroSlides.map((row) => (
               <ImageRow
                 key={row.id}
@@ -251,7 +255,7 @@ export function DashboardList({
 
           <Section
             title={`Product images${needle ? ` (${filteredProductGroups.reduce((n, g) => n + g.images.length, 0)})` : ` (${productGroups.reduce((n, g) => n + g.images.length, 0)})`}`}
-            description="Gallery imagery for every product, grouped by SKU. Click a group to expand it."
+            description="Gallery imagery for every product, grouped by SKU. To add a new product or attach images to a colour, use the Products tab."
             hidden={!!needle && filteredProductGroups.length === 0}
           >
             {filteredProductGroups.map((g) => (
@@ -287,7 +291,9 @@ export function DashboardList({
             </p>
           ) : null}
         </>
-      ) : (
+      ) : null}
+
+      {tab === "text" ? (
         <>
           {Array.from(contentByGroup.entries()).map(([group, entries]) => (
             <Section
@@ -315,6 +321,7 @@ export function DashboardList({
             description="Editable text for every slide in the homepage slideshow. Leave subtitle, CTA label, and CTA URL blank to hide the button on that slide."
             hidden={!!needle && filteredHeroSlidesText.length === 0}
           >
+            {!needle ? <AddHeroSlideForm /> : null}
             {filteredHeroSlidesText.map((slide) => (
               <details
                 key={slide.id}
@@ -354,6 +361,11 @@ export function DashboardList({
                     label="CTA destination URL"
                     currentValue={slide.cta_url ?? ""}
                   />
+                  <DeleteEntityButton
+                    label={`Remove slide "${slide.title || "(untitled)"}" from the homepage`}
+                    confirmMessage={`Remove slide "${slide.title || "(untitled)"}" from the homepage?`}
+                    onDelete={() => softDeleteHeroSlide(slide.id)}
+                  />
                 </div>
               </details>
             ))}
@@ -364,6 +376,7 @@ export function DashboardList({
             description="Name and description shown on the brands listing and per-brand pages."
             hidden={!!needle && filteredBrandsText.length === 0}
           >
+            {!needle ? <AddBrandForm /> : null}
             {filteredBrandsText.map((brand) => (
               <details
                 key={brand.slug}
@@ -390,6 +403,11 @@ export function DashboardList({
                     currentValue={brand.description ?? ""}
                     multiline
                   />
+                  <DeleteEntityButton
+                    label={`Remove brand "${brand.name}" from the public site`}
+                    confirmMessage={`Remove brand "${brand.name}"? It will disappear from the brands listing and logo scroll. Products still tagged with this brand are not affected.`}
+                    onDelete={() => softDeleteBrand(brand.slug)}
+                  />
                 </div>
               </details>
             ))}
@@ -402,8 +420,158 @@ export function DashboardList({
             </p>
           ) : null}
         </>
-      )}
+      ) : null}
+
+      {tab === "products" ? (
+        <ProductsTab
+          products={productRows}
+          brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
+        />
+      ) : null}
+
+      {tab === "team" ? (
+        teamTableMissing ? (
+          <MigrationGuard migration="0005_team_and_theme.sql" feature="Team editor" />
+        ) : (
+          <TeamTab members={team} />
+        )
+      ) : null}
+
+      {tab === "theme" ? (
+        themeTableMissing ? (
+          <MigrationGuard migration="0005_team_and_theme.sql" feature="Theme editor" />
+        ) : (
+          <ThemeTab entries={theme} />
+        )
+      ) : null}
     </>
+  )
+}
+
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...styles.tabButton,
+        ...(active ? styles.tabButtonActive : {}),
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+function MigrationGuard({ migration, feature }: { migration: string; feature: string }) {
+  return (
+    <div style={styles.migrationGuard}>
+      <strong>{feature} needs migration {migration}.</strong>
+      <p style={{ marginTop: 8 }}>
+        In the Supabase Dashboard → SQL Editor, paste the contents of{" "}
+        <code>supabase/migrations/{migration}</code> and click Run. Refresh
+        this page afterwards.
+      </p>
+    </div>
+  )
+}
+
+function DeleteEntityButton({
+  label,
+  confirmMessage,
+  onDelete,
+}: {
+  label: string
+  confirmMessage: string
+  onDelete: () => Promise<{ ok: true } | { ok: false; error: string }>
+}) {
+  const [pending, start] = useTransition()
+  const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
+    kind: "idle",
+    message: "",
+  })
+  const [removed, setRemoved] = useState(false)
+
+  if (removed) {
+    return (
+      <p style={{ color: "#0a7f3f", fontSize: 13, fontWeight: 600 }}>
+        Removed from the public site. Refresh the dashboard to confirm.
+      </p>
+    )
+  }
+
+  const handleClick = () => {
+    if (typeof window !== "undefined" && !window.confirm(confirmMessage)) return
+    setStatus({ kind: "idle", message: "Removing…" })
+    start(async () => {
+      const result = await onDelete()
+      if (result.ok) {
+        setRemoved(true)
+      } else {
+        setStatus({ kind: "err", message: result.error })
+      }
+    })
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        style={{
+          padding: "6px 12px",
+          fontSize: 13,
+          fontWeight: 600,
+          background: "#fff",
+          color: "#b00020",
+          border: "1px solid #b00020",
+          borderRadius: 4,
+          cursor: "pointer",
+        }}
+      >
+        {pending ? "Removing…" : label}
+      </button>
+      {status.message ? (
+        <span
+          style={{
+            fontSize: 13,
+            color: status.kind === "err" ? "#b00020" : status.kind === "ok" ? "#0a7f3f" : "#444",
+          }}
+        >
+          {status.message}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+function SiteImageRowWithDelete({ row }: { row: SiteImageRow }) {
+  return (
+    <div>
+      <ImageRow
+        target="site_images"
+        id={row.key}
+        label={row.label}
+        currentUrl={row.url}
+        hint={row.alt_text}
+      />
+      <div style={{ marginTop: -4, marginBottom: 4, marginLeft: 12 }}>
+        <DeleteEntityButton
+          label="Delete this image slot"
+          confirmMessage={`Delete the "${row.label}" image slot? Code that references the key "${row.key}" will fall back to its hard-coded default image.`}
+          onDelete={() => deleteSiteImage(row.key)}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -524,5 +692,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontStyle: "italic",
     padding: 24,
     textAlign: "center",
+  },
+  migrationGuard: {
+    background: "#fffaf0",
+    border: "1px solid #f0c060",
+    color: "#73510a",
+    padding: 16,
+    borderRadius: 6,
   },
 }
