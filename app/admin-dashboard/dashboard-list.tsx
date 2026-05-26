@@ -59,6 +59,7 @@ interface Props {
   productGroups: ProductGroup[]
   siteContent: SiteContentEntry[]
   productRows: ProductRow[]
+  productCategories: string[]
   team: TeamMemberRow[]
   theme: ThemeEntry[]
   teamTableMissing: boolean
@@ -74,6 +75,7 @@ export function DashboardList({
   productGroups,
   siteContent,
   productRows,
+  productCategories,
   team,
   theme,
   teamTableMissing,
@@ -426,6 +428,7 @@ export function DashboardList({
         <ProductsTab
           products={productRows}
           brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
+          existingCategories={productCategories}
         />
       ) : null}
 

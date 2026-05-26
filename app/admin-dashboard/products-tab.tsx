@@ -42,9 +42,11 @@ interface BrandOption {
 export function ProductsTab({
   products,
   brands,
+  existingCategories,
 }: {
   products: ProductRow[]
   brands: BrandOption[]
+  existingCategories: string[]
 }) {
   const [q, setQ] = useState("")
   const needle = q.trim().toLowerCase()
@@ -61,7 +63,7 @@ export function ProductsTab({
 
   return (
     <div>
-      <AddProductForm brands={brands} />
+      <AddProductForm brands={brands} existingCategories={existingCategories} />
 
       <div style={styles.searchWrap}>
         <input
@@ -98,7 +100,16 @@ export function ProductsTab({
   )
 }
 
-function AddProductForm({ brands }: { brands: BrandOption[] }) {
+function AddProductForm({
+  brands,
+  existingCategories,
+}: {
+  brands: BrandOption[]
+  existingCategories: string[]
+}) {
+  // Stable id avoids datalist collisions if this form is ever rendered
+  // twice in the same tree.
+  const categoryListId = "admin-existing-product-categories"
   const [sku, setSku] = useState("")
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
@@ -181,7 +192,16 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
               disabled={isPending}
               style={styles.input}
               placeholder="e.g. Drinkware, Tops, Bags"
+              list={existingCategories.length > 0 ? categoryListId : undefined}
+              autoComplete="off"
             />
+            {existingCategories.length > 0 ? (
+              <datalist id={categoryListId}>
+                {existingCategories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            ) : null}
           </Field>
         </div>
         <Field label="Product name *">

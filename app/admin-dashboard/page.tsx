@@ -282,6 +282,14 @@ export default async function AdminDashboardPage() {
     }
   })
 
+  // Categories appearing on existing products — fed to the Add Product
+  // form's <datalist> so admins picking a category for a new SKU don't
+  // typo-fork the value ("Drinkware" vs "drinkware" would otherwise
+  // create two filters on the public site).
+  const productCategories = Array.from(
+    new Set(productRows.map((p) => p.category.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b))
+
   // ---- Site text rows for the existing Text content tab -------------------
   const siteContent: SiteContentEntry[] = siteContentRaw
     .map((row) => {
@@ -420,6 +428,7 @@ export default async function AdminDashboardPage() {
           productGroups={productGroups}
           siteContent={siteContent}
           productRows={productRows}
+          productCategories={productCategories}
           team={team}
           theme={theme}
           teamTableMissing={teamMissing}
