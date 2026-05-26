@@ -7,8 +7,11 @@ import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { ThemeVarsProvider } from '@/components/theme-vars-provider'
 import { SiteImagesProvider } from '@/components/site-images-provider'
 import { SiteContentProvider } from '@/components/site-content-provider'
+import { TeamMembersProvider } from '@/components/team-provider'
 import { getSiteImagesMap } from '@/lib/supabase/images'
 import { getSiteContentMap } from '@/lib/supabase/content'
+import { getTeamMembers } from '@/lib/supabase/team'
+import { getSiteThemeMap, themeOverrideCss } from '@/lib/supabase/theme'
 import './globals.css'
 
 // Force every page render to fetch fresh data so URL changes made in the
@@ -61,13 +64,22 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const [siteImages, siteContent] = await Promise.all([
+  const [siteImages, siteContent, teamMembers, siteTheme] = await Promise.all([
     getSiteImagesMap(),
     getSiteContentMap(),
+    getTeamMembers(),
+    getSiteThemeMap(),
   ])
+  const overrideCss = themeOverrideCss(siteTheme)
 
   return (
     <html lang="en" className={`bg-background ${montserrat.variable} ${bebasNeue.variable} ${dmSans.variable}`}>
+      <head>
+        {/* Server-rendered theme override. Lives in <head> so the admin's
+            colour choices apply before any utility class paints, avoiding
+            a flash of the original palette. */}
+        <style id="site-theme-override" dangerouslySetInnerHTML={{ __html: overrideCss }} />
+      </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <AuthProvider>
           <LocaleProvider>
@@ -75,7 +87,9 @@ export default async function RootLayout({
               <ThemeVarsProvider>
                 <SiteImagesProvider value={siteImages}>
                   <SiteContentProvider value={siteContent}>
-                    {children}
+                    <TeamMembersProvider value={teamMembers}>
+                      {children}
+                    </TeamMembersProvider>
                   </SiteContentProvider>
                 </SiteImagesProvider>
               </ThemeVarsProvider>

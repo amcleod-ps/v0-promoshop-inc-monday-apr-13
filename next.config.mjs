@@ -4,6 +4,16 @@
 // nothing to gate here. The previous `eslint: { ignoreDuringBuilds: true }`
 // block fired a deprecation warning on every dev start.
 const nextConfig = {
+  // Server Actions cap inbound request bodies at 1 MB by default. The
+  // /admin-dashboard image uploader documents and validates a 10 MB
+  // limit; without this override Next.js silently rejects anything over
+  // 1 MB and the user sees a generic "This page couldn't load" screen
+  // instead of the friendly error from our action.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

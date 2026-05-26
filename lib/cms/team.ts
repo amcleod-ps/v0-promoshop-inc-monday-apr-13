@@ -4,6 +4,15 @@ export interface TeamMember {
   description: string
   /** URL to profile picture. Leave empty to render initials fallback. */
   imagePath?: string
+  /**
+   * Direct image URL set when this row was sourced from the
+   * `team_members` Supabase table. Takes precedence over the
+   * legacy `site_images['team.<slug>']` registry lookup, so a photo
+   * uploaded via the Team tab in /admin-dashboard shows up
+   * immediately on the public site instead of being shadowed by
+   * the seeded default.
+   */
+  directImageUrl?: string
 }
 
 // Edited via the upcoming admin dashboard. Shared by the Home and About pages

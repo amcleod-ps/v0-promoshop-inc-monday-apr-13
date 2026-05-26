@@ -5,6 +5,10 @@ import {
   type ProductGroup,
   type SiteContentEntry,
 } from "./dashboard-list"
+import type { ProductRow } from "./products-tab"
+import type { TeamMemberRow } from "./team-tab"
+import type { ThemeEntry } from "./theme-tab"
+import { DEFAULT_THEME } from "@/lib/supabase/theme"
 
 export const dynamic = "force-dynamic"
 
@@ -19,7 +23,25 @@ interface ProductImageJoinedRow {
   url: string | null
   sort_order: number
   product_sku: string
+  colour_id: string | null
   products: { name: string } | { name: string }[] | null
+}
+
+interface ProductColourRow {
+  id: string
+  product_sku: string
+  name: string
+  hex: string
+  sort_order: number
+}
+
+interface ProductFullRow {
+  sku: string
+  name: string
+  category: string
+  description: string | null
+  brand_slugs: string[] | null
+  is_active: boolean
 }
 
 interface SiteContentRow {
@@ -28,10 +50,21 @@ interface SiteContentRow {
   value: string
 }
 
-// Maps each `site_content` key prefix to (a) the group it shows up under in
-// the dashboard text editor and (b) whether the field is multi-line. The
-// `key` column lives in Supabase, but this mapping is editorial / display
-// metadata, so it stays in code.
+interface SiteThemeRowRaw {
+  key: string
+  label: string
+  value: string
+}
+
+interface TeamMemberRowRaw {
+  slug: string
+  name: string
+  role: string
+  description: string | null
+  image_url: string | null
+  is_active: boolean
+}
+
 const CONTENT_KEY_RULES: Array<{
   prefix: string
   group: string
@@ -76,6 +109,15 @@ const CONTENT_GROUP_ORDER = [
   "Other",
 ]
 
+function missingTableError(err: { message?: string } | null | undefined): boolean {
+  if (!err?.message) return false
+  return (
+    err.message.includes("does not exist") ||
+    err.message.includes("schema cache") ||
+    err.message.includes("Could not find the table")
+  )
+}
+
 export default async function AdminDashboardPage() {
   let supabase
   try {
@@ -103,7 +145,11 @@ export default async function AdminDashboardPage() {
     brandsRes,
     heroSlidesRes,
     productImagesRes,
+    productsRes,
+    productColoursRes,
     siteContentRes,
+    teamRes,
+    themeRes,
   ] = await Promise.all([
     supabase
       .from("site_images")
@@ -111,47 +157,68 @@ export default async function AdminDashboardPage() {
       .order("label", { ascending: true }),
     supabase
       .from("brands")
-      .select("slug, name, description, logo_url")
+      .select("slug, name, description, logo_url, is_active")
+      .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabase
       .from("hero_slides")
-      .select("id, title, subtitle, cta_text, cta_url, image_url, sort_order")
+      .select("id, title, subtitle, cta_text, cta_url, image_url, sort_order, is_active")
+      .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabase
       .from("product_images")
-      .select(
-        "id, label, url, sort_order, product_sku, products(name)",
-      )
+      .select("id, label, url, sort_order, product_sku, colour_id, products(name)")
+      .order("product_sku", { ascending: true })
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("products")
+      .select("sku, name, category, description, brand_slugs, is_active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("product_colours")
+      .select("id, product_sku, name, hex, sort_order")
       .order("product_sku", { ascending: true })
       .order("sort_order", { ascending: true }),
     supabase
       .from("site_content")
       .select("key, label, value")
       .order("key", { ascending: true }),
+    supabase
+      .from("team_members")
+      .select("slug, name, role, description, image_url, is_active, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase.from("site_theme").select("key, label, value"),
   ])
 
-  // Filter out missing-table errors for site_content specifically — that's
-  // the expected state until migration 0004 is applied. We still want to
-  // surface other errors so the maintainer can debug them.
-  const siteContentMissing =
-    siteContentRes.error?.message?.includes("does not exist") ||
-    siteContentRes.error?.message?.includes("site_content") ||
-    false
+  const siteContentMissing = missingTableError(siteContentRes.error)
+  const teamMissing = missingTableError(teamRes.error)
+  const themeMissing = missingTableError(themeRes.error)
 
   const errors = [
     siteImagesRes.error,
     brandsRes.error,
     heroSlidesRes.error,
     productImagesRes.error,
+    productsRes.error,
+    productColoursRes.error,
     siteContentMissing ? null : siteContentRes.error,
+    teamMissing ? null : teamRes.error,
+    themeMissing ? null : themeRes.error,
   ].filter(Boolean) as Array<{ message: string }>
 
   const siteImages = siteImagesRes.data ?? []
   const brands = brandsRes.data ?? []
   const heroSlides = heroSlidesRes.data ?? []
   const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
+  const productRowsRaw = (productsRes.data as ProductFullRow[] | null) ?? []
+  const productColours = (productColoursRes.data as ProductColourRow[] | null) ?? []
   const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
+  const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
+  const themeRaw = (themeRes.data as SiteThemeRowRaw[] | null) ?? []
 
+  // ---- Images grouped by product (existing dashboard image view) ----------
   const productGroupMap = new Map<string, ProductGroup>()
   for (const img of productImages) {
     const productName = Array.isArray(img.products)
@@ -171,6 +238,51 @@ export default async function AdminDashboardPage() {
   }
   const productGroups = Array.from(productGroupMap.values())
 
+  // ---- Full products structure for the new Products tab -------------------
+  const coloursBySku = new Map<string, ProductColourRow[]>()
+  for (const c of productColours) {
+    const list = coloursBySku.get(c.product_sku) ?? []
+    list.push(c)
+    coloursBySku.set(c.product_sku, list)
+  }
+  const imagesByColour = new Map<string, ProductImageJoinedRow[]>()
+  for (const img of productImages) {
+    if (!img.colour_id) continue
+    const list = imagesByColour.get(img.colour_id) ?? []
+    list.push(img)
+    imagesByColour.set(img.colour_id, list)
+  }
+
+  const productRows: ProductRow[] = productRowsRaw.map((p) => {
+    const colours = (coloursBySku.get(p.sku) ?? [])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        hex: c.hex,
+        sort_order: c.sort_order,
+        images: (imagesByColour.get(c.id) ?? [])
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((img) => ({
+            id: img.id,
+            label: img.label,
+            url: img.url,
+            sort_order: img.sort_order,
+          })),
+      }))
+    return {
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      description: p.description,
+      brand_slugs: p.brand_slugs ?? [],
+      colours,
+    }
+  })
+
+  // ---- Site text rows for the existing Text content tab -------------------
   const siteContent: SiteContentEntry[] = siteContentRaw
     .map((row) => {
       const { group, multiline } = classifyContentKey(row.key)
@@ -189,6 +301,25 @@ export default async function AdminDashboardPage() {
       return a.key.localeCompare(b.key)
     })
 
+  const team: TeamMemberRow[] = teamRaw.map((t) => ({
+    slug: t.slug,
+    name: t.name,
+    role: t.role,
+    description: t.description,
+    image_url: t.image_url,
+  }))
+
+  const themeMap = new Map<string, SiteThemeRowRaw>()
+  for (const t of themeRaw) themeMap.set(t.key, t)
+  const theme: ThemeEntry[] = Object.entries(DEFAULT_THEME).map(([key, def]) => {
+    const row = themeMap.get(key)
+    return {
+      key,
+      label: row?.label ?? def.label,
+      value: row?.value ?? def.value,
+    }
+  })
+
   const totalImages =
     siteImages.length +
     brands.length +
@@ -196,56 +327,67 @@ export default async function AdminDashboardPage() {
     productGroups.reduce((n, g) => n + g.images.length, 0)
   const totalText = siteContent.length + heroSlides.length * 4 + brands.length * 2
 
+  const missingMigrations: string[] = []
+  if (siteContentMissing) missingMigrations.push("0004_site_content.sql")
+  if (teamMissing || themeMissing) missingMigrations.push("0005_team_and_theme.sql")
+
   return (
     <main style={pageStyles.main}>
       <h1 style={pageStyles.h1}>Image &amp; Content Dashboard</h1>
 
       <details style={pageStyles.help}>
-        <summary style={pageStyles.helpSummary}>
-          How to use this page
-        </summary>
+        <summary style={pageStyles.helpSummary}>How to use this page</summary>
         <ol style={pageStyles.helpList}>
           <li>
-            Pick a tab: <strong>Images</strong> to replace or remove pictures,
-            or <strong>Text content</strong> to edit headings, paragraphs, and
-            button labels.
+            Pick a tab: <strong>Images</strong>, <strong>Text content</strong>,{" "}
+            <strong>Products</strong>, <strong>Team</strong>, or <strong>Theme</strong>.
           </li>
           <li>
-            Use the search box to find the row you want. Search matches the
-            label, the database key, and (for text) the current value.
+            Inside each tab, expand <strong>+ Add new …</strong> to create a new
+            brand, hero slide, image slot, SKU, or team member.
           </li>
           <li>
-            On an <em>image</em> row: click <strong>Choose File</strong>, pick
-            an image, then <strong>Replace</strong>. Click <strong>Remove</strong>{" "}
-            to delete the current image — the row stays and shows the default.
+            On any item: edit fields and click <strong>Save</strong>, replace an
+            image with <strong>Replace</strong>, or click <strong>Remove</strong> /
+            <strong> Delete</strong> to hide it from the public site. Deletes are
+            soft — items can be re-activated in Supabase Table Editor.
           </li>
           <li>
-            On a <em>text</em> row: edit the value and click <strong>Save</strong>.
-            When you see <em>“Saved. Live on the site.”</em>, refresh the
-            public site to see the change.
+            In the <strong>Theme</strong> tab, pick a new colour and click
+            <strong> Save</strong>. The new value replaces the original hex
+            everywhere on the site at the next page load.
           </li>
         </ol>
         <p style={pageStyles.helpNote}>
-          Notes: maximum file size is 10 MB; JPG, PNG, WebP, GIF, and SVG all
-          work. Maximum text length is 5,000 characters per field. The
-          dashboard has no access control — anyone with the URL can edit
-          everything here, so treat the URL as the secret.
+          Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, SVG). 5,000
+          characters max per text field. The dashboard has no access control —
+          anyone with this URL can edit everything here, so treat the URL as
+          the secret.
         </p>
       </details>
 
       <p style={pageStyles.summaryLine}>
-        Managing <strong>{totalImages}</strong> images and{" "}
-        <strong>{totalText}</strong> editable text fields across the site.
+        Managing <strong>{totalImages}</strong> images,{" "}
+        <strong>{totalText}</strong> text fields,{" "}
+        <strong>{productRows.length}</strong> products, and{" "}
+        <strong>{team.length}</strong> team members.
       </p>
 
-      {siteContentMissing ? (
+      {missingMigrations.length > 0 ? (
         <div style={pageStyles.warning}>
-          <strong>Text editor migration not yet applied.</strong>
+          <strong>Migration{missingMigrations.length === 1 ? "" : "s"} not yet applied:</strong>
+          <ul style={{ margin: "8px 0 8px 24px" }}>
+            {missingMigrations.map((m) => (
+              <li key={m}>
+                <code>supabase/migrations/{m}</code>
+              </li>
+            ))}
+          </ul>
           <p>
-            The text-editing tab works once you run the latest migration. In
-            the Supabase Dashboard → SQL Editor, paste the contents of{" "}
-            <code>supabase/migrations/0004_site_content.sql</code> and click
-            Run. Refresh this page afterwards. Image editing is unaffected.
+            Apply in the Supabase Dashboard → SQL Editor. Image editing, text
+            editing, and existing tabs work without the new tables — only the
+            sections backed by the missing tables are inert until you run
+            them.
           </p>
         </div>
       ) : null}
@@ -258,11 +400,6 @@ export default async function AdminDashboardPage() {
               <li key={i}>{e.message}</li>
             ))}
           </ul>
-          <p>
-            If the database is empty, run the migrations in
-            <code> supabase/migrations/ </code> from the Supabase SQL Editor
-            (0001 → 0002 → 0003 → 0004) and refresh.
-          </p>
         </div>
       ) : null}
 
@@ -270,8 +407,8 @@ export default async function AdminDashboardPage() {
         <div style={pageStyles.error}>
           <strong>No data in any image table yet.</strong>
           <p>
-            Apply the SQL migrations in <code>supabase/migrations/</code>{" "}
-            from the Supabase SQL Editor (0001 → 0002 → 0003 → 0004) and
+            Apply the SQL migrations in <code>supabase/migrations/</code> from
+            the Supabase SQL Editor (0001 → 0002 → 0003 → 0004 → 0005) and
             refresh.
           </p>
         </div>
@@ -282,6 +419,11 @@ export default async function AdminDashboardPage() {
           heroSlides={heroSlides}
           productGroups={productGroups}
           siteContent={siteContent}
+          productRows={productRows}
+          team={team}
+          theme={theme}
+          teamTableMissing={teamMissing}
+          themeTableMissing={themeMissing}
         />
       )}
     </main>
@@ -308,23 +450,14 @@ const pageStyles: Record<string, React.CSSProperties> = {
     padding: "12px 16px",
     marginBottom: 16,
   },
-  helpSummary: {
-    cursor: "pointer",
-    fontWeight: 700,
-    fontSize: 14,
-  },
+  helpSummary: { cursor: "pointer", fontWeight: 700, fontSize: 14 },
   helpList: {
     margin: "12px 0 8px 24px",
     lineHeight: 1.55,
     color: "#333",
     fontSize: 14,
   },
-  helpNote: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#666",
-    lineHeight: 1.5,
-  },
+  helpNote: { marginTop: 8, fontSize: 13, color: "#666", lineHeight: 1.5 },
   error: {
     background: "#fff5f5",
     border: "1px solid #f3c4c4",
