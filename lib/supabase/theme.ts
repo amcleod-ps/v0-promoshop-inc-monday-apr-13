@@ -103,7 +103,6 @@ const PROPS: Array<{ tw: string; css: string }> = [
   { tw: "from", css: "--tw-gradient-from" },
   { tw: "to", css: "--tw-gradient-to" },
   { tw: "decoration", css: "text-decoration-color" },
-  { tw: "placeholder", css: "color" },
 ]
 
 /**
@@ -173,9 +172,7 @@ export function themeOverrideCss(map: SiteThemeMap): string {
         const baseClass = `${variant.twPrefix}${tw}-[${originalHex}]`
         const baseEscaped = escapeClassSelector(baseClass)
         const baseSelector = variant.buildSelector(baseEscaped)
-        // placeholder uses a ::placeholder pseudo on top of the variant.
-        const suffix = tw === "placeholder" ? "::placeholder" : ""
-        lines.push(`${baseSelector}${suffix} { ${css}: ${next} !important; }`)
+        lines.push(`${baseSelector} { ${css}: ${next} !important; }`)
 
         // Opacity modifier variants — `bg-[#ef473f]/20`, etc.
         for (const op of OPACITIES) {
@@ -183,7 +180,7 @@ export function themeOverrideCss(map: SiteThemeMap): string {
           const opEscaped = escapeClassSelector(opClass)
           const opSelector = variant.buildSelector(opEscaped)
           const blended = `color-mix(in srgb, ${next} ${op}%, transparent)`
-          lines.push(`${opSelector}${suffix} { ${css}: ${blended} !important; }`)
+          lines.push(`${opSelector} { ${css}: ${blended} !important; }`)
         }
       }
     }

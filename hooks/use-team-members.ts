@@ -27,7 +27,14 @@ export function useTeamMembers(): TeamMember[] {
       name: m.name,
       role: m.role,
       description: m.description ?? "",
+      // Set both imagePath (legacy fallback if directImageUrl is ignored
+      // anywhere) and directImageUrl (the field TeamMemberAvatar prefers,
+      // bypassing the site_images registry that still holds the seeded
+      // default photo). Without this the public site keeps showing
+      // /placeholder-user.jpg even after the admin uploads via the
+      // Team tab — `site_images['team.<slug>']` shadows the new DB url.
       imagePath: m.image_url ?? undefined,
+      directImageUrl: m.image_url ?? undefined,
     }))
   }
 
