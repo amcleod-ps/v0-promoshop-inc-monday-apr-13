@@ -8,6 +8,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useQuote } from "@/lib/quote-context"
 import { PRODUCTS } from "@/lib/products"
+import { submitQuoteRequest } from "@/app/actions/quotes"
 
 export default function MyQuotePage() {
   const { 
@@ -25,6 +26,8 @@ export default function MyQuotePage() {
   
   const [activeTab, setActiveTab] = useState<"items" | "contact" | "project">("items")
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState("")
   const [selectedColour, setSelectedColour] = useState("")
@@ -50,9 +53,52 @@ export default function MyQuotePage() {
     setShowAddProduct(false)
   }
 
-  const handleSubmitQuote = (e: React.FormEvent) => {
+  const handleSubmitQuote = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitError("")
+    setSubmitting(true)
+
+    // The quote_requests table has no structured line-item columns, so the
+    // full cart + project details are serialised into `message` (which the
+    // back office reads). Persisting line items as structured jsonb is a
+    // recommended follow-up.
+    const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0)
+    const itemLines = items.map(
+      (item) =>
+        `- ${item.productName} (SKU ${item.productSku}) — ${item.colour} / ${item.size} × ${item.quantity}`,
+    )
+    const message = [
+      projectInfo.eventName && `Event / Project: ${projectInfo.eventName}`,
+      projectInfo.eventDate && `In-hands date: ${projectInfo.eventDate}`,
+      projectInfo.budget && `Budget range: ${projectInfo.budget}`,
+      contactInfo.jobTitle && `Job title: ${contactInfo.jobTitle}`,
+      `Items (${items.length} line${items.length === 1 ? "" : "s"}, ${totalUnits} total units):`,
+      ...itemLines,
+      projectInfo.notes && `\nNotes:\n${projectInfo.notes}`,
+    ]
+      .filter(Boolean)
+      .join("\n")
+
+    const result = await submitQuoteRequest({
+      first_name: contactInfo.firstName,
+      last_name: contactInfo.lastName,
+      email: contactInfo.email,
+      phone: contactInfo.phone || undefined,
+      company: contactInfo.company || undefined,
+      quantity_range: String(totalUnits),
+      message,
+    })
+
+    setSubmitting(false)
+
+    if (result.success) {
+      clearItems()
+      setSubmitted(true)
+    } else {
+      setSubmitError(
+        result.error || "Something went wrong submitting your quote. Please try again.",
+      )
+    }
   }
 
   if (!isLoaded) {
@@ -325,10 +371,15 @@ export default function MyQuotePage() {
                 </div>
               </div>
 
+              {submitError && (
+                <div className="mb-4 p-3 bg-[#ef473f]/10 border border-[#ef473f]/30 rounded text-[#ef473f] text-sm" role="alert">
+                  {submitError}
+                </div>
+              )}
               <div className="flex gap-4">
-                <button type="button" onClick={() => setActiveTab("contact")} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors">Back</button>
-                <button type="submit" disabled={items.length === 0 || !contactInfo.firstName || !contactInfo.email || !contactInfo.company} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
-                  Submit Quote Request <ArrowRight className="w-4 h-4" />
+                <button type="button" onClick={() => setActiveTab("contact")} disabled={submitting} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors disabled:opacity-50">Back</button>
+                <button type="submit" disabled={submitting || items.length === 0 || !contactInfo.firstName || !contactInfo.email || !contactInfo.company} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? "Submitting..." : <>Submit Quote Request <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             </form>
