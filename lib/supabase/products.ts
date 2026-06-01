@@ -64,7 +64,15 @@ function busted(url: string, updatedAt: string): string {
  * client component already consumes.
  */
 export async function getAllProducts(): Promise<Product[]> {
-  const supabase = await createClient()
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch {
+    // Missing env vars or a client-init failure must not 500 /studio or
+    // /brands/[slug]. Mirror the defensive getters in data.ts and return an
+    // empty list so callers fall back to the static catalog.
+    return []
+  }
 
   const [{ data: productRows }, { data: brandRows }] = await Promise.all([
     supabase
