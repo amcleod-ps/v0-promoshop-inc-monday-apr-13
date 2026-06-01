@@ -13,9 +13,25 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
   const firstImage = firstColour?.images[0] || ""
 
   return (
-    <div 
-      className="group cursor-pointer transition-transform duration-200 hover:-translate-y-1"
+    <div
+      className="group cursor-pointer rounded transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2"
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `View details for ${product.name}` : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              // Make the card operable by keyboard / assistive tech, not just
+              // the mouse: Enter and Space activate it like a real button
+              // (Space is preventDefault-ed so it doesn't scroll the page).
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     >
       {/* Image */}
       <div className="relative aspect-[3/4] bg-[#e4e4e4] rounded overflow-hidden mb-3">
