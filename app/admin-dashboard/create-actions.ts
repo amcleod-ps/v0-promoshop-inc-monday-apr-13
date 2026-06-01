@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { validateImageUpload } from "@/lib/image-upload"
 
 const BUCKET = "site-images"
-const MAX_BYTES = 10 * 1024 * 1024
 
 interface SuccessResultBase {
   ok: true
@@ -296,27 +296,18 @@ export async function createProductImage(
 ): Promise<UploadResult> {
   if (!productSku) return { ok: false, error: "SKU is required." }
   if (!colourId) return { ok: false, error: "Colour is required." }
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Pick an image file." }
-  }
-  if (file.size > MAX_BYTES) {
-    return { ok: false, error: `Too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 10 MB.` }
-  }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: `Not an image file (got ${file.type || "unknown"}).` }
-  }
+  const validation = await validateImageUpload(formData.get("file"))
+  if (!validation.ok) return { ok: false, error: validation.error }
+  const { buffer, contentType, ext } = validation
 
   const adminResult = adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
   const safeSku = productSku.replace(/[^a-z0-9._-]/gi, "_").slice(0, 60)
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "")
   const storagePath = `product_image/${safeSku}-${Date.now()}.${ext}`
-  const buffer = await file.arrayBuffer()
   const upload = await supabase.storage.from(BUCKET).upload(storagePath, buffer, {
-    contentType: file.type,
+    contentType,
     upsert: false,
   })
   if (upload.error) return { ok: false, error: `Upload failed: ${upload.error.message}` }
@@ -545,27 +536,18 @@ export async function replaceTeamMemberImage(
   formData: FormData,
 ): Promise<UploadResult> {
   if (!slug) return { ok: false, error: "Missing slug." }
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Pick an image file." }
-  }
-  if (file.size > MAX_BYTES) {
-    return { ok: false, error: `Too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 10 MB.` }
-  }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: `Not an image file (got ${file.type || "unknown"}).` }
-  }
+  const validation = await validateImageUpload(formData.get("file"))
+  if (!validation.ok) return { ok: false, error: validation.error }
+  const { buffer, contentType, ext } = validation
 
   const adminResult = adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
   const safeSlug = slug.replace(/[^a-z0-9._-]/gi, "_").slice(0, 60)
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "")
   const storagePath = `team/${safeSlug}-${Date.now()}.${ext}`
-  const buffer = await file.arrayBuffer()
   const upload = await supabase.storage.from(BUCKET).upload(storagePath, buffer, {
-    contentType: file.type,
+    contentType,
     upsert: false,
   })
   if (upload.error) return { ok: false, error: `Upload failed: ${upload.error.message}` }
