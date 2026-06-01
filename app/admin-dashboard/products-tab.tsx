@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import {
   createProduct,
   createProductColour,
@@ -107,6 +108,7 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
   const [genders, setGenders] = useState("")
   const [sizes, setSizes] = useState("")
   const [minQty, setMinQty] = useState("1")
+  const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
     message: "",
@@ -136,8 +138,9 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
       if (result.ok) {
         setStatus({
           kind: "ok",
-          message: `Created "${result.id}". Refresh to see the new product card below, then add colours and images.`,
+          message: `Created "${result.id}" — the new product card now appears below; add colours and images to it.`,
         })
+        router.refresh()
         setSku("")
         setName("")
         setCategory("")
@@ -478,6 +481,7 @@ function ColourEditor({
 function AddColourForm({ productSku }: { productSku: string }) {
   const [name, setName] = useState("")
   const [hex, setHex] = useState("#111111")
+  const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
     message: "",
@@ -490,7 +494,8 @@ function AddColourForm({ productSku }: { productSku: string }) {
       setStatus({ kind: "idle", message: "Saving…" })
       const result = await createProductColour({ productSku, name: name.trim(), hex })
       if (result.ok) {
-        setStatus({ kind: "ok", message: `Created. Refresh to upload images for "${name.trim()}".` })
+        setStatus({ kind: "ok", message: `Added colour "${name.trim()}" — add images to it below.` })
+        router.refresh()
         setName("")
         setHex("#111111")
       } else {
@@ -563,6 +568,7 @@ function AddImageToColourForm({
     message: "",
   })
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   useEffect(() => {
     if (!file) {
@@ -584,7 +590,8 @@ function AddImageToColourForm({
     startTransition(async () => {
       const result = await createProductImage(productSku, colourId, finalLabel, fd)
       if (result.ok) {
-        setStatus({ kind: "ok", message: "Uploaded. Refresh to see it in the gallery." })
+        setStatus({ kind: "ok", message: "Uploaded — it now appears in the gallery." })
+        router.refresh()
         setFile(null)
         setLabel("")
       } else {

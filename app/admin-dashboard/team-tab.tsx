@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import {
   createTeamMember,
   replaceTeamMemberImage,
@@ -46,6 +47,7 @@ function AddTeamMemberForm() {
     message: "",
   })
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +59,8 @@ function AddTeamMemberForm() {
         description: description.trim() || undefined,
       })
       if (result.ok) {
-        setStatus({ kind: "ok", message: `Created. Refresh to see "${name.trim()}" in the list below.` })
+        setStatus({ kind: "ok", message: `Created — "${name.trim()}" now appears in the list below.` })
+        router.refresh()
         setName("")
         setRole("")
         setDescription("")
