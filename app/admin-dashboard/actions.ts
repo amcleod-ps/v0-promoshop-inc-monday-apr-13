@@ -137,10 +137,11 @@ export async function removeImage(
         dbError = e1.message
         break
       }
-      await supabase
+      const { error: e2 } = await supabase
         .from("site_images")
         .update({ url: "" })
         .eq("key", `brand.${id}.logo`)
+      if (e2) dbError = e2.message
       break
     }
     case "hero_slide": {
@@ -196,11 +197,14 @@ async function writeImageUrl(
         .update({ logo_url: url })
         .eq("slug", id)
       if (e1) return e1.message
-      await supabase
+      // Capture the override write's error too — it was previously discarded,
+      // so a failed write here returned success while the (non-empty) override
+      // kept shadowing the canonical column and the site showed the old logo.
+      const { error: e2 } = await supabase
         .from("site_images")
         .update({ url })
         .eq("key", `brand.${id}.logo`)
-      return null
+      return e2?.message ?? null
     }
     case "hero_slide": {
       const { error } = await supabase

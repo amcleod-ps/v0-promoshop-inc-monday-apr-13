@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import {
   createBrand,
   createHeroSlide,
@@ -56,6 +57,7 @@ export function AddBrandForm() {
   const [description, setDescription] = useState("")
   const [categories, setCategories] = useState("")
   const [featured, setFeatured] = useState(false)
+  const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
     message: "",
@@ -85,8 +87,9 @@ export function AddBrandForm() {
         featured,
       })
       if (result.ok) {
-        setStatus({ kind: "ok", message: `Created brand "${result.id}". Refresh to see it in the lists above.` })
+        setStatus({ kind: "ok", message: `Created brand "${result.id}" — it now appears in the lists above.` })
         reset()
+        router.refresh()
       } else {
         setStatus({ kind: "err", message: result.error })
       }
@@ -151,6 +154,7 @@ export function AddHeroSlideForm() {
   const [subtitle, setSubtitle] = useState("")
   const [ctaText, setCtaText] = useState("")
   const [ctaUrl, setCtaUrl] = useState("")
+  const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
     message: "",
@@ -170,8 +174,9 @@ export function AddHeroSlideForm() {
       if (result.ok) {
         setStatus({
           kind: "ok",
-          message: "Created. Refresh to see it in the lists above, then upload its image from the Images tab.",
+          message: "Created — it now appears in the lists above; upload its image from the Images tab.",
         })
+        router.refresh()
         setTitle("")
         setSubtitle("")
         setCtaText("")
@@ -211,6 +216,7 @@ export function AddSiteImageForm() {
   const [key, setKey] = useState("")
   const [label, setLabel] = useState("")
   const [altText, setAltText] = useState("")
+  const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
     message: "",
@@ -229,8 +235,9 @@ export function AddSiteImageForm() {
       if (result.ok) {
         setStatus({
           kind: "ok",
-          message: `Created slot "${result.id}". Refresh and upload its image from the list above.`,
+          message: `Created slot "${result.id}" — it now appears above; upload its image there.`,
         })
+        router.refresh()
         setKey("")
         setLabel("")
         setAltText("")
