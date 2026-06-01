@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { setFallbackUser } from "@/lib/auth/AuthProvider"
+import { toSafeRedirect } from "@/lib/auth/safe-redirect"
 
 export default function SignInPage() {
   return (
@@ -24,7 +25,7 @@ function SignInPageInner() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const redirectTarget = searchParams?.get("redirect") ?? "/my-quote"
+  const redirectTarget = toSafeRedirect(searchParams?.get("redirect"))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

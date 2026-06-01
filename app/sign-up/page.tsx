@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, ArrowRight, Check } from "lucide-react"
 import { setFallbackUser } from "@/lib/auth/AuthProvider"
+import { toSafeRedirect } from "@/lib/auth/safe-redirect"
 
 export default function SignUpPage() {
   return (
@@ -26,7 +27,7 @@ function SignUpPageInner() {
   const [error, setError] = useState("")
   const [agreedToTerms, setAgreedToTerms] = useState(false)
 
-  const redirectTarget = searchParams?.get("redirect") ?? "/my-quote"
+  const redirectTarget = toSafeRedirect(searchParams?.get("redirect"))
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
