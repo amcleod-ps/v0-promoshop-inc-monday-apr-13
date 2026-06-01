@@ -21,9 +21,10 @@ export default async function BrandPage({ params }: BrandPageProps) {
   }
 
   const products = await getAllProducts()
-  const brandProducts = products.filter((p) =>
-    p.brands.some((b) => b.toLowerCase() === brand.name.toLowerCase()),
-  )
+  // Match on the stable brand slug, not the display name. Renaming a brand in
+  // the admin dashboard changes a product's resolved brand *name* but not its
+  // slug, so name-matching would silently empty this grid.
+  const brandProducts = products.filter((p) => p.brandSlugs.includes(brand.slug))
 
   return (
     <div className="min-h-screen bg-[#ededed] text-[#111] font-montserrat">

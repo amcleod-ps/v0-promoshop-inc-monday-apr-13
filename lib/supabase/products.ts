@@ -11,6 +11,7 @@ export interface Product {
   name: string
   category: string
   brands: string[]
+  brandSlugs: string[]
   gender: string[]
   colours: ProductColour[]
   sizes: string[]
@@ -111,6 +112,7 @@ export async function getAllProducts(): Promise<Product[]> {
       name: p.name,
       category: p.category,
       brands: (p.brand_slugs || []).map((s) => slugToName.get(s) || s),
+      brandSlugs: p.brand_slugs || [],
       gender: p.genders || [],
       colours,
       sizes: p.sizes || [],
