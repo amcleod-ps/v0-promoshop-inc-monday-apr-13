@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { validateImageUpload } from "@/lib/image-upload"
 
 const BUCKET = "site-images"
 
@@ -25,8 +26,6 @@ interface SimpleSuccess {
   ok: true
 }
 export type SimpleResult = SimpleSuccess | ErrorResult
-
-const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
 function bumpCaches() {
   // Tell Next.js to rebuild every cached page so changes are visible
@@ -52,22 +51,14 @@ export async function replaceImage(
   id: string,
   formData: FormData,
 ): Promise<ReplaceResult> {
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Please pick a file before clicking Replace." }
-  }
-  if (file.size > MAX_BYTES) {
-    return {
-      ok: false,
-      error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${MAX_BYTES / 1024 / 1024} MB.`,
-    }
-  }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: `Not an image file (got ${file.type || "unknown"}).` }
-  }
   if (!id || typeof id !== "string") {
     return { ok: false, error: "Missing row identifier." }
   }
+  // Sniff magic bytes and allowlist raster formats — never trust the
+  // client-supplied MIME/filename. Blocks SVG/HTML stored-XSS payloads.
+  const validation = await validateImageUpload(formData.get("file"))
+  if (!validation.ok) return { ok: false, error: validation.error }
+  const { buffer, contentType, ext } = validation
 
   let supabase
   try {
@@ -80,12 +71,10 @@ export async function replaceImage(
   }
 
   const safeId = id.replace(/[^a-z0-9._-]/gi, "_").slice(0, 80)
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "")
   const storagePath = `${target}/${safeId}-${Date.now()}.${ext}`
 
-  const buffer = await file.arrayBuffer()
   const upload = await supabase.storage.from(BUCKET).upload(storagePath, buffer, {
-    contentType: file.type,
+    contentType,
     upsert: false,
   })
   if (upload.error) {
