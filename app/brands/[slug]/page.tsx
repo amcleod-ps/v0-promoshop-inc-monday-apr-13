@@ -3,8 +3,9 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { getBrandBySlug } from "@/lib/brands"
+import { getBrandBySlug, type Brand } from "@/lib/brands"
 import { getAllProducts } from "@/lib/supabase/products"
+import { getSupabaseBrandBySlug } from "@/lib/supabase/data"
 import { BrandHero } from "@/components/brand-hero"
 import { BrandProductsGrid } from "@/components/brand-products-grid"
 
@@ -14,13 +15,33 @@ interface BrandPageProps {
 
 export default async function BrandPage({ params }: BrandPageProps) {
   const { slug } = await params
-  const brand = getBrandBySlug(slug)
+
+  // Resolve the brand from the live `brands` table first so dashboard-created
+  // brands resolve here and edits (name/description/logo) show on the detail
+  // page — mirroring the /brands listing. Fall back to the compiled-in seed
+  // when Supabase is unreachable or the slug exists only in the seed.
+  const [liveBrand, products] = await Promise.all([
+    getSupabaseBrandBySlug(slug),
+    getAllProducts(),
+  ])
+
+  const brand: Brand | undefined = liveBrand
+    ? {
+        id: liveBrand.id,
+        name: liveBrand.name,
+        slug: liveBrand.slug,
+        description: liveBrand.description ?? "",
+        categories: liveBrand.categories ?? [],
+        featured: liveBrand.featured,
+        logoUrl: liveBrand.logo_url,
+        website: liveBrand.website_url,
+      }
+    : getBrandBySlug(slug)
 
   if (!brand) {
     notFound()
   }
 
-  const products = await getAllProducts()
   // Match on the stable brand slug, not the display name. Renaming a brand in
   // the admin dashboard changes a product's resolved brand *name* but not its
   // slug, so name-matching would silently empty this grid.

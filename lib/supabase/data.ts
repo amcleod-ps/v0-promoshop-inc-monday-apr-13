@@ -79,3 +79,24 @@ export async function getSupabaseBrands(): Promise<SupabaseBrand[]> {
     logo_url: bustedUrl(row.logo_url, row.updated_at),
   }))
 }
+
+// Single-brand live lookup for /brands/[slug]. Returns null (not a throw) when
+// env vars are missing, the query fails, or no active brand matches — callers
+// fall back to the static seed so a Supabase outage never 500s the route.
+export async function getSupabaseBrandBySlug(slug: string): Promise<SupabaseBrand | null> {
+  const supabase = await maybeClient()
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  return {
+    ...data,
+    logo_url: bustedUrl(data.logo_url, data.updated_at),
+  }
+}
