@@ -90,7 +90,7 @@ export async function createBrand(input: {
     sort_order,
   })
   if (error) {
-    if (error.message?.includes("duplicate")) {
+    if (error.code === "23505") {
       return { ok: false, error: `A brand with slug "${slug}" already exists.` }
     }
     return { ok: false, error: `Could not create brand: ${error.message}` }
@@ -167,7 +167,7 @@ export async function createProduct(input: {
     sort_order,
   })
   if (error) {
-    if (error.message?.includes("duplicate")) {
+    if (error.code === "23505") {
       return { ok: false, error: `A product with SKU "${sku}" already exists.` }
     }
     return { ok: false, error: `Could not create product: ${error.message}` }
@@ -228,7 +228,7 @@ export async function createProductColour(input: {
     .select("id")
     .single()
   if (error || !data) {
-    if (error?.message?.includes("duplicate")) {
+    if (error?.code === "23505") {
       return { ok: false, error: `Colour "${name}" already exists for this product.` }
     }
     return { ok: false, error: `Could not create colour: ${error?.message ?? "unknown"}` }
@@ -327,7 +327,7 @@ export async function createProductImage(
   const { error } = await supabase.from("product_images").insert({
     product_sku: productSku,
     colour_id: colourId,
-    label: label.trim() || `${productSku} image`,
+    label: (typeof label === "string" ? label.trim() : "") || `${productSku} image`,
     url,
     sort_order,
   })
@@ -420,7 +420,7 @@ export async function createSiteImage(input: {
     .from("site_images")
     .insert({ key, label, url: "", alt_text: input.altText?.trim() || null })
   if (error) {
-    if (error.message?.includes("duplicate")) {
+    if (error.code === "23505") {
       return { ok: false, error: `Image slot with key "${key}" already exists.` }
     }
     return { ok: false, error: `Could not create site image: ${error.message}` }
@@ -480,7 +480,7 @@ export async function createTeamMember(input: {
     is_active: true,
   })
   if (error) {
-    if (error.message?.includes("duplicate")) {
+    if (error.code === "23505") {
       return { ok: false, error: `A team member with slug "${slug}" already exists.` }
     }
     return { ok: false, error: `Could not create team member: ${error.message}` }
