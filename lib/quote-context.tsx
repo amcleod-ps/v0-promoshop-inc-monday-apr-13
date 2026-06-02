@@ -57,6 +57,48 @@ const defaultProjectInfo: QuoteProjectInfo = {
   notes: "",
 }
 
+// localStorage is user-writable and can hold stale data from an older schema.
+// Parse defensively so a bad value can't crash the cart (items.map /
+// items.length) or de-control the form inputs (value={undefined}).
+function parseQuoteItems(raw: string | null): QuoteItem[] {
+  if (!raw) return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null)
+      .map((it) => ({
+        id: String(it.id ?? `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`),
+        productSku: String(it.productSku ?? ""),
+        productName: String(it.productName ?? ""),
+        colour: String(it.colour ?? ""),
+        size: String(it.size ?? ""),
+        quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : 1,
+        ...(typeof it.image === "string" ? { image: it.image } : {}),
+      }))
+  } catch {
+    return []
+  }
+}
+
+// Merge a parsed object over the defaults, keeping only known string fields —
+// guarantees every field is present and a string (no uncontrolled inputs).
+function mergeStringShape<T extends object>(raw: string | null, defaults: T): T {
+  if (!raw) return defaults
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return defaults
+    const src = parsed as Record<string, unknown>
+    const out: Record<string, unknown> = { ...(defaults as Record<string, unknown>) }
+    for (const key of Object.keys(out)) {
+      if (typeof src[key] === "string") out[key] = src[key]
+    }
+    return out as T
+  } catch {
+    return defaults
+  }
+}
+
 const QuoteContext = createContext<QuoteContextType | undefined>(undefined)
 
 export function QuoteProvider({ children }: { children: ReactNode }) {
@@ -65,16 +107,12 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   const [projectInfo, setProjectInfoState] = useState<QuoteProjectInfo>(defaultProjectInfo)
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (shape-guarded — see parsers above)
   useEffect(() => {
     try {
-      const savedItems = localStorage.getItem("promoshop_quote_items")
-      const savedContact = localStorage.getItem("promoshop_quote_contact")
-      const savedProject = localStorage.getItem("promoshop_quote_project")
-
-      if (savedItems) setItems(JSON.parse(savedItems))
-      if (savedContact) setContactInfoState(JSON.parse(savedContact))
-      if (savedProject) setProjectInfoState(JSON.parse(savedProject))
+      setItems(parseQuoteItems(localStorage.getItem("promoshop_quote_items")))
+      setContactInfoState(mergeStringShape(localStorage.getItem("promoshop_quote_contact"), defaultContactInfo))
+      setProjectInfoState(mergeStringShape(localStorage.getItem("promoshop_quote_project"), defaultProjectInfo))
     } catch (e) {
       console.error("Error loading quote from localStorage:", e)
     }
