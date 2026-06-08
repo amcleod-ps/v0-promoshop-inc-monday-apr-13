@@ -325,7 +325,24 @@ export default async function AdminDashboardPage() {
     brands.length +
     heroSlides.length +
     productGroups.reduce((n, g) => n + g.images.length, 0)
-  const totalText = siteContent.length + heroSlides.length * 4 + brands.length * 2
+  const totalText =
+    siteContent.length +
+    heroSlides.reduce(
+      (n, s) =>
+        n +
+        [s.title, s.subtitle, s.cta_text, s.cta_url].filter(
+          (v) => typeof v === "string" && v.trim() !== "",
+        ).length,
+      0,
+    ) +
+    brands.reduce(
+      (n, b) =>
+        n +
+        [b.name, b.description].filter(
+          (v) => typeof v === "string" && v.trim() !== "",
+        ).length,
+      0,
+    )
 
   const missingMigrations: string[] = []
   if (siteContentMissing) missingMigrations.push("0004_site_content.sql")
@@ -359,8 +376,9 @@ export default async function AdminDashboardPage() {
           </li>
         </ol>
         <p style={pageStyles.helpNote}>
-          Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, SVG). 5,000
-          characters max per text field. The dashboard has no access control —
+          Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, AVIF; SVG
+          is blocked). 5,000 characters max per text field. The dashboard has
+          no access control —
           anyone with this URL can edit everything here, so treat the URL as
           the secret.
         </p>
