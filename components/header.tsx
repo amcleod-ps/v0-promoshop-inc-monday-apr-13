@@ -17,22 +17,11 @@ const navigation = [
   { name: "About", href: "/about" },
 ]
 
-export function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const pathname = usePathname()
-  const { locale, config, setLocale } = useLocale()
-  const { isAuthenticated } = useAuth()
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  const LocaleToggle = ({ className = "" }: { className?: string }) => (
+// Top-level (not defined inside Header) so React treats it as a stable
+// component type instead of remounting it on every Header re-render.
+function LocaleToggle({ className = "" }: { className?: string }) {
+  const { locale, setLocale } = useLocale()
+  return (
     <div className={`inline-flex items-center rounded-full border border-[#e5e5e5] p-0.5 ${className}`} role="group" aria-label="Select region">
       <button
         type="button"
@@ -60,6 +49,22 @@ export function Header() {
       </button>
     </div>
   )
+}
+
+export function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
+  const { config } = useLocale()
+  const { isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   return (
     <header className={`bg-white ${scrolled ? "shadow-md" : ""} sticky top-0 z-50 transition-all duration-300`}>

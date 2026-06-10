@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useCallback, useMemo, useState, useTransition } from "react"
 import { ImageRow } from "./image-row"
 import { TextRow } from "./text-row"
 import {
@@ -98,8 +98,11 @@ export function DashboardList({
   const [q, setQ] = useState("")
   const needle = q.trim().toLowerCase()
 
-  const match = (text: string | null | undefined) =>
-    !needle || (text ?? "").toLowerCase().includes(needle)
+  const match = useCallback(
+    (text: string | null | undefined) =>
+      !needle || (text ?? "").toLowerCase().includes(needle),
+    [needle],
+  )
 
   // ----- images -----
   const filteredSiteImages = useMemo(
@@ -107,15 +110,15 @@ export function DashboardList({
       siteImages.filter(
         (i) => match(i.label) || match(i.key) || match(i.alt_text),
       ),
-    [siteImages, needle],
+    [siteImages, match],
   )
   const filteredBrandImages = useMemo(
     () => brands.filter((b) => match(`Brand logo: ${b.name}`) || match(b.slug)),
-    [brands, needle],
+    [brands, match],
   )
   const filteredHeroSlides = useMemo(
     () => heroSlides.filter((s) => match(s.title)),
-    [heroSlides, needle],
+    [heroSlides, match],
   )
   const filteredProductGroups = useMemo(() => {
     if (!needle) return productGroups
@@ -130,7 +133,7 @@ export function DashboardList({
         }
       })
       .filter((g) => g.images.length > 0)
-  }, [productGroups, needle])
+  }, [productGroups, needle, match])
 
   const totalImagesFiltered =
     filteredSiteImages.length +
@@ -144,7 +147,7 @@ export function DashboardList({
       siteContent.filter(
         (c) => match(c.label) || match(c.key) || match(c.value),
       ),
-    [siteContent, needle],
+    [siteContent, match],
   )
   const contentByGroup = useMemo(() => {
     const groups = new Map<string, SiteContentEntry[]>()
@@ -165,11 +168,11 @@ export function DashboardList({
           match(s.cta_text) ||
           match(s.cta_url),
       ),
-    [heroSlides, needle],
+    [heroSlides, match],
   )
   const filteredBrandsText = useMemo(
     () => brands.filter((b) => match(b.name) || match(b.slug) || match(b.description)),
-    [brands, needle],
+    [brands, match],
   )
 
   const totalTextFiltered =

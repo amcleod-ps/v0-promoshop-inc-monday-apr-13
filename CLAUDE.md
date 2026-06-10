@@ -14,16 +14,20 @@ pnpm install
 pnpm dev      # dev server on :3000
 pnpm build    # production build — also the reliable type-check (tsc noEmit via Next)
 pnpm start    # serve the production build
-pnpm lint     # eslint .
+pnpm lint     # eslint . — flat config in eslint.config.mjs (next/core-web-vitals + typescript)
 
 # Regenerate supabase/migrations/0003_seed_data.sql from in-repo seed files.
 # Run after editing lib/seed-data/* or lib/cms/team.ts.
 pnpm tsx scripts/generate-seed-sql.ts
 ```
 
-There is no test framework configured. `pnpm build` is the de-facto correctness
-gate (it type-checks). The package is named `my-project` in package.json; the
-real name is PromoShop Inc.
+There is no test framework configured. `pnpm build` is the primary correctness
+gate (it type-checks); `pnpm lint` must also pass clean — run both before
+pushing. `react-hooks/set-state-in-effect` is deliberately off in
+eslint.config.mjs: the localStorage hydration pattern below and the
+dashboard's preview/re-sync effects are intentional setState-in-effect.
+The package is named `my-project` in package.json; the real name is
+PromoShop Inc.
 
 ## The one architectural idea to understand first
 
