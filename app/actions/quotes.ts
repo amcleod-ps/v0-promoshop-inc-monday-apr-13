@@ -1,6 +1,8 @@
 "use server"
 
+import { after } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { sendQuoteNotification } from "@/lib/email/quote-notification"
 import { z } from "zod"
 
 const quoteRequestSchema = z.object({
@@ -42,6 +44,10 @@ export async function submitQuoteRequest(
       console.error("Error submitting quote request:", error)
       return { success: false, error: "Failed to submit quote request. Please try again." }
     }
+
+    // Staff notification runs after the response is sent, so a slow or
+    // failing Resend call never delays or fails the visitor's submission.
+    after(() => sendQuoteNotification(validated))
 
     return { success: true }
   } catch (error) {
