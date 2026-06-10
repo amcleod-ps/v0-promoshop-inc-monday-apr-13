@@ -158,6 +158,28 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
     return () => URL.revokeObjectURL(u)
   }, [file])
 
+  // Re-sync to fresh props when the row changes underneath us (e.g. a sibling
+  // create triggers router.refresh() while this card keeps a stable key={slug}).
+  // The "saved" baselines and the shown photo always track the DB; editable
+  // fields update only when they're not mid-edit, so an in-progress change is
+  // never clobbered. File/preview upload state is deliberately left untouched.
+  const nextName = member.name
+  const nextRole = member.role
+  const nextDescription = member.description ?? ""
+  const nextImageUrl = member.image_url
+  useEffect(() => {
+    setName((current) => (current === savedName ? nextName : current))
+    setSavedName(nextName)
+    setRole((current) => (current === savedRole ? nextRole : current))
+    setSavedRole(nextRole)
+    setDescription((current) => (current === savedDescription ? nextDescription : current))
+    setSavedDescription(nextDescription)
+    setImageUrl(nextImageUrl)
+    // saved* baselines are read via functional updaters, so they don't belong
+    // in the deps; re-sync only when the incoming prop values change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextName, nextRole, nextDescription, nextImageUrl])
+
   if (removed) {
     return (
       <div style={{ ...styles.card, opacity: 0.6 }}>
