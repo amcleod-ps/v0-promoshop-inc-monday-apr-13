@@ -45,8 +45,8 @@ Content has two sources that must stay in sync:
   import these for **types** and as a **static fallback** when Supabase is
   unreachable. `/my-quote` reads the static `PRODUCTS` directly.
 - **`lib/supabase/*.ts`** fetch the **live** data. Server Components use these:
-  homepage (`getHeroSlides`, `getSupabaseBrands`), `/studio` and
-  `/brands/[slug]` (`getAllProducts`), etc.
+  homepage (`getHeroSlides`, `getSupabaseBrands`), `/studio` (`getAllProducts`),
+  `/brands/[slug]` (`getSupabaseBrandBySlug` + `getAllProducts`), etc.
 - **`scripts/generate-seed-sql.ts`** compiles the seed files + team roster into
   `0003_seed_data.sql`. **The seed files are the only hand-edited input to that
   migration — never edit `0003_seed_data.sql` by hand.** After changing seeds,
