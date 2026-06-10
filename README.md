@@ -54,6 +54,12 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role secret>
   `/admin-dashboard` page to upload files and update rows. Bypasses Row
   Level Security. Never use the `NEXT_PUBLIC_` prefix on this one.
 
+Three further **optional** variables (`RESEND_API_KEY`,
+`QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM`, all server-side only)
+enable an email notification for every quote-request submission. With them
+unset, submissions are still saved to the `quote_requests` table — no email
+is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
+
 ### Useful scripts
 
 | Command | Purpose |

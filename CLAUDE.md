@@ -135,7 +135,10 @@ personalization, not access control. Locale (`lib/locale-context.tsx`, CAN/USA
 spelling via `t(key)`) is likewise localStorage-backed and hydrates after first
 render to keep SSR markup stable. The only data that actually persists server-
 side is quote-request submissions (`app/actions/quotes.ts` → `quote_requests`,
-Zod-validated).
+Zod-validated). When the Resend env vars are set, each successful submission
+also fires a best-effort staff notification email
+(`lib/email/quote-notification.ts`, called via `after()` so it never blocks or
+fails the submission; with the vars unset it silently no-ops).
 
 ## Conventions
 
@@ -155,4 +158,7 @@ Copy `.env.example` → `.env.local`. `NEXT_PUBLIC_SUPABASE_URL` and
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required for the public site (the
 `NEXT_PUBLIC_` prefix is mandatory). `SUPABASE_SERVICE_ROLE_KEY` is server-only
 and required only for `/admin-dashboard` writes — never give it the
-`NEXT_PUBLIC_` prefix.
+`NEXT_PUBLIC_` prefix. Optional, server-only: `RESEND_API_KEY`,
+`QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM` enable quote-request
+email notifications (`docs/RESEND-EMAIL-SETUP.md` is the client-facing setup
+guide; `docs/ADMIN-LOGIN-SETUP.md` covers admin-dashboard access).
