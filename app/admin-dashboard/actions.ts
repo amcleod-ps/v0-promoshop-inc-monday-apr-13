@@ -450,8 +450,9 @@ export async function updateHeroSlideText(
 
   // Only relative paths and http(s) URLs make valid link targets; anything
   // else (javascript:, mailto typos, bare words) would render a broken or
-  // dangerous CTA button.
-  if (field === "cta_url" && stored !== null && !/^(\/|https?:\/\/)/.test(stored)) {
+  // dangerous CTA button. `(?!\/)` rejects protocol-relative `//host` URLs,
+  // which browsers treat as an external link to that host.
+  if (field === "cta_url" && stored !== null && !/^(\/(?!\/)|https?:\/\/)/.test(stored)) {
     return {
       ok: false,
       error:

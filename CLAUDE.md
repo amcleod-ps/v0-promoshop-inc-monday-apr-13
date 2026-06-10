@@ -22,7 +22,10 @@ pnpm tsx scripts/generate-seed-sql.ts
 ```
 
 There is no test framework configured. `pnpm build` is the de-facto correctness
-gate (it type-checks); `pnpm lint` must also stay green (warnings allowed).
+gate (it type-checks); `pnpm lint` must also stay green — run both before
+pushing. `react-hooks/set-state-in-effect` is deliberately off in
+eslint.config.mjs: the localStorage hydration pattern below and the
+dashboard's preview/re-sync effects are intentional setState-in-effect.
 
 ## The one architectural idea to understand first
 
@@ -48,7 +51,8 @@ Content has two sources that must stay in sync:
   the static fallback) into its client component.
 - **`lib/supabase/*.ts`** fetch the **live** data. Server Components use these:
   homepage (`getHeroSlides`, `getSupabaseBrands`), `/studio` (`getAllProducts`),
-  `/brands/[slug]` (`getSupabaseBrandBySlug` + `getAllProducts`), etc.
+  `/brands/[slug]` (`getSupabaseBrandBySlug` + `getAllProducts`), `/my-quote`
+  (`getAllProducts` for the manual add-product picker), etc.
 - **`scripts/generate-seed-sql.ts`** compiles the seed files + team roster into
   `0003_seed_data.sql`. **The seed files are the only hand-edited input to that
   migration — never edit `0003_seed_data.sql` by hand.** After changing seeds,

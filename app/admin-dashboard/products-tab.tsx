@@ -9,10 +9,13 @@ import {
   deleteProductColour,
   softDeleteProduct,
   updateProductColour,
+  updateProductList,
+  updateProductMinQty,
   updateProductText,
   updateSortOrder,
 } from "./create-actions"
 import { TextRow } from "./text-row"
+import { parseRequiredNumber } from "./parse-required-number"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 interface ProductImage {
@@ -36,6 +39,9 @@ export interface ProductRow {
   category: string
   description: string | null
   brand_slugs: string[]
+  genders: string[]
+  sizes: string[]
+  min_qty: number
   sort_order: number
   colours: ProductColour[]
 }
@@ -180,7 +186,9 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
       </summary>
       <p style={styles.helpNote}>
         Creates the product row. After it appears in the list below, expand
-        the card to add its colours and upload images.
+        the card to add its colours and upload images. Give it at least one
+        size (use “One Size” when sizes don&apos;t apply) — customers must pick a
+        size to add a product to their quote.
       </p>
       <form onSubmit={handleSubmit} style={styles.addForm}>
         <div style={styles.formRow}>
@@ -390,10 +398,45 @@ function ProductCard({ product }: { product: ProductRow }) {
         />
         <TextRow
           source="custom"
+          idLabel={`product:${product.sku}:sizes`}
+          label="Sizes (comma-separated)"
+          hint="Customers must pick a size to add a product to their quote, so keep at least one — use “One Size” when sizes don't apply."
+          currentValue={product.sizes.join(", ")}
+          onSave={(v) =>
+            updateProductList(
+              product.sku,
+              "sizes",
+              v.split(",").map((s) => s.trim()).filter(Boolean),
+            )
+          }
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:genders`}
+          label="Genders (comma-separated)"
+          hint="Drives the Men's / Women's / Unisex filter in the studio. Recognised values: Mens, Womens, Unisex."
+          currentValue={product.genders.join(", ")}
+          onSave={(v) =>
+            updateProductList(
+              product.sku,
+              "genders",
+              v.split(",").map((g) => g.trim()).filter(Boolean),
+            )
+          }
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:min_qty`}
+          label="Minimum order quantity"
+          currentValue={String(product.min_qty)}
+          onSave={(v) => updateProductMinQty(product.sku, parseRequiredNumber(v))}
+        />
+        <TextRow
+          source="custom"
           idLabel={`product:${product.sku}:sort_order`}
           label="Display order (lower shows first)"
           currentValue={String(product.sort_order)}
-          onSave={(v) => updateSortOrder("product", product.sku, Number(v.trim()))}
+          onSave={(v) => updateSortOrder("product", product.sku, parseRequiredNumber(v))}
         />
 
         <div style={styles.coloursList}>
@@ -598,7 +641,7 @@ function SortOrderInline({
     setStatus({ kind: "idle", message: "…" })
     startTransition(async () => {
       try {
-        const result = await updateSortOrder(entity, id, Number(value.trim()))
+        const result = await updateSortOrder(entity, id, parseRequiredNumber(value))
         if (result.ok) {
           setSavedValue(value.trim())
           setStatus({ kind: "ok", message: "Saved." })
