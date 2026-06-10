@@ -39,10 +39,13 @@
 }
 
 @theme inline {
-  --font-sans: 'Montserrat', sans-serif;
-  /* TODO: Add Visby CF font files - using DM Sans as fallback */
-  --font-visby: 'Visby CF', 'DM Sans', sans-serif;
-  --font-mono: 'DM Sans', monospace;
+  /* next/font registers hashed family names and exposes them through the
+     CSS variables set on <html> in app/layout.tsx — literal family names
+     like 'Montserrat' never match. Always go through the variables. */
+  --font-sans: var(--font-montserrat), sans-serif;
+  /* Visby CF is not licensed/loaded; DM Sans is the agreed substitute. */
+  --font-visby: var(--font-dm-sans), sans-serif;
+  --font-mono: ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -91,7 +94,8 @@
   animation: scroll 30s linear infinite;
 }
 
-.animate-scroll:hover {
+.animate-scroll:hover,
+.animate-scroll:focus-within {
   animation-play-state: paused;
 }
 
@@ -125,21 +129,37 @@
 
 /* Bebas Neue for headers */
 .font-bebas {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: var(--font-bebas), sans-serif;
   letter-spacing: 0.1em;
 }
 
 /* DM Sans for body */
 .font-dm-sans {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 /* Montserrat for headings and nav */
 .font-montserrat {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), sans-serif;
 }
 
-/* TODO: Add Visby CF font files - using DM Sans as fallback */
+/* Visby CF is not licensed/loaded; DM Sans is the agreed substitute. */
 .font-visby {
-  font-family: 'Visby CF', 'DM Sans', sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
+}
+
+/* WCAG 2.3.3 / 2.2.2: stop decorative motion for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll {
+    animation: none;
+  }
+  .shimmer-cta::after {
+    animation: none;
+    content: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

@@ -1,4 +1,6 @@
+import { cache } from "react"
 import { createClient } from "./server"
+import { withCacheBust } from "@/lib/cache-bust"
 
 export interface ProductColour {
   name: string
@@ -49,9 +51,14 @@ interface ProductRow {
   }> | null
 }
 
-function busted(url: string, updatedAt: string): string {
-  if (!url) return url
-  return `${url}?v=${encodeURIComponent(updatedAt)}`
+// Deactivating a brand hides its row from the anon key (RLS), so its
+// products would otherwise display the raw slug ("peter-millar") as their
+// brand label. Title-case it instead.
+function prettifySlug(slug: string): string {
+  return slug
+    .split("-")
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(" ")
 }
 
 /**
@@ -69,7 +76,9 @@ function busted(url: string, updatedAt: string): string {
  * the returned `Product.brands` array matches the shape every existing
  * client component already consumes.
  */
-export async function getAllProducts(): Promise<Product[] | null> {
+// React cache(): per-request memo only — /brands/[slug] calls this from both
+// generateMetadata and the page; freshness (force-dynamic) is untouched.
+export const getAllProducts = cache(async (): Promise<Product[] | null> => {
   let supabase
   try {
     supabase = await createClient()
@@ -108,7 +117,7 @@ export async function getAllProducts(): Promise<Product[] | null> {
         const images = (p.product_images || [])
           .filter((img) => img.colour_id === c.id)
           .sort((a, b) => a.sort_order - b.sort_order)
-          .map((img) => busted(img.url, img.updated_at))
+          .map((img) => withCacheBust(img.url, img.updated_at))
         return { name: c.name, hex: c.hex, images }
       })
 
@@ -116,7 +125,7 @@ export async function getAllProducts(): Promise<Product[] | null> {
       sku: p.sku,
       name: p.name,
       category: p.category,
-      brands: (p.brand_slugs || []).map((s) => slugToName.get(s) || s),
+      brands: (p.brand_slugs || []).map((s) => slugToName.get(s) || prettifySlug(s)),
       brandSlugs: p.brand_slugs || [],
       gender: p.genders || [],
       colours,
@@ -127,4 +136,4 @@ export async function getAllProducts(): Promise<Product[] | null> {
       decoMethods: p.deco_methods || undefined,
     }
   })
-}
+})

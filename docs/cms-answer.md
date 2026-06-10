@@ -1,3 +1,6 @@
+> **HISTORICAL DRAFT.** The admin dashboard has since shipped
+> (`/admin-dashboard`); see `README.md` for current editing workflows.
+
 # Draft reply — CMS / admin dashboard question
 
 > Abigail asked: *"Can homepage copy and 'Meet the Team' data (names, titles,

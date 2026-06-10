@@ -1,3 +1,7 @@
+> **STALE (kept for history).** Assets now live in `public/images/` and
+> Supabase Storage; the raw.githubusercontent.com pipeline described
+> below no longer exists.
+
 # Asset map — claude/update-carousel-images-L7n5N
 
 This branch stacks on top of `claude/promoshop-staging-qa-HsyTJ` (see PR #2)

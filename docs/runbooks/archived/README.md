@@ -7,4 +7,4 @@ Kept in-tree for reference on the history of:
 - `phase-1-data-layer.md` — Cosmos + Blob bootstrap. Outcome is identical to what main.bicep creates today; the runbook just used to walk each step manually.
 - `phase-2-auth.md` — Entra External ID tenant bootstrap. §2 of the production runbook.
 
-Read `../production-go-live.md` first.
+Read `./azure-production-go-live.md (ARCHIVED — wrong stack; see ../production-go-live.md for the real Vercel+Supabase checklist)` first.

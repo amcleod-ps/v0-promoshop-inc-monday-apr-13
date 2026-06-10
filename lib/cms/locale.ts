@@ -23,6 +23,8 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
   CAN: {
     label: "Canada",
     shortLabel: "CAN",
+    // Standard Canadian English keeps -ize/-ization (unlike British
+    // English) while using -our and "catalogue"/"centre".
     spelling: {
       color: "colour",
       colors: "colours",
@@ -33,11 +35,11 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
       catalog: "catalogue",
       Catalog: "Catalogue",
       center: "centre",
-      organization: "organisation",
-      Organization: "Organisation",
-      customization: "customisation",
+      organization: "organization",
+      Organization: "Organization",
+      customization: "customization",
       favorite: "favourite",
-      recognized: "recognised",
+      recognized: "recognized",
     },
     primaryContact: {
       addressLine1: "3000 Marentette Avenue",

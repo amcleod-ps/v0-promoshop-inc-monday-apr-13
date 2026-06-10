@@ -18,11 +18,17 @@ const quoteRequestSchema = z.object({
   email: z.string().trim().email("Invalid email address").max(254, "Email address is too long."),
   phone: z.string().trim().max(50, "Phone number is too long.").optional(),
   company: z.string().trim().max(200, "Company name is too long.").optional(),
-  brand_interest: z.string().trim().max(200, "Brand interest is too long.").optional(),
   quantity_range: z.string().trim().max(100, "Quantity is too long.").optional(),
-  message: z.string().trim().min(1, "Message is required").max(10_000, "Message is too long (10,000 character limit)."),
-  // Honeypot — a visually hidden "website" field real visitors never fill.
-  website: z.string().max(500).optional(),
+  // 16k keeps headroom under the 20k DB CHECK (0007): /my-quote serializes
+  // the whole cart into this field, and large carts are machine-generated —
+  // a visitor can't "shorten" them on request.
+  message: z.string().trim().min(1, "Message is required").max(16_000, "Message is too long."),
+  // Honeypot — a visually hidden field real visitors never fill. Renamed
+  // from "website": browser address-autofill matches that name and was a
+  // silent-lead-loss risk for visitors with autofill profiles. Deliberately
+  // uncapped: any value here means the submission is discarded, and a
+  // length error would surface a visible failure bots could learn from.
+  hp_check: z.string().optional(),
 })
 
 export type QuoteRequestInput = z.infer<typeof quoteRequestSchema>
@@ -38,7 +44,7 @@ export async function submitQuoteRequest(
 
     // Bots that fill the honeypot get a success response (so they don't
     // adapt) but nothing is stored or sent.
-    if (validated.website) {
+    if (validated.hp_check) {
       console.warn("quote_requests: honeypot tripped, submission discarded")
       return { success: true }
     }
@@ -54,7 +60,21 @@ export async function submitQuoteRequest(
       }
     }
 
-    const supabase = await createClient()
+    // With the Supabase env vars unset/misconfigured this throws — caught
+    // below as a generic failure for the visitor, but logged loudly first:
+    // every OTHER feature falls back silently to static content, so a
+    // misconfigured deploy looks healthy while the only server-persisted
+    // conversion flow is down.
+    let supabase
+    try {
+      supabase = await createClient()
+    } catch (e) {
+      console.error(
+        "quote_requests: Supabase client init failed — NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing or invalid. Quote submissions are NOT being stored.",
+        e,
+      )
+      return { success: false, error: "Failed to submit quote request. Please try again." }
+    }
 
     const { error } = await supabase
       .from("quote_requests")
@@ -64,7 +84,6 @@ export async function submitQuoteRequest(
         email: validated.email,
         phone: validated.phone || null,
         company: validated.company || null,
-        brand_interest: validated.brand_interest || null,
         quantity_range: validated.quantity_range || null,
         message: validated.message,
         status: "new",

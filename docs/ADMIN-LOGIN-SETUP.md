@@ -1,3 +1,10 @@
+> **UPDATE (2026-06-10): the password gate is now built in.** To turn it
+> on, set the environment variable `ADMIN_DASHBOARD_PASSWORD` in Vercel
+> (Project → Settings → Environment Variables), then redeploy. The
+> dashboard and all of its save actions will then require that password
+> (any username). No code change is needed — statements below about
+> needing a developer to add a login predate this.
+
 # Admin Login Setup — PromoShop Website
 
 *A step-by-step guide for the site owner. No technical experience needed.*

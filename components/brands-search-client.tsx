@@ -51,13 +51,14 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
       <section className="py-8 px-6 lg:px-8 bg-[#f9f9f9]">
         <div className="mx-auto max-w-7xl">
           <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#999]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#767676]" aria-hidden="true" />
             <input
               type="text"
+              aria-label="Search brands"
               placeholder="Search brands..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] pl-12 pr-4 py-3.5 rounded-lg text-sm font-visby tracking-wide outline-none placeholder:text-[#999] focus:border-[#ef473f] transition-colors shadow-sm"
+              className="w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] pl-12 pr-4 py-3.5 rounded-lg text-sm font-visby tracking-wide outline-none placeholder:text-[#767676] focus:border-[#ef473f] focus-visible:ring-2 focus-visible:ring-[#ef473f] transition-colors shadow-sm"
             />
           </div>
         </div>
@@ -68,7 +69,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
         <section className="py-12 px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             {featuredBrands.length > 0 && (
-              <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#999] mb-8">
+              <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-8">
                 Featured Brands
               </h2>
             )}
@@ -92,7 +93,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                   </h3>
 
                   {brand.categories[0] && (
-                    <p className="text-xs font-bold tracking-wider uppercase text-[#ef473f] mb-2">
+                    <p className="text-xs font-bold tracking-wider uppercase text-[#d93e36] mb-2">
                       {brand.categories[0]}
                     </p>
                   )}
@@ -103,7 +104,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-2 text-[#ef473f] text-sm font-semibold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-[#d93e36] text-sm font-semibold uppercase tracking-wider">
                     View Products
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -118,7 +119,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
       {otherBrands.length > 0 && featuredBrands.length > 0 && (
         <section className="py-12 px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#999] mb-8">
+            <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-8">
               All Brands
             </h2>
 
@@ -140,7 +141,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                     {brand.name}
                   </h3>
 
-                  <div className="flex items-center gap-2 text-[#ef473f] text-sm font-semibold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-[#d93e36] text-sm font-semibold uppercase tracking-wider">
                     View Products
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -151,12 +152,24 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
         </section>
       )}
 
-      {/* No Results */}
+      {/* No Results — "try a different search" only makes sense when the
+          visitor actually searched; an empty catalog gets honest copy. */}
       {filteredBrands.length === 0 && (
-        <section className="py-16 px-6 lg:px-8">
+        <section className="py-16 px-6 lg:px-8" aria-live="polite">
           <div className="mx-auto max-w-7xl text-center">
-            <p className="text-xl font-montserrat font-bold text-[#1a1a1a] mb-2">No Brands Found</p>
-            <p className="text-[#666] font-visby">Try a different search term.</p>
+            {brands.length === 0 ? (
+              <>
+                <p className="text-xl font-montserrat font-bold text-[#1a1a1a] mb-2">Brand Lineup Coming Soon</p>
+                <p className="text-[#666] font-visby">
+                  We&apos;re curating our brand partners. <Link href="/#contact" className="underline hover:text-[#1a1a1a]">Contact us</Link> for availability.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xl font-montserrat font-bold text-[#1a1a1a] mb-2">No Brands Found</p>
+                <p className="text-[#666] font-visby">Try a different search term.</p>
+              </>
+            )}
           </div>
         </section>
       )}
