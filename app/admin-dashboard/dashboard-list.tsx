@@ -16,10 +16,12 @@ import {
   softDeleteHeroSlide,
   deleteSiteImage,
   updateBrandCategories,
+  updateBrandFeatured,
   updateHeroSlideBgColor,
   updateSiteImageAltText,
   updateSortOrder,
 } from "./create-actions"
+import { parseRequiredNumber } from "./parse-required-number"
 
 interface SiteImageRow {
   key: string
@@ -33,6 +35,7 @@ interface BrandRow {
   description: string | null
   categories: string[] | null
   logo_url: string | null
+  featured: boolean
   sort_order: number
 }
 interface HeroSlideRow {
@@ -388,7 +391,7 @@ export function DashboardList({
                     idLabel={`hero_slide:${slide.id}:sort_order`}
                     label="Display order (lower shows first)"
                     currentValue={String(slide.sort_order)}
-                    onSave={(v) => updateSortOrder("hero_slide", slide.id, Number(v.trim()))}
+                    onSave={(v) => updateSortOrder("hero_slide", slide.id, parseRequiredNumber(v))}
                   />
                   <DeleteEntityButton
                     label={`Remove slide "${slide.title || "(untitled)"}" from the homepage`}
@@ -445,12 +448,13 @@ export function DashboardList({
                       )
                     }
                   />
+                  <BrandFeaturedToggle slug={brand.slug} initial={brand.featured} />
                   <TextRow
                     source="custom"
                     idLabel={`brand:${brand.slug}:sort_order`}
                     label="Display order (lower shows first)"
                     currentValue={String(brand.sort_order)}
-                    onSave={(v) => updateSortOrder("brand", brand.slug, Number(v.trim()))}
+                    onSave={(v) => updateSortOrder("brand", brand.slug, parseRequiredNumber(v))}
                   />
                   <DeleteEntityButton
                     label={`Remove brand "${brand.name}" from the public site`}
@@ -610,6 +614,69 @@ function DeleteEntityButton({
   )
 }
 
+function BrandFeaturedToggle({ slug, initial }: { slug: string; initial: boolean }) {
+  const [checked, setChecked] = useState(initial)
+  const [pending, start] = useTransition()
+  const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
+    kind: "idle",
+    message: "",
+  })
+
+  const handleChange = (next: boolean) => {
+    const previous = checked
+    setChecked(next)
+    setStatus({ kind: "idle", message: "Saving…" })
+    start(async () => {
+      try {
+        const result = await updateBrandFeatured(slug, next)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved. Live on the site." })
+        } else {
+          setChecked(previous)
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setChecked(previous)
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
+      }
+    })
+  }
+
+  return (
+    <div style={styles.toggleRow}>
+      <div style={{ fontWeight: 700, fontSize: 15 }}>Featured brand</div>
+      <div style={{ fontSize: 12, color: "#666" }}>
+        <code style={styles.summaryAside}>brand:{slug}:featured</code>
+        {" · "}Featured brands appear in the highlighted “Featured Brands” section
+        at the top of the brands page; the rest sit under “All Brands”.
+      </div>
+      <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => handleChange(e.target.checked)}
+          disabled={pending}
+        />
+        <span>Show in “Featured Brands”</span>
+        {status.message ? (
+          <span
+            style={{
+              fontSize: 13,
+              color:
+                status.kind === "err" ? "#b00020" : status.kind === "ok" ? "#0a7f3f" : "#444",
+            }}
+          >
+            {status.message}
+          </span>
+        ) : null}
+      </label>
+    </div>
+  )
+}
+
 function SiteImageRowWithDelete({ row }: { row: SiteImageRow }) {
   return (
     <div>
@@ -757,6 +824,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontStyle: "italic",
     padding: 24,
     textAlign: "center",
+  },
+  toggleRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    padding: 12,
+    border: "1px solid #ddd",
+    borderRadius: 6,
+    background: "#fff",
   },
   migrationGuard: {
     background: "#fffaf0",

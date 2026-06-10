@@ -10,6 +10,7 @@ import {
   updateTeamMemberText,
   type TeamMemberField,
 } from "./create-actions"
+import { parseRequiredNumber } from "./parse-required-number"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 export interface TeamMemberRow {
@@ -230,7 +231,7 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
       try {
-        const result = await updateSortOrder("team_member", member.slug, Number(value.trim()))
+        const result = await updateSortOrder("team_member", member.slug, parseRequiredNumber(value))
         if (result.ok) {
           setStatus({ kind: "ok", message: "Saved." })
           after()

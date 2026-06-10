@@ -43,10 +43,11 @@ Content has two sources that must stay in sync:
   **`lib/cms/team.ts`** are the compiled-in source of truth. `lib/brands.ts`
   and `lib/products.ts` just re-export them (plus helpers). Client components
   import these for **types** and as a **static fallback** when Supabase is
-  unreachable. `/my-quote` reads the static `PRODUCTS` directly.
+  unreachable.
 - **`lib/supabase/*.ts`** fetch the **live** data. Server Components use these:
   homepage (`getHeroSlides`, `getSupabaseBrands`), `/studio` (`getAllProducts`),
-  `/brands/[slug]` (`getSupabaseBrandBySlug` + `getAllProducts`), etc.
+  `/brands/[slug]` (`getSupabaseBrandBySlug` + `getAllProducts`), `/my-quote`
+  (`getAllProducts` for the manual add-product picker), etc.
 - **`scripts/generate-seed-sql.ts`** compiles the seed files + team roster into
   `0003_seed_data.sql`. **The seed files are the only hand-edited input to that
   migration — never edit `0003_seed_data.sql` by hand.** After changing seeds,

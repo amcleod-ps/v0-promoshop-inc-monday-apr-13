@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
+import { DEFAULT_THEME } from "@/lib/supabase/theme"
 
 const BUCKET = "site-images"
 
@@ -149,6 +150,23 @@ export async function createBrand(input: {
     return { ok: false, error: `Could not create brand: ${error.message}` }
   }
 
+  // Seeded brands each get a `brand.<slug>.lifestyle` site_images slot — the
+  // editable backdrop behind the logo on /brands/<slug>. Provision the same
+  // slot here so dashboard-created brands get the backdrop editor on the
+  // Images tab without the admin needing to know the key convention.
+  // Best-effort: the brand row is already live, so a failure here must not
+  // fail the create; ignoreDuplicates keeps any pre-existing slot (and its
+  // uploaded image) when a previously used slug is recreated.
+  await supabase.from("site_images").upsert(
+    {
+      key: `brand.${slug}.lifestyle`,
+      label: `Brand lifestyle backdrop: ${name}`,
+      url: "",
+      alt_text: `${name} lifestyle`,
+    },
+    { onConflict: "key", ignoreDuplicates: true },
+  )
+
   bumpCaches()
   return { ok: true, id: slug }
 }
@@ -200,6 +218,34 @@ export async function updateBrandCategories(
     .eq("slug", slug)
     .select("slug")
   if (error) return { ok: false, error: `Could not update categories: ${error.message}` }
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Sets whether a brand appears in the highlighted "Featured Brands" section
+ * at the top of the /brands listing (unfeatured brands sit under "All
+ * Brands" below it). Previously create-only.
+ */
+export async function updateBrandFeatured(
+  slug: string,
+  featured: boolean,
+): Promise<SimpleResult> {
+  if (!slug) return { ok: false, error: "Missing brand slug." }
+  if (typeof featured !== "boolean") {
+    return { ok: false, error: "Featured must be true or false." }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("brands")
+    .update({ featured })
+    .eq("slug", slug)
+    .select("slug")
+  if (error) return { ok: false, error: `Could not update featured flag: ${error.message}` }
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -309,6 +355,78 @@ export async function updateProductText(
   return { ok: true }
 }
 
+export type ProductListField = "genders" | "sizes"
+const PRODUCT_LIST_FIELDS: ProductListField[] = ["genders", "sizes"]
+
+/**
+ * Replaces a product's sizes or genders list. Sizes drive the quote modal's
+ * size picker — customers must pick a size, so a product with no sizes can
+ * never be added to a quote. Genders drive the studio's Men's / Women's /
+ * Unisex filter. Both were previously create-only.
+ */
+export async function updateProductList(
+  sku: string,
+  field: ProductListField,
+  values: string[],
+): Promise<SimpleResult> {
+  if (!sku) return { ok: false, error: "Missing SKU." }
+  if (!PRODUCT_LIST_FIELDS.includes(field)) {
+    return { ok: false, error: `Unknown field: ${String(field)}` }
+  }
+  if (!Array.isArray(values)) return { ok: false, error: "Value must be a list." }
+  const cleaned = values.map((v) => String(v).trim()).filter(Boolean)
+  if (cleaned.some((v) => v.length > 80)) {
+    return { ok: false, error: "Each entry must be 80 characters or fewer." }
+  }
+  if (field === "sizes" && cleaned.length === 0) {
+    return {
+      ok: false,
+      error:
+        'Products need at least one size — customers must pick one to add the product to a quote. Use "One Size" if sizes don\'t apply.',
+    }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("products")
+    .update({ [field]: cleaned })
+    .eq("sku", sku)
+    .select("sku")
+  if (error) return { ok: false, error: `Could not update ${field}: ${error.message}` }
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Updates a product's minimum order quantity (shown in the product detail
+ * modal). Previously create-only.
+ */
+export async function updateProductMinQty(
+  sku: string,
+  value: number,
+): Promise<SimpleResult> {
+  if (!sku) return { ok: false, error: "Missing SKU." }
+  if (!Number.isInteger(value) || value < 1 || value > 1000000) {
+    return { ok: false, error: "Minimum order quantity must be a whole number of at least 1." }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("products")
+    .update({ min_qty: value })
+    .eq("sku", sku)
+    .select("sku")
+  if (error) return { ok: false, error: `Could not update minimum quantity: ${error.message}` }
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
 // ===========================================================================
 // Product colour CRUD
 // ===========================================================================
@@ -413,15 +531,17 @@ export async function createProductImage(
 ): Promise<UploadResult> {
   if (!productSku) return { ok: false, error: "SKU is required." }
   if (!colourId) return { ok: false, error: "Colour is required." }
+  // Authorize BEFORE consuming the shared rate-limit budget: with the
+  // password gate enabled, unauthorized requests must not be able to
+  // exhaust the per-minute upload allowance for the real admin.
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
   const rate = checkUploadRateLimit()
   if (!rate.ok) return rate
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
-
-  const adminResult = await adminOrError()
-  if (!adminResult.ok) return adminResult
-  const { supabase } = adminResult
 
   const safeSku = productSku.replace(/[^a-z0-9._-]/gi, "_").slice(0, 60)
   const storagePath = `product_image/${safeSku}-${Date.now()}.${ext}`
@@ -466,7 +586,9 @@ export async function createHeroSlide(input: {
   const title = (input.title ?? "").trim()
   if (!title) return { ok: false, error: "Slide title is required." }
   const ctaUrl = input.ctaUrl?.trim() || null
-  if (ctaUrl !== null && !/^(\/|https?:\/\/)/.test(ctaUrl)) {
+  // `(?!\/)` rejects protocol-relative `//host` URLs, which browsers treat
+  // as an external link to that host rather than a page on this site.
+  if (ctaUrl !== null && !/^(\/(?!\/)|https?:\/\/)/.test(ctaUrl)) {
     return {
       ok: false,
       error:
@@ -760,15 +882,16 @@ export async function replaceTeamMemberImage(
   formData: FormData,
 ): Promise<UploadResult> {
   if (!slug) return { ok: false, error: "Missing slug." }
+  // Authorize BEFORE consuming the shared rate-limit budget (see
+  // createProductImage).
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
   const rate = checkUploadRateLimit()
   if (!rate.ok) return rate
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
-
-  const adminResult = await adminOrError()
-  if (!adminResult.ok) return adminResult
-  const { supabase } = adminResult
 
   // Remember the old photo so it can be pruned once the row points at the
   // new one — replaced uploads shouldn't accumulate in storage forever.
@@ -823,6 +946,12 @@ export async function updateThemeColor(
   value: string,
 ): Promise<SimpleResult> {
   if (!key) return { ok: false, error: "Missing key." }
+  // The override CSS only targets the palette keys in DEFAULT_THEME, so an
+  // upsert under any other key could never affect the site — reject it
+  // instead of writing a dead row.
+  if (!(key in DEFAULT_THEME)) {
+    return { ok: false, error: `Unknown theme colour: ${key}` }
+  }
   const hex = (value ?? "").trim()
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
     return { ok: false, error: "Hex must be in the form #rrggbb." }
@@ -838,7 +967,7 @@ export async function updateThemeColor(
     .select("label")
     .eq("key", key)
     .maybeSingle()
-  const label = (existing?.label as string | undefined) ?? key
+  const label = (existing?.label as string | undefined) ?? DEFAULT_THEME[key].label
 
   const { error } = await supabase
     .from("site_theme")

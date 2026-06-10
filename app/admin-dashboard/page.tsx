@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { adminGateEnabled } from "@/lib/admin-auth"
 import {
   DashboardList,
   type ProductGroup,
@@ -41,6 +42,9 @@ interface ProductFullRow {
   category: string
   description: string | null
   brand_slugs: string[] | null
+  genders: string[] | null
+  sizes: string[] | null
+  min_qty: number
   sort_order: number
   is_active: boolean
 }
@@ -58,6 +62,7 @@ interface BrandRowRaw {
   description: string | null
   categories: string[] | null
   logo_url: string | null
+  featured: boolean
   sort_order: number
   is_active: boolean
 }
@@ -219,7 +224,7 @@ export default async function AdminDashboardPage() {
     fetchAll((from, to) =>
       supabase
         .from("brands")
-        .select("slug, name, description, categories, logo_url, sort_order, is_active")
+        .select("slug, name, description, categories, logo_url, featured, sort_order, is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("slug", { ascending: true })
@@ -246,7 +251,7 @@ export default async function AdminDashboardPage() {
     fetchAll((from, to) =>
       supabase
         .from("products")
-        .select("sku, name, category, description, brand_slugs, sort_order, is_active")
+        .select("sku, name, category, description, brand_slugs, genders, sizes, min_qty, sort_order, is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("sku", { ascending: true })
@@ -335,9 +340,18 @@ export default async function AdminDashboardPage() {
       )
     : siteContentRaw
 
+  // Soft-deleted products keep their product_images rows (so re-activating
+  // from the Table Editor restores the gallery), but the dashboard must not
+  // offer image editors for products that no longer exist on the public
+  // site — admins read that as "I deleted it but it's still here".
+  const activeSkus = new Set(productRowsRaw.map((p) => p.sku))
+  const activeProductImages = productImages.filter((img) =>
+    activeSkus.has(img.product_sku),
+  )
+
   // ---- Images grouped by product (existing dashboard image view) ----------
   const productGroupMap = new Map<string, ProductGroup>()
-  for (const img of productImages) {
+  for (const img of activeProductImages) {
     const productName = Array.isArray(img.products)
       ? img.products[0]?.name ?? ""
       : img.products?.name ?? ""
@@ -363,7 +377,7 @@ export default async function AdminDashboardPage() {
     coloursBySku.set(c.product_sku, list)
   }
   const imagesByColour = new Map<string, ProductImageJoinedRow[]>()
-  for (const img of productImages) {
+  for (const img of activeProductImages) {
     if (!img.colour_id) continue
     const list = imagesByColour.get(img.colour_id) ?? []
     list.push(img)
@@ -395,6 +409,9 @@ export default async function AdminDashboardPage() {
       category: p.category,
       description: p.description,
       brand_slugs: p.brand_slugs ?? [],
+      genders: p.genders ?? [],
+      sizes: p.sizes ?? [],
+      min_qty: p.min_qty,
       sort_order: p.sort_order,
       colours,
     }
@@ -500,9 +517,10 @@ export default async function AdminDashboardPage() {
         </ol>
         <p style={pageStyles.helpNote}>
           Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, or AVIF —
-          SVG is blocked for security). 5,000 characters max per text field.
-          The dashboard has no access control — anyone with this URL can edit
-          everything here, so treat the URL as the secret.
+          SVG is blocked for security). 5,000 characters max per text field.{" "}
+          {adminGateEnabled()
+            ? "This dashboard is protected by the admin password (the browser sign-in prompt)."
+            : "The dashboard has no access control — anyone with this URL can edit everything here, so treat the URL as the secret."}
         </p>
       </details>
 
@@ -548,8 +566,7 @@ export default async function AdminDashboardPage() {
           <strong>No data in any image table yet.</strong>
           <p>
             Apply the SQL migrations in <code>supabase/migrations/</code> from
-            the Supabase SQL Editor (0001 → 0002 → 0003 → 0004 → 0005) and
-            refresh.
+            the Supabase SQL Editor, in order (0001 → 0007), and refresh.
           </p>
         </div>
       ) : (
