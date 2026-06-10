@@ -444,9 +444,28 @@ export default async function AdminDashboardPage() {
     brands.length +
     heroSlides.length +
     productGroups.reduce((n, g) => n + g.images.length, 0)
-  // Per-slide rows: title, subtitle, CTA text, CTA URL, bg colour, order.
-  // Per-brand rows: name, description, categories, order.
-  const totalText = siteContent.length + heroSlides.length * 6 + brands.length * 4
+  // "Managing N text fields" counts populated values, not editor slots, so
+  // the summary reflects actual content. Per slide the editable strings are
+  // title, subtitle, CTA text, CTA URL, and bg colour; per brand they are
+  // name, description, and the categories list. Display-order rows always
+  // hold a value, so each row contributes its +1 unconditionally.
+  const populated = (values: Array<string | null | undefined>) =>
+    values.filter((v) => typeof v === "string" && v.trim() !== "").length
+  const totalText =
+    siteContent.length +
+    heroSlides.reduce(
+      (n, s) =>
+        n + populated([s.title, s.subtitle, s.cta_text, s.cta_url, s.bg_color]) + 1,
+      0,
+    ) +
+    brands.reduce(
+      (n, b) =>
+        n +
+        populated([b.name, b.description]) +
+        ((b.categories?.length ?? 0) > 0 ? 1 : 0) +
+        1,
+      0,
+    )
 
   const missingMigrations: string[] = []
   if (siteContentMissing) missingMigrations.push("0004_site_content.sql")
