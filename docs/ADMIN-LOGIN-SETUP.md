@@ -17,10 +17,11 @@ on two things:
    site. It isn't linked from anywhere and search engines are told to ignore
    it — but *anyone who knows the address can edit the site*. The address IS
    your password. Treat it like one.
-2. **Three secret keys stored in Vercel** (the service that runs your
-   website). These let the dashboard talk to your database. You'll set them up
-   now, in your own accounts, so that you — not your developer — control admin
-   access from here on.
+2. **Three keys stored in Vercel** (the service that runs your website).
+   These let the website and its dashboard talk to your database — and one of
+   them, the *service_role* key, is the master secret that makes editing
+   possible. You'll set them up now, in your own accounts, so that you — not
+   your developer — control admin access from here on.
 
 ## What you need before starting
 
