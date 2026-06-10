@@ -112,9 +112,14 @@ match `hover:`/opacity variants and force elements into hover state at load.
 
 Despite README phrasing about "no admin UI", `app/admin-dashboard/` **is** a
 working CMS (image replace/remove, text editing, brand/hero/product/team create,
-theme editor). It is **intentionally unauthenticated** — the URL is the secret
+theme editor). By default it is **unauthenticated** — the URL is the secret
 (noindex-metadata'd, unlinked; deliberately NOT named in robots.txt, which would
-advertise the path). Its server actions live in `actions.ts` and
+advertise the path). An **opt-in HTTP Basic gate** exists: setting
+`ADMIN_DASHBOARD_PASSWORD` makes `proxy.ts` challenge the page and
+`requireAdminAction()` (`lib/admin-auth-action.ts`) re-verify every server
+action (actions are invocable from any route by Next-Action id, so the proxy
+matcher alone can't protect them); unset preserves the open mode. Its server
+actions live in `actions.ts` and
 `create-actions.ts`, use the admin (service-role) client, validate a 10 MB image
 cap, and call `revalidatePath("/", "layout")` to push changes live.
 
@@ -136,7 +141,9 @@ personalization, not access control. Locale (`lib/locale-context.tsx`, CAN/USA
 spelling via `t(key)`) is likewise localStorage-backed and hydrates after first
 render to keep SSR markup stable. The only data that actually persists server-
 side is quote-request submissions (`app/actions/quotes.ts` → `quote_requests`,
-Zod-validated). When the Resend env vars are set, each successful submission
+Zod-validated with per-field length caps, a hidden honeypot field both public
+forms send, and a per-IP in-memory rate limit — migration 0007's CHECK
+constraints backstop direct PostgREST inserts). When the Resend env vars are set, each successful submission
 also fires a best-effort staff notification email
 (`lib/email/quote-notification.ts`, called via `after()` so it never blocks or
 fails the submission; with the vars unset it silently no-ops).
@@ -150,10 +157,12 @@ fails the submission; with the vars unset it silently no-ops).
 - `next/image` runs with `unoptimized: true` globally; new external image hosts
   must be added to `images.remotePatterns` in `next.config.mjs`.
 - Migrations in `supabase/migrations/` are applied **in order, by hand** via the
-  Supabase SQL Editor (0001 → 0006). There are six (README mentions three);
-  0004 adds `site_content`, 0005 adds `team_members` + `site_theme`, 0006 adds
-  the `assign_sort_order` insert triggers the dashboard's create actions rely
-  on for race-free ordering (they fall back to read-max+1 without it).
+  Supabase SQL Editor (0001 → 0007). There are seven; 0004 adds `site_content`,
+  0005 adds `team_members` + `site_theme`, 0006 adds the `assign_sort_order`
+  insert triggers the dashboard's create actions rely on for race-free
+  ordering (they fall back to read-max+1 without it), and 0007 adds
+  `quote_requests` CHECK length constraints backstopping direct PostgREST
+  inserts.
 
 ## Environment
 
@@ -161,7 +170,8 @@ Copy `.env.example` → `.env.local`. `NEXT_PUBLIC_SUPABASE_URL` and
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required for the public site (the
 `NEXT_PUBLIC_` prefix is mandatory). `SUPABASE_SERVICE_ROLE_KEY` is server-only
 and required only for `/admin-dashboard` writes — never give it the
-`NEXT_PUBLIC_` prefix. Optional, server-only: `RESEND_API_KEY`,
+`NEXT_PUBLIC_` prefix. Optional, server-only: `ADMIN_DASHBOARD_PASSWORD`
+enables the admin-dashboard Basic-auth gate (unset = open); `RESEND_API_KEY`,
 `QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM` enable quote-request
 email notifications (`docs/RESEND-EMAIL-SETUP.md` is the client-facing setup
 guide; `docs/ADMIN-LOGIN-SETUP.md` covers admin-dashboard access).

@@ -74,7 +74,7 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 
 ## Supabase setup
 
-Three migrations live in `supabase/migrations/`. Run them in order from
+Seven migrations live in `supabase/migrations/`. Run them in order from
 the Supabase Dashboard → SQL Editor → New query:
 
 1. `0001_init.sql` — base tables: `brands`, `hero_slides`, `quote_requests`
@@ -85,9 +85,18 @@ the Supabase Dashboard → SQL Editor → New query:
    bucket.
 3. `0003_seed_data.sql` — populates every table with current default
    content so the site renders the same imagery and product catalog
-   it always has. Idempotent (`ON CONFLICT DO UPDATE`), safe to re-run.
+   it always has. Idempotent and admin-safe: every insert is keyed, so
+   re-running refreshes seed defaults without duplicating rows or
+   deleting admin-added content.
+4. `0004_site_content.sql` — keyed editable text (`site_content`).
+5. `0005_team_and_theme.sql` — team roster (`team_members`) and the
+   editable colour palette (`site_theme`).
+6. `0006_sort_order_triggers.sql` — `BEFORE INSERT` triggers that assign
+   `sort_order` atomically for dashboard-created rows.
+7. `0007_quote_request_hardening.sql` — `CHECK` length constraints on
+   `quote_requests` as a backstop for direct PostgREST inserts.
 
-After running all three, the dashboard's Table Editor shows:
+After running all seven, the dashboard's Table Editor shows:
 
 | Table | Rows | What it controls |
 | --- | --- | --- |
