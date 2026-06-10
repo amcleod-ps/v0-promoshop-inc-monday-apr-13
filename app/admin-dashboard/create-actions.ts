@@ -432,7 +432,9 @@ export async function createProductImage(
     {
       product_sku: productSku,
       colour_id: colourId,
-      label: label.trim() || `${productSku} image`,
+      // typeof guard: `label` crosses the server-action boundary untyped at
+      // runtime, so a non-string would otherwise throw on .trim().
+      label: (typeof label === "string" && label.trim()) || `${productSku} image`,
       url,
     },
     { scopeColumn: "colour_id" },
