@@ -11,7 +11,15 @@ import {
 import { ProductsTab, type ProductRow } from "./products-tab"
 import { TeamTab, type TeamMemberRow } from "./team-tab"
 import { ThemeTab, type ThemeEntry } from "./theme-tab"
-import { softDeleteBrand, softDeleteHeroSlide, deleteSiteImage } from "./create-actions"
+import {
+  softDeleteBrand,
+  softDeleteHeroSlide,
+  deleteSiteImage,
+  updateBrandCategories,
+  updateHeroSlideBgColor,
+  updateSiteImageAltText,
+  updateSortOrder,
+} from "./create-actions"
 
 interface SiteImageRow {
   key: string
@@ -23,7 +31,9 @@ interface BrandRow {
   slug: string
   name: string
   description: string | null
+  categories: string[] | null
   logo_url: string | null
+  sort_order: number
 }
 interface HeroSlideRow {
   id: string
@@ -32,6 +42,8 @@ interface HeroSlideRow {
   cta_text: string | null
   cta_url: string | null
   image_url: string | null
+  bg_color: string | null
+  sort_order: number
 }
 interface ProductImageRow {
   id: string
@@ -159,8 +171,8 @@ export function DashboardList({
 
   const totalTextFiltered =
     filteredContent.length +
-    filteredHeroSlidesText.length * 4 +
-    filteredBrandsText.length * 2
+    filteredHeroSlidesText.length * 6 +
+    filteredBrandsText.length * 4
 
   const showSearch = tab === "images" || tab === "text"
   const matchCountForTab =
@@ -207,7 +219,7 @@ export function DashboardList({
         <>
           <Section
             title={`Site images${needle ? ` (${filteredSiteImages.length})` : ` (${siteImages.length})`}`}
-            description="Site logo, About-page hero, team photos, and brand lifestyle backdrops."
+            description="Site logo, About-page hero, and brand lifestyle backdrops. Brand logos live in the next section (so both stores stay in sync) and team photos are edited on the Team tab."
             hidden={!!needle && filteredSiteImages.length === 0}
           >
             {!needle ? <AddSiteImageForm /> : null}
@@ -318,7 +330,7 @@ export function DashboardList({
 
           <Section
             title={`Hero slides${needle ? ` (${filteredHeroSlidesText.length})` : ` (${heroSlides.length})`}`}
-            description="Editable text for every slide in the homepage slideshow. Leave subtitle, CTA label, and CTA URL blank to hide the button on that slide."
+            description="Editable text for every slide in the homepage slideshow. The subtitle and CTA button render as an overlay on the slide; leave subtitle, CTA label, and CTA URL blank for a clean image-only slide."
             hidden={!!needle && filteredHeroSlidesText.length === 0}
           >
             {!needle ? <AddHeroSlideForm /> : null}
@@ -337,13 +349,14 @@ export function DashboardList({
                     slideId={slide.id}
                     field="title"
                     label="Slide title"
+                    hint="Used as the image's alt text and as this list's label — not displayed on the slide."
                     currentValue={slide.title}
                   />
                   <TextRow
                     source="hero_slide"
                     slideId={slide.id}
                     field="subtitle"
-                    label="Slide subtitle"
+                    label="Slide subtitle (shown on the slide)"
                     currentValue={slide.subtitle ?? ""}
                     multiline
                   />
@@ -359,7 +372,23 @@ export function DashboardList({
                     slideId={slide.id}
                     field="cta_url"
                     label="CTA destination URL"
+                    hint="Must start with / (page on this site) or http(s):// (external link)."
                     currentValue={slide.cta_url ?? ""}
+                  />
+                  <TextRow
+                    source="custom"
+                    idLabel={`hero_slide:${slide.id}:bg_color`}
+                    label="Background colour (hex like #ef473f; blank for none)"
+                    hint="Shows behind/instead of the image. Slides with neither an image nor a background colour are skipped by the slideshow."
+                    currentValue={slide.bg_color ?? ""}
+                    onSave={(v) => updateHeroSlideBgColor(slide.id, v)}
+                  />
+                  <TextRow
+                    source="custom"
+                    idLabel={`hero_slide:${slide.id}:sort_order`}
+                    label="Display order (lower shows first)"
+                    currentValue={String(slide.sort_order)}
+                    onSave={(v) => updateSortOrder("hero_slide", slide.id, Number(v.trim()))}
                   />
                   <DeleteEntityButton
                     label={`Remove slide "${slide.title || "(untitled)"}" from the homepage`}
@@ -402,6 +431,26 @@ export function DashboardList({
                     label="Brand description"
                     currentValue={brand.description ?? ""}
                     multiline
+                  />
+                  <TextRow
+                    source="custom"
+                    idLabel={`brand:${brand.slug}:categories`}
+                    label="Categories (comma-separated)"
+                    hint="Shown as tags on the brands listing and the brand page."
+                    currentValue={(brand.categories ?? []).join(", ")}
+                    onSave={(v) =>
+                      updateBrandCategories(
+                        brand.slug,
+                        v.split(",").map((c) => c.trim()).filter(Boolean),
+                      )
+                    }
+                  />
+                  <TextRow
+                    source="custom"
+                    idLabel={`brand:${brand.slug}:sort_order`}
+                    label="Display order (lower shows first)"
+                    currentValue={String(brand.sort_order)}
+                    onSave={(v) => updateSortOrder("brand", brand.slug, Number(v.trim()))}
                   />
                   <DeleteEntityButton
                     label={`Remove brand "${brand.name}" from the public site`}
@@ -512,11 +561,18 @@ function DeleteEntityButton({
     if (typeof window !== "undefined" && !window.confirm(confirmMessage)) return
     setStatus({ kind: "idle", message: "Removing…" })
     start(async () => {
-      const result = await onDelete()
-      if (result.ok) {
-        setRemoved(true)
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await onDelete()
+        if (result.ok) {
+          setRemoved(true)
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -564,7 +620,16 @@ function SiteImageRowWithDelete({ row }: { row: SiteImageRow }) {
         currentUrl={row.url}
         hint={row.alt_text}
       />
-      <div style={{ marginTop: -4, marginBottom: 4, marginLeft: 12 }}>
+      <div style={{ marginTop: 4, marginBottom: 4, marginLeft: 12 }}>
+        <TextRow
+          source="custom"
+          idLabel={`site_images:${row.key}:alt_text`}
+          label="Alt text (read by screen readers wherever this image appears)"
+          currentValue={row.alt_text ?? ""}
+          onSave={(v) => updateSiteImageAltText(row.key, v)}
+        />
+      </div>
+      <div style={{ marginTop: 4, marginBottom: 4, marginLeft: 12 }}>
         <DeleteEntityButton
           label="Delete this image slot"
           confirmMessage={`Delete the "${row.label}" image slot? Code that references the key "${row.key}" will fall back to its hard-coded default image.`}

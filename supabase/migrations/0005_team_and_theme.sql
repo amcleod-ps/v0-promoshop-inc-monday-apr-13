@@ -73,10 +73,9 @@ values
    '/placeholder-user.jpg',
    3)
 on conflict (slug) do update set
-  -- Refresh role/description labels on re-run but do NOT overwrite the
-  -- name in case the admin has already personalised it.
-  role = excluded.role,
-  description = excluded.description,
+  -- Only refresh ordering on re-run. Name, role, and description are all
+  -- admin-editable from the dashboard, so overwriting any of them here
+  -- would silently revert the admin's edits.
   sort_order = excluded.sort_order;
 
 -- ---------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 import "server-only"
 
+import { MAX_IMAGE_BYTES } from "./upload-limits"
+
 /**
  * Hardened validation for admin image uploads.
  *
@@ -12,7 +14,7 @@ import "server-only"
  * never from the upload's `type`/`name`.
  */
 
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10 MB
+export { MAX_IMAGE_BYTES }
 
 // Sniffed MIME type -> safe file extension used for the stored object.
 const RASTER_TYPES = {

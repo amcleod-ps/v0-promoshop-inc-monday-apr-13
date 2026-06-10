@@ -9,7 +9,11 @@ import {
   deleteProductColour,
   softDeleteProduct,
   updateProductColour,
+  updateProductText,
+  updateSortOrder,
 } from "./create-actions"
+import { TextRow } from "./text-row"
+import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 interface ProductImage {
   id: string
@@ -32,6 +36,7 @@ export interface ProductRow {
   category: string
   description: string | null
   brand_slugs: string[]
+  sort_order: number
   colours: ProductColour[]
 }
 
@@ -104,7 +109,7 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
   const [description, setDescription] = useState("")
-  const [brandSlug, setBrandSlug] = useState("")
+  const [brandSlugs, setBrandSlugs] = useState<string[]>([])
   const [genders, setGenders] = useState("")
   const [sizes, setSizes] = useState("")
   const [minQty, setMinQty] = useState("1")
@@ -115,42 +120,55 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
   })
   const [isPending, startTransition] = useTransition()
 
+  const toggleBrand = (slug: string) => {
+    setBrandSlugs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    )
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createProduct({
-        sku: sku.trim(),
-        name: name.trim(),
-        category: category.trim(),
-        description: description.trim() || undefined,
-        brandSlugs: brandSlug ? [brandSlug] : [],
-        genders: genders
-          .split(",")
-          .map((g) => g.trim())
-          .filter(Boolean),
-        sizes: sizes
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        minQty: Number(minQty) || 1,
-      })
-      if (result.ok) {
-        setStatus({
-          kind: "ok",
-          message: `Created "${result.id}" — the new product card now appears below; add colours and images to it.`,
+      try {
+        const result = await createProduct({
+          sku: sku.trim(),
+          name: name.trim(),
+          category: category.trim(),
+          description: description.trim() || undefined,
+          brandSlugs,
+          genders: genders
+            .split(",")
+            .map((g) => g.trim())
+            .filter(Boolean),
+          sizes: sizes
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          minQty: Number(minQty) || 1,
         })
-        router.refresh()
-        setSku("")
-        setName("")
-        setCategory("")
-        setDescription("")
-        setBrandSlug("")
-        setGenders("")
-        setSizes("")
-        setMinQty("1")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+        if (result.ok) {
+          setStatus({
+            kind: "ok",
+            message: `Created "${result.id}" — the new product card now appears below; add colours and images to it.`,
+          })
+          router.refresh()
+          setSku("")
+          setName("")
+          setCategory("")
+          setDescription("")
+          setBrandSlugs([])
+          setGenders("")
+          setSizes("")
+          setMinQty("1")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -207,21 +225,28 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
           />
         </Field>
         <div style={styles.formRow}>
-          <Field label="Brand">
-            <select
-              value={brandSlug}
-              onChange={(e) => setBrandSlug(e.target.value)}
-              disabled={isPending || brands.length === 0}
-              style={styles.input}
-            >
-              <option value="">— None —</option>
-              {brands.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {/* div-based field (not <Field>, which renders a <label>) so the
+              per-checkbox labels aren't nested inside another label. */}
+          <div style={styles.fieldWrap}>
+            <span style={styles.fieldLabel}>Brands (select all that apply)</span>
+            <div style={styles.brandChecklist}>
+              {brands.length === 0 ? (
+                <span style={{ fontSize: 13, color: "#888" }}>No brands yet.</span>
+              ) : (
+                brands.map((b) => (
+                  <label key={b.slug} style={styles.brandCheckItem}>
+                    <input
+                      type="checkbox"
+                      checked={brandSlugs.includes(b.slug)}
+                      onChange={() => toggleBrand(b.slug)}
+                      disabled={isPending}
+                    />
+                    <span>{b.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
           <Field label="Minimum order qty">
             <input
               type="number"
@@ -306,11 +331,18 @@ function ProductCard({ product }: { product: ProductRow }) {
     }
     setStatus({ kind: "idle", message: "Removing…" })
     startTransition(async () => {
-      const result = await softDeleteProduct(product.sku)
-      if (result.ok) {
-        setRemoved(true)
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await softDeleteProduct(product.sku)
+        if (result.ok) {
+          setRemoved(true)
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -333,6 +365,36 @@ function ProductCard({ product }: { product: ProductRow }) {
             <span style={{ ...styles.status, color: "#b00020" }}>{status.message}</span>
           ) : null}
         </div>
+
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:name`}
+          label="Product name"
+          currentValue={product.name}
+          onSave={(v) => updateProductText(product.sku, "name", v)}
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:category`}
+          label="Category"
+          currentValue={product.category}
+          onSave={(v) => updateProductText(product.sku, "category", v)}
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:description`}
+          label="Description"
+          currentValue={product.description ?? ""}
+          multiline
+          onSave={(v) => updateProductText(product.sku, "description", v)}
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:sort_order`}
+          label="Display order (lower shows first)"
+          currentValue={String(product.sort_order)}
+          onSave={(v) => updateSortOrder("product", product.sku, Number(v.trim()))}
+        />
 
         <div style={styles.coloursList}>
           {product.colours.map((c) => (
@@ -370,13 +432,20 @@ function ColourEditor({
   const handleSave = () => {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
-      const result = await updateProductColour({ id: colour.id, name, hex })
-      if (result.ok) {
-        setSavedName(name)
-        setSavedHex(hex)
-        setStatus({ kind: "ok", message: "Saved." })
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await updateProductColour({ id: colour.id, name, hex })
+        if (result.ok) {
+          setSavedName(name)
+          setSavedHex(hex)
+          setStatus({ kind: "ok", message: "Saved." })
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -387,11 +456,18 @@ function ColourEditor({
     }
     setStatus({ kind: "idle", message: "Removing…" })
     startTransition(async () => {
-      const result = await deleteProductColour(colour.id)
-      if (result.ok) {
-        setRemoved(true)
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await deleteProductColour(colour.id)
+        if (result.ok) {
+          setRemoved(true)
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -459,6 +535,13 @@ function ColourEditor({
         ) : null}
       </div>
 
+      <SortOrderInline
+        label="Colour order"
+        entity="product_colour"
+        id={colour.id}
+        current={colour.sort_order}
+      />
+
       <div style={styles.imagesGrid}>
         {colour.images.map((img) => (
           <div key={img.id} style={styles.imageTile}>
@@ -469,11 +552,100 @@ function ColourEditor({
               <div style={styles.imageEmpty}>—</div>
             )}
             <div style={styles.imageLabel}>{img.label}</div>
+            <SortOrderInline
+              label="Order"
+              entity="product_image"
+              id={img.id}
+              current={img.sort_order}
+              compact
+            />
           </div>
         ))}
       </div>
 
       <AddImageToColourForm productSku={productSku} colourId={colour.id} colourName={savedName} />
+    </div>
+  )
+}
+
+/**
+ * Compact sort_order editor used inside colour cards and image tiles, where
+ * a full TextRow would dominate the layout.
+ */
+function SortOrderInline({
+  label,
+  entity,
+  id,
+  current,
+  compact,
+}: {
+  label: string
+  entity: "product_colour" | "product_image"
+  id: string
+  current: number
+  compact?: boolean
+}) {
+  const [value, setValue] = useState(String(current))
+  const [savedValue, setSavedValue] = useState(String(current))
+  const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
+    kind: "idle",
+    message: "",
+  })
+  const [isPending, startTransition] = useTransition()
+  const dirty = value.trim() !== savedValue
+
+  const handleSave = () => {
+    setStatus({ kind: "idle", message: "…" })
+    startTransition(async () => {
+      try {
+        const result = await updateSortOrder(entity, id, Number(value.trim()))
+        if (result.ok) {
+          setSavedValue(value.trim())
+          setStatus({ kind: "ok", message: "Saved." })
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
+      }
+    })
+  }
+
+  return (
+    <div style={compact ? styles.sortInlineCompact : styles.sortInline}>
+      <span style={styles.sortInlineLabel}>{label}</span>
+      <input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value)
+          if (status.message) setStatus({ kind: "idle", message: "" })
+        }}
+        disabled={isPending}
+        style={styles.sortInlineInput}
+      />
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={!dirty || isPending}
+        style={{ ...styles.button, padding: "4px 10px", fontSize: 12 }}
+      >
+        Save
+      </button>
+      {status.message ? (
+        <span
+          style={{
+            fontSize: 11,
+            color: status.kind === "err" ? "#b00020" : status.kind === "ok" ? "#0a7f3f" : "#444",
+          }}
+        >
+          {status.message}
+        </span>
+      ) : null}
     </div>
   )
 }
@@ -492,14 +664,21 @@ function AddColourForm({ productSku }: { productSku: string }) {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createProductColour({ productSku, name: name.trim(), hex })
-      if (result.ok) {
-        setStatus({ kind: "ok", message: `Added colour "${name.trim()}" — add images to it below.` })
-        router.refresh()
-        setName("")
-        setHex("#111111")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await createProductColour({ productSku, name: name.trim(), hex })
+        if (result.ok) {
+          setStatus({ kind: "ok", message: `Added colour "${name.trim()}" — add images to it below.` })
+          router.refresh()
+          setName("")
+          setHex("#111111")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -583,19 +762,35 @@ function AddImageToColourForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
+    // Pre-check the 10 MB cap client-side: a larger body is rejected by the
+    // Server Action transport before our friendly server-side message runs.
+    if (file.size > MAX_IMAGE_BYTES) {
+      setStatus({
+        kind: "err",
+        message: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`,
+      })
+      return
+    }
     setStatus({ kind: "idle", message: "Uploading…" })
     const fd = new FormData()
     fd.append("file", file)
     const finalLabel = label.trim() || `${productSku} — ${colourName} — new image`
     startTransition(async () => {
-      const result = await createProductImage(productSku, colourId, finalLabel, fd)
-      if (result.ok) {
-        setStatus({ kind: "ok", message: "Uploaded — it now appears in the gallery." })
-        router.refresh()
-        setFile(null)
-        setLabel("")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await createProductImage(productSku, colourId, finalLabel, fd)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Uploaded — it now appears in the gallery." })
+          router.refresh()
+          setFile(null)
+          setLabel("")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Upload failed. Check your connection and try again.",
+        })
       }
     })
   }
@@ -819,4 +1014,44 @@ const styles: Record<string, React.CSSProperties> = {
   actionsRow: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
   status: { fontSize: 13 },
   removedNote: { color: "#0a7f3f", fontWeight: 600, margin: 0 },
+  brandChecklist: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px 14px",
+    padding: "8px 10px",
+    border: "1px solid #ccc",
+    borderRadius: 4,
+    background: "#fff",
+    maxHeight: 140,
+    overflowY: "auto",
+  },
+  brandCheckItem: {
+    display: "flex",
+    gap: 5,
+    alignItems: "center",
+    fontSize: 13,
+    whiteSpace: "nowrap",
+  },
+  sortInline: {
+    display: "flex",
+    gap: 6,
+    alignItems: "center",
+    marginBottom: 10,
+    fontSize: 12,
+  },
+  sortInlineCompact: {
+    display: "flex",
+    gap: 4,
+    alignItems: "center",
+    marginTop: 4,
+    fontSize: 11,
+  },
+  sortInlineLabel: { color: "#666", fontWeight: 600 },
+  sortInlineInput: {
+    width: 64,
+    padding: "4px 6px",
+    fontSize: 12,
+    border: "1px solid #ccc",
+    borderRadius: 4,
+  },
 }

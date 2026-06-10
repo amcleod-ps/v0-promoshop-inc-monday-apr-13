@@ -21,6 +21,9 @@ export function Footer() {
     "footer.ada",
     "We understand the importance of accessibility for all visitors to our website and it is something we take seriously. We are working on bringing this website in-line with WCAG 2.1 A, AA standards to ensure we provide an experience that is accessible to all. Your patience is appreciated as we work through these changes.",
   )
+  // Same CMS key as ContactSection so an admin email edit updates both
+  // places instead of leaving the footer stale.
+  const contactEmail = useSiteText("contact.section.email", "info@promoshopinc.com")
 
   const socialLinks = [
     { name: "Instagram", icon: Instagram, href: "#" },
@@ -159,8 +162,8 @@ export function Footer() {
                 </li>
               ))}
               <li className="text-sm text-[#555] pt-2">
-                <a href="mailto:info@promoshopinc.com" className="hover:text-[#ef473f] transition-colors">
-                  info@promoshopinc.com
+                <a href={`mailto:${contactEmail}`} className="hover:text-[#ef473f] transition-colors">
+                  {contactEmail}
                 </a>
               </li>
             </ul>

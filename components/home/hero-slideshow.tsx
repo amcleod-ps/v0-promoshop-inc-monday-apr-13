@@ -28,13 +28,16 @@ function Slide({
   active: boolean
   slideIndex: number
 }) {
-  // Only render the image when the admin has set a custom override —
-  // defaults stay blank to preserve the intentional "no background image"
-  // hero design. The Admin panel still lists these slots so they can be
-  // turned back on at any time.
+  // Position-keyed override slot. The `home.slideshow.<n>` keys are NOT
+  // seeded, so by default this resolves to nothing and the slide's own
+  // image_url (slide.src) renders. It only kicks in if an admin manually
+  // creates a slot with that exact key via "Add new site image slot" on the
+  // dashboard — normally slide images are managed per-slide in the Hero
+  // slides section instead.
   const overrideSrc = useImageSrc(`home.slideshow.${slideIndex}`, "")
   const src = overrideSrc || slide.src
-  
+  const showCta = !!(slide.cta_text && slide.cta_url)
+
   return (
     <div
       className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -47,6 +50,29 @@ function Slide({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={slide.alt} className="w-full h-full object-cover" />
       ) : null}
+
+      {/* Per-slide subtitle + CTA, edited from /admin-dashboard. The title
+          is intentionally not displayed: it serves as the slide's alt text
+          and its label in the dashboard. Both elements are optional and the
+          overlay only renders when at least one is set, so the seeded
+          image-only slides keep their clean, uncaptioned look. */}
+      {(slide.subtitle || showCta) && (
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-3 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-6 pb-12 pt-16 lg:px-8">
+          {slide.subtitle ? (
+            <p className="max-w-md text-lg font-semibold leading-snug text-white drop-shadow lg:text-xl">
+              {slide.subtitle}
+            </p>
+          ) : null}
+          {showCta ? (
+            <a
+              href={slide.cta_url!}
+              className="inline-flex items-center gap-2 rounded-full bg-[#ef473f] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#d93e36]"
+            >
+              {slide.cta_text}
+            </a>
+          ) : null}
+        </div>
+      )}
     </div>
   )
 }

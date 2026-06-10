@@ -31,30 +31,37 @@ export function ContactSection() {
     setError("")
     setSubmitting(true)
 
-    const result = await submitQuoteRequest({
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      email: formData.email,
-      phone: formData.phone || undefined,
-      company: formData.company || undefined,
-      message: formData.message,
-    })
-
-    setSubmitting(false)
-
-    if (result.success) {
-      setSubmitted(true)
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        company: "",
-        message: ""
+    // try/catch/finally so a network failure or server error surfaces a
+    // message and re-enables the button instead of leaving it stuck on
+    // "Sending..." forever.
+    try {
+      const result = await submitQuoteRequest({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        company: formData.company || undefined,
+        message: formData.message,
       })
-      setTimeout(() => setSubmitted(false), 5000)
-    } else {
-      setError(result.error || "An error occurred. Please try again.")
+
+      if (result.success) {
+        setSubmitted(true)
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          company: "",
+          message: ""
+        })
+        setTimeout(() => setSubmitted(false), 5000)
+      } else {
+        setError(result.error || "An error occurred. Please try again.")
+      }
+    } catch {
+      setError("Something went wrong sending your message. Check your connection and try again.")
+    } finally {
+      setSubmitting(false)
     }
   }
 

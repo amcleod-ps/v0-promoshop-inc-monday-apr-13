@@ -3,6 +3,27 @@
 // invokes `eslint .` directly via the npm-script in package.json, so there's
 // nothing to gate here. The previous `eslint: { ignoreDuringBuilds: true }`
 // block fired a deprecation warning on every dev start.
+// Baseline security headers. Notes on the CSP:
+//   * 'unsafe-inline' script/style is required by Next.js inline runtime
+//     scripts and the server-rendered theme-override <style> tag (going
+//     stricter needs a nonce pipeline — out of scope for a baseline).
+//   * 'unsafe-eval' only in dev (React Refresh needs it).
+//   * img-src allows any https host because content images are admin-edited
+//     at runtime (Supabase Storage, squarespace-cdn, GitHub attachments, …).
+//   * frame-ancestors 'none' + X-Frame-Options DENY block clickjacking,
+//     which matters for the unauthenticated /admin-dashboard.
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ')
+
 const nextConfig = {
   // Server Actions cap inbound request bodies at 1 MB by default. The
   // /admin-dashboard image uploader documents and validates a 10 MB
@@ -13,6 +34,19 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ]
   },
   images: {
     unoptimized: true,

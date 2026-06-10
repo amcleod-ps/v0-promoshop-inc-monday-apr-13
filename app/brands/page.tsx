@@ -28,8 +28,12 @@ export default async function BrandsPage() {
     "We work with hundreds of brands. If you don't see what you're looking for, reach out and we'll source it for you.",
   )
 
-  const brands = supabaseBrands.length > 0
-    ? supabaseBrands.map((b) => ({
+  // `null` = Supabase unreachable → static seed fallback. An empty list is a
+  // real answer (every brand deactivated) and renders an empty listing
+  // instead of resurrecting brands the admin removed.
+  const brands = supabaseBrands === null
+    ? BRANDS.map((b) => ({ ...b, logoUrl: b.logoUrl ?? null, website: b.website ?? null }))
+    : supabaseBrands.map((b) => ({
         id: b.id,
         slug: b.slug,
         name: b.name,
@@ -39,7 +43,6 @@ export default async function BrandsPage() {
         categories: b.categories ?? [],
         featured: b.featured,
       }))
-    : BRANDS.map((b) => ({ ...b, logoUrl: b.logoUrl ?? null, website: b.website ?? null }))
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a]">

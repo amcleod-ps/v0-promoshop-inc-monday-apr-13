@@ -17,13 +17,17 @@ interface BrandLogoScrollProps {
 }
 
 export function BrandLogoScroll({ brands: propBrands }: BrandLogoScrollProps) {
-  // Use Supabase brands if provided, otherwise fallback to static BRANDS
-  const brands = propBrands || BRANDS.map(b => ({
+  // null/undefined = Supabase unreachable → fall back to static BRANDS.
+  // An empty array is a deliberate "no active brands" state, so render
+  // nothing instead of resurrecting the compiled-in list.
+  const brands = propBrands ?? BRANDS.map(b => ({
     id: b.id,
     slug: b.slug,
     name: b.name,
     logoUrl: b.logoUrl ?? null,
   }))
+
+  if (brands.length === 0) return null
 
   // Tile — no borders, no background. Logo floats directly on the sky-blue
   // (#bde7ff) banner per client feedback (Apr 16). When a brand hasn't had

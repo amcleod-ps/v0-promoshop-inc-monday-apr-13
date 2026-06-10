@@ -102,7 +102,7 @@ Two ways to replace any image on the site:
 ### Option 1 — `/admin-dashboard` (recommended for non-developers)
 
 Open `https://<your-domain>/admin-dashboard` in a browser. The page is
-unlinked (no nav link, robots-disallowed), so visitors don't find it.
+unlinked (no nav link, noindex metadata), so visitors don't find it.
 
 For each image on the site you see:
 

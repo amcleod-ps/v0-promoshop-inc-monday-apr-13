@@ -41,6 +41,36 @@ interface ProductFullRow {
   category: string
   description: string | null
   brand_slugs: string[] | null
+  sort_order: number
+  is_active: boolean
+}
+
+interface SiteImageRowRaw {
+  key: string
+  label: string
+  url: string | null
+  alt_text: string | null
+}
+
+interface BrandRowRaw {
+  slug: string
+  name: string
+  description: string | null
+  categories: string[] | null
+  logo_url: string | null
+  sort_order: number
+  is_active: boolean
+}
+
+interface HeroSlideRowRaw {
+  id: string
+  title: string
+  subtitle: string | null
+  cta_text: string | null
+  cta_url: string | null
+  image_url: string | null
+  bg_color: string | null
+  sort_order: number
   is_active: boolean
 }
 
@@ -62,6 +92,7 @@ interface TeamMemberRowRaw {
   role: string
   description: string | null
   image_url: string | null
+  sort_order: number
   is_active: boolean
 }
 
@@ -118,6 +149,32 @@ function missingTableError(err: { message?: string } | null | undefined): boolea
   )
 }
 
+// PostgREST caps responses at 1000 rows regardless of the requested limit,
+// and product_images is already big enough to hit that in production. Page
+// through with .range() so large tables load fully. The query factory must
+// apply a deterministic ORDER BY (ties broken by a unique column) or rows
+// can repeat/vanish across page boundaries.
+const FETCH_PAGE_SIZE = 1000
+
+interface QueryResult<T> {
+  data: T[] | null
+  error: { message: string } | null
+}
+
+async function fetchAll<T>(
+  makeQuery: (from: number, to: number) => PromiseLike<QueryResult<T>>,
+): Promise<QueryResult<T>> {
+  const all: T[] = []
+  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+    const { data, error } = await makeQuery(from, from + FETCH_PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+    const rows = data ?? []
+    all.push(...rows)
+    if (rows.length < FETCH_PAGE_SIZE) break
+  }
+  return { data: all, error: null }
+}
+
 export default async function AdminDashboardPage() {
   let supabase
   try {
@@ -151,45 +208,82 @@ export default async function AdminDashboardPage() {
     teamRes,
     themeRes,
   ] = await Promise.all([
-    supabase
-      .from("site_images")
-      .select("key, label, url, alt_text")
-      .order("label", { ascending: true }),
-    supabase
-      .from("brands")
-      .select("slug, name, description, logo_url, is_active")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("hero_slides")
-      .select("id, title, subtitle, cta_text, cta_url, image_url, sort_order, is_active")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("product_images")
-      .select("id, label, url, sort_order, product_sku, colour_id, products(name)")
-      .order("product_sku", { ascending: true })
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("products")
-      .select("sku, name, category, description, brand_slugs, is_active")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("product_colours")
-      .select("id, product_sku, name, hex, sort_order")
-      .order("product_sku", { ascending: true })
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("site_content")
-      .select("key, label, value")
-      .order("key", { ascending: true }),
-    supabase
-      .from("team_members")
-      .select("slug, name, role, description, image_url, is_active, sort_order")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase.from("site_theme").select("key, label, value"),
+    fetchAll((from, to) =>
+      supabase
+        .from("site_images")
+        .select("key, label, url, alt_text")
+        .order("label", { ascending: true })
+        .order("key", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("brands")
+        .select("slug, name, description, categories, logo_url, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("slug", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("hero_slides")
+        .select("id, title, subtitle, cta_text, cta_url, image_url, bg_color, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("product_images")
+        .select("id, label, url, sort_order, product_sku, colour_id, products(name)")
+        .order("product_sku", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("products")
+        .select("sku, name, category, description, brand_slugs, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("sku", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("product_colours")
+        .select("id, product_sku, name, hex, sort_order")
+        .order("product_sku", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("site_content")
+        .select("key, label, value")
+        .order("key", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("team_members")
+        .select("slug, name, role, description, image_url, is_active, sort_order")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("slug", { ascending: true })
+        .range(from, to),
+    ),
+    fetchAll((from, to) =>
+      supabase
+        .from("site_theme")
+        .select("key, label, value")
+        .order("key", { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   const siteContentMissing = missingTableError(siteContentRes.error)
@@ -208,15 +302,38 @@ export default async function AdminDashboardPage() {
     themeMissing ? null : themeRes.error,
   ].filter(Boolean) as Array<{ message: string }>
 
-  const siteImages = siteImagesRes.data ?? []
-  const brands = brandsRes.data ?? []
-  const heroSlides = heroSlidesRes.data ?? []
+  const allSiteImages = (siteImagesRes.data as SiteImageRowRaw[] | null) ?? []
+  const brands = (brandsRes.data as BrandRowRaw[] | null) ?? []
+  const heroSlides = (heroSlidesRes.data as HeroSlideRowRaw[] | null) ?? []
   const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
   const productRowsRaw = (productsRes.data as ProductFullRow[] | null) ?? []
   const productColours = (productColoursRes.data as ProductColourRow[] | null) ?? []
   const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
   const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
   const themeRaw = (themeRes.data as SiteThemeRowRaw[] | null) ?? []
+
+  // Once team_members has rows (migration 0005), the public site reads the
+  // roster exclusively from that table: the site_images `team.<slug>` slots
+  // and the site_content `team.<slug>.*` overrides are dead inputs. Hide
+  // them so admins aren't offered editors that save successfully but change
+  // nothing — the Team tab is the live editor.
+  const teamTableLive = !teamMissing && teamRaw.length > 0
+
+  // Brand logos must always be edited through the Brand logos section
+  // (target="brand"), which writes BOTH brands.logo_url and the legacy
+  // site_images override. Listing the raw `brand.<slug>.logo` rows here too
+  // let admins update only the override, silently desyncing the two stores.
+  const siteImages = allSiteImages.filter((row) => {
+    if (/^brand\..+\.logo$/.test(row.key)) return false
+    if (teamTableLive && /^team\./.test(row.key)) return false
+    return true
+  })
+
+  const filteredSiteContentRaw = teamTableLive
+    ? siteContentRaw.filter(
+        (row) => !/^team\./.test(row.key) || row.key.startsWith("team.section."),
+      )
+    : siteContentRaw
 
   // ---- Images grouped by product (existing dashboard image view) ----------
   const productGroupMap = new Map<string, ProductGroup>()
@@ -278,12 +395,13 @@ export default async function AdminDashboardPage() {
       category: p.category,
       description: p.description,
       brand_slugs: p.brand_slugs ?? [],
+      sort_order: p.sort_order,
       colours,
     }
   })
 
   // ---- Site text rows for the existing Text content tab -------------------
-  const siteContent: SiteContentEntry[] = siteContentRaw
+  const siteContent: SiteContentEntry[] = filteredSiteContentRaw
     .map((row) => {
       const { group, multiline } = classifyContentKey(row.key)
       return {
@@ -307,6 +425,7 @@ export default async function AdminDashboardPage() {
     role: t.role,
     description: t.description,
     image_url: t.image_url,
+    sort_order: t.sort_order,
   }))
 
   const themeMap = new Map<string, SiteThemeRowRaw>()
@@ -325,7 +444,9 @@ export default async function AdminDashboardPage() {
     brands.length +
     heroSlides.length +
     productGroups.reduce((n, g) => n + g.images.length, 0)
-  const totalText = siteContent.length + heroSlides.length * 4 + brands.length * 2
+  // Per-slide rows: title, subtitle, CTA text, CTA URL, bg colour, order.
+  // Per-brand rows: name, description, categories, order.
+  const totalText = siteContent.length + heroSlides.length * 6 + brands.length * 4
 
   const missingMigrations: string[] = []
   if (siteContentMissing) missingMigrations.push("0004_site_content.sql")
@@ -359,10 +480,10 @@ export default async function AdminDashboardPage() {
           </li>
         </ol>
         <p style={pageStyles.helpNote}>
-          Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, SVG). 5,000
-          characters max per text field. The dashboard has no access control —
-          anyone with this URL can edit everything here, so treat the URL as
-          the secret.
+          Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, or AVIF —
+          SVG is blocked for security). 5,000 characters max per text field.
+          The dashboard has no access control — anyone with this URL can edit
+          everything here, so treat the URL as the secret.
         </p>
       </details>
 

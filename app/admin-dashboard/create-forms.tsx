@@ -76,22 +76,29 @@ export function AddBrandForm() {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createBrand({
-        slug: slug.trim() || undefined,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        categories: categories
-          .split(",")
-          .map((c) => c.trim())
-          .filter(Boolean),
-        featured,
-      })
-      if (result.ok) {
-        setStatus({ kind: "ok", message: `Created brand "${result.id}" — it now appears in the lists above.` })
-        reset()
-        router.refresh()
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await createBrand({
+          slug: slug.trim() || undefined,
+          name: name.trim(),
+          description: description.trim() || undefined,
+          categories: categories
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean),
+          featured,
+        })
+        if (result.ok) {
+          setStatus({ kind: "ok", message: `Created brand "${result.id}" — it now appears in the lists above.` })
+          reset()
+          router.refresh()
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -165,24 +172,32 @@ export function AddHeroSlideForm() {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createHeroSlide({
-        title: title.trim(),
-        subtitle: subtitle.trim() || undefined,
-        ctaText: ctaText.trim() || undefined,
-        ctaUrl: ctaUrl.trim() || undefined,
-      })
-      if (result.ok) {
-        setStatus({
-          kind: "ok",
-          message: "Created — it now appears in the lists above; upload its image from the Images tab.",
+      try {
+        const result = await createHeroSlide({
+          title: title.trim(),
+          subtitle: subtitle.trim() || undefined,
+          ctaText: ctaText.trim() || undefined,
+          ctaUrl: ctaUrl.trim() || undefined,
         })
-        router.refresh()
-        setTitle("")
-        setSubtitle("")
-        setCtaText("")
-        setCtaUrl("")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+        if (result.ok) {
+          setStatus({
+            kind: "ok",
+            message:
+              "Created — it now appears in the lists above. It won't show on the homepage until you upload its image (or set a background colour).",
+          })
+          router.refresh()
+          setTitle("")
+          setSubtitle("")
+          setCtaText("")
+          setCtaUrl("")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -227,22 +242,29 @@ export function AddSiteImageForm() {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createSiteImage({
-        key: key.trim(),
-        label: label.trim(),
-        altText: altText.trim() || undefined,
-      })
-      if (result.ok) {
-        setStatus({
-          kind: "ok",
-          message: `Created slot "${result.id}" — it now appears above; upload its image there.`,
+      try {
+        const result = await createSiteImage({
+          key: key.trim(),
+          label: label.trim(),
+          altText: altText.trim() || undefined,
         })
-        router.refresh()
-        setKey("")
-        setLabel("")
-        setAltText("")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+        if (result.ok) {
+          setStatus({
+            kind: "ok",
+            message: `Created slot "${result.id}" — it now appears above; upload its image there.`,
+          })
+          router.refresh()
+          setKey("")
+          setLabel("")
+          setAltText("")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }

@@ -11,18 +11,20 @@ function slugFromImageId(id: string): string {
 
 /**
  * Returns the team roster. Behaviour:
- *   1. If the `team_members` Supabase table has rows (migration 0005
- *      applied), use those — admins can now add/remove people from the
- *      dashboard.
- *   2. Otherwise, fall back to the hard-coded TEAM_MEMBERS and apply any
- *      per-member text overrides in `site_content`. This is the legacy
- *      path that worked before migration 0005.
+ *   1. If the `team_members` Supabase table is readable (migration 0005
+ *      applied), use its contents — including an empty roster when the
+ *      admin deactivated everyone. Admins manage people from the
+ *      dashboard's Team tab.
+ *   2. Fall back to the hard-coded TEAM_MEMBERS (with any per-member text
+ *      overrides in `site_content`) only when the table is unavailable —
+ *      missing migration, missing env vars, or an outage. This is the
+ *      legacy path that worked before migration 0005.
  */
 export function useTeamMembers(): TeamMember[] {
   const dbMembers = useDbTeamMembers()
   const content = useSiteContentMap()
 
-  if (dbMembers && dbMembers.length > 0) {
+  if (dbMembers !== null) {
     return dbMembers.map((m) => ({
       name: m.name,
       role: m.role,

@@ -79,25 +79,34 @@ export default function MyQuotePage() {
       .filter(Boolean)
       .join("\n")
 
-    const result = await submitQuoteRequest({
-      first_name: contactInfo.firstName,
-      last_name: contactInfo.lastName,
-      email: contactInfo.email,
-      phone: contactInfo.phone || undefined,
-      company: contactInfo.company || undefined,
-      quantity_range: String(totalUnits),
-      message,
-    })
+    // try/catch/finally so a network failure or server error surfaces a
+    // message and re-enables the button instead of leaving it stuck on
+    // its pending label forever.
+    try {
+      const result = await submitQuoteRequest({
+        first_name: contactInfo.firstName,
+        last_name: contactInfo.lastName,
+        email: contactInfo.email,
+        phone: contactInfo.phone || undefined,
+        company: contactInfo.company || undefined,
+        quantity_range: String(totalUnits),
+        message,
+      })
 
-    setSubmitting(false)
-
-    if (result.success) {
-      clearItems()
-      setSubmitted(true)
-    } else {
+      if (result.success) {
+        clearItems()
+        setSubmitted(true)
+      } else {
+        setSubmitError(
+          result.error || "Something went wrong submitting your quote. Please try again.",
+        )
+      }
+    } catch {
       setSubmitError(
-        result.error || "Something went wrong submitting your quote. Please try again.",
+        "Something went wrong submitting your quote. Check your connection and try again.",
       )
+    } finally {
+      setSubmitting(false)
     }
   }
 

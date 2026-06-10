@@ -34,7 +34,12 @@ function sqlBool(value: boolean | undefined): string {
 
 function sqlTextArray(values: string[] | undefined): string {
   if (!values || values.length === 0) return `'{}'`
-  const escaped = values.map((v) => `"${v.replace(/"/g, '\\"')}"`).join(",")
+  // The array literal is wrapped in single quotes, so embedded single quotes
+  // must be doubled for SQL on top of escaping double quotes for the array
+  // syntax — otherwise a value like Men's breaks the generated statement.
+  const escaped = values
+    .map((v) => `"${v.replace(/"/g, '\\"').replace(/'/g, "''")}"`)
+    .join(",")
   return `'{${escaped}}'`
 }
 
@@ -44,10 +49,18 @@ lines.push(
   "-- Re-run that script after changing lib/seed-data/* or lib/cms/team.ts.",
   "--",
   "-- Apply AFTER 0001_init.sql and 0002_images_and_products.sql.",
-  "-- Idempotent: every row uses ON CONFLICT DO UPDATE so running it more",
-  "-- than once is safe and will refresh defaults without duplicating rows.",
+  "-- Idempotent AND admin-safe: every insert is keyed (slug / sku / fixed id /",
+  "-- unique colour+image keys) so re-running never duplicates rows, never",
+  "-- deletes admin-added colours or uploaded gallery images, and only",
+  "-- refreshes the seeded defaults.",
   "",
   "begin;",
+  "",
+  "-- Idempotency key for seeded gallery images: a given URL appears at most",
+  "-- once per colour, so re-running the seed skips rows that already exist",
+  "-- instead of duplicating them. (Admin uploads always get unique URLs.)",
+  "create unique index if not exists product_images_colour_url_key",
+  "  on public.product_images (colour_id, url);",
   "",
 )
 
@@ -75,18 +88,22 @@ BRANDS.forEach((b, idx) => {
 // hero_slides — the four homepage marketing slides
 // ---------------------------------------------------------------------------
 lines.push("-- hero_slides ------------------------------------------------------")
+// Fixed UUIDs act as the natural key for the four seeded slides: re-running
+// the migration hits ON CONFLICT (id) instead of inserting four fresh
+// gen_random_uuid() duplicates on every run. DO NOTHING (not DO UPDATE)
+// preserves any text/image edits the admin made to these slides.
 const heroSlides = [
-  { idx: 1, file: "/images/mainmemory/1.png" },
-  { idx: 2, file: "/images/mainmemory/2.png" },
-  { idx: 3, file: "/images/mainmemory/3.png" },
-  { idx: 4, file: "/images/mainmemory/4.png" },
+  { idx: 1, id: "5eed51de-0000-4000-8000-000000000001", file: "/images/mainmemory/1.png" },
+  { idx: 2, id: "5eed51de-0000-4000-8000-000000000002", file: "/images/mainmemory/2.png" },
+  { idx: 3, id: "5eed51de-0000-4000-8000-000000000003", file: "/images/mainmemory/3.png" },
+  { idx: 4, id: "5eed51de-0000-4000-8000-000000000004", file: "/images/mainmemory/4.png" },
 ]
 heroSlides.forEach((slide) => {
   const slug = `homepage-slide-${slide.idx}`
   lines.push(
     `insert into public.hero_slides (id, title, subtitle, cta_text, cta_url, image_url, bg_color, is_active, sort_order)`,
-    `values (gen_random_uuid(), ${sqlString(`Homepage hero slide ${slide.idx}`)}, NULL, NULL, NULL, ${sqlString(slide.file)}, NULL, true, ${slide.idx})`,
-    `on conflict do nothing;`,
+    `values (${sqlString(slide.id)}, ${sqlString(`Homepage hero slide ${slide.idx}`)}, NULL, NULL, NULL, ${sqlString(slide.file)}, NULL, true, ${slide.idx})`,
+    `on conflict (id) do nothing;`,
     `-- key: ${slug}`,
     "",
   )
@@ -184,19 +201,19 @@ PRODUCTS.forEach((p, idx) => {
     "",
   )
 
-  // Clear and reinsert colours + images. Doing this in a single
-  // delete+insert pass keeps the script idempotent.
-  lines.push(
-    `delete from public.product_colours where product_sku = ${sqlString(p.sku)};`,
-  )
-
+  // Keyed upserts (no delete pass): colours upsert on the (product_sku, name)
+  // unique constraint from 0002, and images skip on the (colour_id, url)
+  // unique index created above. Re-running therefore refreshes seed defaults
+  // without cascading away admin-added colours or uploaded gallery images.
   p.colours.forEach((c, colourIdx) => {
-    const colourId = `gen_random_uuid()`
     const colourLabel = `colour_${slugify(c.name)}_${p.sku.replace(/\s+/g, "_")}`
     lines.push(
-      `with new_colour as (`,
+      `with seed_colour as (`,
       `  insert into public.product_colours (product_sku, name, hex, sort_order)`,
       `  values (${sqlString(p.sku)}, ${sqlString(c.name)}, ${sqlString(c.hex)}, ${colourIdx})`,
+      `  on conflict (product_sku, name) do update set`,
+      `    hex = excluded.hex,`,
+      `    sort_order = excluded.sort_order`,
       `  returning id`,
       `)`,
     )
@@ -204,20 +221,21 @@ PRODUCTS.forEach((p, idx) => {
     const images = c.images.filter((u) => !!u)
     if (images.length === 0) {
       lines.push(
-        `select id from new_colour;  -- ${colourLabel}: no images in seed`,
+        `select id from seed_colour;  -- ${colourLabel}: no images in seed`,
         "",
       )
     } else {
       const valueRows = images
         .map(
           (url, imgIdx) =>
-            `(${sqlString(p.sku)}, (select id from new_colour), ${sqlString(`${p.name} — ${c.name} — Image ${imgIdx + 1}`)}, ${sqlString(url)}, ${sqlString(`${p.name} in ${c.name}`)}, ${imgIdx})`,
+            `(${sqlString(p.sku)}, (select id from seed_colour), ${sqlString(`${p.name} — ${c.name} — Image ${imgIdx + 1}`)}, ${sqlString(url)}, ${sqlString(`${p.name} in ${c.name}`)}, ${imgIdx})`,
         )
         .join(",\n  ")
       lines.push(
         `insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)`,
         `values`,
-        `  ${valueRows};`,
+        `  ${valueRows}`,
+        `on conflict (colour_id, url) do nothing;`,
         "",
       )
     }

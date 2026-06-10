@@ -32,3 +32,12 @@ export function useSiteImageUrl(key: string, fallback: string): string {
   }
   return fallback
 }
+
+/**
+ * Returns the admin-edited alt text for `key`, or null when no row exists
+ * or its alt text is empty (callers keep their hard-coded alt).
+ */
+export function useSiteImageAlt(key: string): string | null {
+  const map = useContext(SiteImagesContext)
+  return map[key]?.altText || null
+}

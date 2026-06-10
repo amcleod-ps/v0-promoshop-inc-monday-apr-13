@@ -60,36 +60,41 @@ function busted(url: string, updatedAt: string): string {
  * via `?v=<updated_at>` so replacing a row's `url` is instantly visible
  * on the next page render.
  *
+ * Returns `null` when Supabase is unreachable / misconfigured — callers
+ * fall back to the static catalog. An empty array is a genuine "no active
+ * products" answer (e.g. the admin deactivated everything) and should
+ * render as such instead of resurrecting the compiled-in products.
+ *
  * Brand slugs stored on the row are resolved to brand display names so
  * the returned `Product.brands` array matches the shape every existing
  * client component already consumes.
  */
-export async function getAllProducts(): Promise<Product[]> {
+export async function getAllProducts(): Promise<Product[] | null> {
   let supabase
   try {
     supabase = await createClient()
   } catch {
     // Missing env vars or a client-init failure must not 500 /studio or
-    // /brands/[slug]. Mirror the defensive getters in data.ts and return an
-    // empty list so callers fall back to the static catalog.
-    return []
+    // /brands/[slug]. Mirror the defensive getters in data.ts.
+    return null
   }
 
-  const [{ data: productRows }, { data: brandRows }] = await Promise.all([
-    supabase
-      .from("products")
-      .select(
-        `sku, name, category, description, brand_slugs, genders, sizes, min_qty,
+  const [{ data: productRows, error: productsError }, { data: brandRows }] =
+    await Promise.all([
+      supabase
+        .from("products")
+        .select(
+          `sku, name, category, description, brand_slugs, genders, sizes, min_qty,
          deco_locations, deco_methods, sort_order,
          product_colours (id, name, hex, sort_order),
          product_images (id, colour_id, url, label, sort_order, updated_at)`,
-      )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase.from("brands").select("slug, name"),
-  ])
+        )
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabase.from("brands").select("slug, name"),
+    ])
 
-  if (!productRows) return []
+  if (productsError || !productRows) return null
 
   const slugToName = new Map<string, string>(
     (brandRows || []).map((b) => [b.slug, b.name]),
