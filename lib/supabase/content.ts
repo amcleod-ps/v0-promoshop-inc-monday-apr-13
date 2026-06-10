@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { createClient } from "./server"
 
 export interface SiteContentRow {
@@ -19,7 +20,9 @@ export type SiteContentMap = Record<string, SiteContentRow>
  * Returns `{}` when the table doesn't exist yet (migrations not applied)
  * or the query errors, so callers can still render their fallbacks.
  */
-export async function getSiteContentMap(): Promise<SiteContentMap> {
+// React cache(): the layout AND several pages fetch this on the same
+// request — dedupe per request without touching the freshness contract.
+export const getSiteContentMap = cache(async (): Promise<SiteContentMap> => {
   let supabase
   try {
     supabase = await createClient()
@@ -45,7 +48,7 @@ export async function getSiteContentMap(): Promise<SiteContentMap> {
     }
   }
   return map
-}
+})
 
 /**
  * Server-side equivalent of `useSiteText`. Returns the override value when

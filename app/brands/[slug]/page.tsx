@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
@@ -12,6 +13,23 @@ import { BrandProductsGrid } from "@/components/brand-products-grid"
 
 interface BrandPageProps {
   params: Promise<{ slug: string }>
+}
+
+// Brand pages are the core indexable catalog — without this they all carried
+// the homepage's title/description. Unknown slugs return nothing extra; the
+// page itself answers with notFound().
+export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
+  const { slug } = await params
+  const lookup = await getSupabaseBrandBySlug(slug)
+  const brand = lookup.ok && lookup.brand?.is_active ? lookup.brand : null
+  const fallback = getBrandBySlug(slug)
+  const name = brand?.name ?? fallback?.name
+  if (!name) return {}
+  const description = (brand?.description ?? fallback?.description) || undefined
+  return {
+    title: `${name} Promotional Products`,
+    description,
+  }
 }
 
 export default async function BrandPage({ params }: BrandPageProps) {
@@ -62,8 +80,13 @@ export default async function BrandPage({ params }: BrandPageProps) {
     : PRODUCTS.filter((p) => p.brands.includes(brand.name))
 
   return (
-    <div className="min-h-screen bg-[#ededed] text-[#111] font-montserrat">
+    <div className="min-h-screen bg-[#ededed] text-[#111111] font-montserrat">
       <Header />
+
+      <main id="main-content">
+      {/* The brand's visual identity is its logo; expose the name as the
+          page heading for assistive tech and search. */}
+      <h1 className="sr-only">{brand.name}</h1>
 
       {/* Breadcrumb & Hero */}
       <section className="px-6 lg:px-10 pt-8 pb-12">
@@ -71,7 +94,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
           {/* Breadcrumb */}
           <Link
             href="/brands"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#777] hover:text-[#ef473f] transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#6b6b6b] hover:text-[#d93e36] transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             All Brands
@@ -145,6 +168,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
           </div>
         </div>
       </section>
+      </main>
 
       <Footer />
     </div>

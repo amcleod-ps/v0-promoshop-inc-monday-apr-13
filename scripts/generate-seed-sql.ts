@@ -14,14 +14,9 @@ import { resolve } from "node:path"
 import { BRANDS } from "../lib/seed-data/brands.seed"
 import { PRODUCTS } from "../lib/seed-data/products.seed"
 import { TEAM_MEMBERS } from "../lib/cms/team"
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-}
+// Single source of truth — a drifted local copy would silently desync the
+// seeded site_images keys from the runtime registry lookups.
+import { slugify } from "../lib/image-registry"
 
 function sqlString(value: string | null | undefined): string {
   if (value == null) return "NULL"
@@ -35,10 +30,11 @@ function sqlBool(value: boolean | undefined): string {
 function sqlTextArray(values: string[] | undefined): string {
   if (!values || values.length === 0) return `'{}'`
   // The array literal is wrapped in single quotes, so embedded single quotes
-  // must be doubled for SQL on top of escaping double quotes for the array
-  // syntax — otherwise a value like Men's breaks the generated statement.
+  // must be doubled for SQL on top of escaping backslashes and double quotes
+  // for the array syntax — otherwise a value like Men's (or one containing a
+  // backslash) breaks the generated statement.
   const escaped = values
-    .map((v) => `"${v.replace(/"/g, '\\"').replace(/'/g, "''")}"`)
+    .map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "''")}"`)
     .join(",")
   return `'{${escaped}}'`
 }
@@ -50,9 +46,10 @@ lines.push(
   "--",
   "-- Apply AFTER 0001_init.sql and 0002_images_and_products.sql.",
   "-- Idempotent AND admin-safe: every insert is keyed (slug / sku / fixed id /",
-  "-- unique colour+image keys) so re-running never duplicates rows, never",
-  "-- deletes admin-added colours or uploaded gallery images, and only",
-  "-- refreshes the seeded defaults.",
+  "-- unique colour+image keys) so re-running never duplicates rows and never",
+  "-- overwrites admin edits — existing brands, products, colours, slides and",
+  "-- images are left untouched (inserts use DO NOTHING / no-op conflict",
+  "-- handling; site_images refresh their admin-facing label only).",
   "",
   "begin;",
   "",
@@ -72,14 +69,7 @@ BRANDS.forEach((b, idx) => {
   lines.push(
     `insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)`,
     `values (${sqlString(b.slug)}, ${sqlString(b.name)}, ${sqlString(b.logoUrl || null)}, ${sqlString(b.website || null)}, ${sqlString(b.description)}, ${sqlTextArray(b.categories)}, ${sqlBool(b.featured)}, true, ${idx})`,
-    `on conflict (slug) do update set`,
-    `  name = excluded.name,`,
-    `  logo_url = excluded.logo_url,`,
-    `  website_url = excluded.website_url,`,
-    `  description = excluded.description,`,
-    `  categories = excluded.categories,`,
-    `  featured = excluded.featured,`,
-    `  sort_order = excluded.sort_order;`,
+    `on conflict (slug) do nothing;`,
     "",
   )
 })
@@ -167,8 +157,7 @@ siteImages.forEach((img) => {
     `insert into public.site_images (key, label, url, alt_text)`,
     `values (${sqlString(img.key)}, ${sqlString(img.label)}, ${sqlString(img.url)}, ${sqlString(img.alt)})`,
     `on conflict (key) do update set`,
-    `  label = excluded.label,`,
-    `  alt_text = excluded.alt_text;`,
+    `  label = excluded.label;`,
     "",
   )
 })
@@ -187,24 +176,15 @@ PRODUCTS.forEach((p, idx) => {
   lines.push(
     `insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)`,
     `values (${sqlString(p.sku)}, ${sqlString(p.name)}, ${sqlString(p.category)}, ${sqlString(p.description || null)}, ${sqlTextArray(brandSlugs)}, ${sqlTextArray(p.gender)}, ${sqlTextArray(p.sizes)}, ${p.minQty}, ${sqlTextArray(p.decoLocations)}, ${sqlTextArray(p.decoMethods)}, true, ${idx})`,
-    `on conflict (sku) do update set`,
-    `  name = excluded.name,`,
-    `  category = excluded.category,`,
-    `  description = excluded.description,`,
-    `  brand_slugs = excluded.brand_slugs,`,
-    `  genders = excluded.genders,`,
-    `  sizes = excluded.sizes,`,
-    `  min_qty = excluded.min_qty,`,
-    `  deco_locations = excluded.deco_locations,`,
-    `  deco_methods = excluded.deco_methods,`,
-    `  sort_order = excluded.sort_order;`,
+    `on conflict (sku) do nothing;`,
     "",
   )
 
-  // Keyed upserts (no delete pass): colours upsert on the (product_sku, name)
-  // unique constraint from 0002, and images skip on the (colour_id, url)
-  // unique index created above. Re-running therefore refreshes seed defaults
-  // without cascading away admin-added colours or uploaded gallery images.
+  // Keyed upserts (no delete pass): colours key on the (product_sku, name)
+  // unique constraint from 0002 with a NO-OP conflict update — DO NOTHING
+  // would make RETURNING yield no row for the dependent image insert, while
+  // a real update would clobber admin hex/sort edits. Images skip on the
+  // (colour_id, url) unique index created above.
   p.colours.forEach((c, colourIdx) => {
     const colourLabel = `colour_${slugify(c.name)}_${p.sku.replace(/\s+/g, "_")}`
     lines.push(
@@ -212,8 +192,7 @@ PRODUCTS.forEach((p, idx) => {
       `  insert into public.product_colours (product_sku, name, hex, sort_order)`,
       `  values (${sqlString(p.sku)}, ${sqlString(c.name)}, ${sqlString(c.hex)}, ${colourIdx})`,
       `  on conflict (product_sku, name) do update set`,
-      `    hex = excluded.hex,`,
-      `    sort_order = excluded.sort_order`,
+      `    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated`,
       `  returning id`,
       `)`,
     )

@@ -1,4 +1,6 @@
+import { cache } from "react"
 import { createClient } from "./server"
+import { withCacheBust } from "@/lib/cache-bust"
 
 export interface SiteImage {
   key: string
@@ -16,7 +18,7 @@ export type SiteImageMap = Record<string, SiteImage>
  * "team.phil-duym"). Pages that consume images via <SiteImage imageId="...">
  * pick up changes the next time this map is fetched.
  */
-export async function getSiteImagesMap(): Promise<SiteImageMap> {
+export const getSiteImagesMap = cache(async (): Promise<SiteImageMap> => {
   let supabase
   try {
     supabase = await createClient()
@@ -44,7 +46,7 @@ export async function getSiteImagesMap(): Promise<SiteImageMap> {
     }
   }
   return map
-}
+})
 
 /**
  * Looks up a key in the map. Returns `${url}?v=${updated_at}` when a row
@@ -59,7 +61,7 @@ export function resolveSiteImageUrl(
 ): string {
   const row = map[key]
   if (row?.url) {
-    return `${row.url}?v=${encodeURIComponent(row.updatedAt)}`
+    return withCacheBust(row.url, row.updatedAt)
   }
   return fallback
 }

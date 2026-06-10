@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { DEFAULT_LOCALE, LOCALES, type Locale, type LocaleConfig } from "@/lib/cms/locale"
 
 interface LocaleContextType {
@@ -30,24 +30,26 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const setLocale = (next: Locale) => {
+  const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)
     try {
       localStorage.setItem(STORAGE_KEY, next)
     } catch {
       // ignore
     }
-  }
+  }, [])
 
-  const config = LOCALES[locale]
+  const value = useMemo<LocaleContextType>(() => {
+    const config = LOCALES[locale]
+    return {
+      locale,
+      config,
+      setLocale,
+      t: (key: string) => config.spelling[key] ?? key,
+    }
+  }, [locale, setLocale])
 
-  const t = (key: string) => config.spelling[key] ?? key
-
-  return (
-    <LocaleContext.Provider value={{ locale, config, setLocale, t }}>
-      {children}
-    </LocaleContext.Provider>
-  )
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
 }
 
 export function useLocale() {

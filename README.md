@@ -5,7 +5,9 @@ with a Supabase Postgres database (and Supabase Storage for image files).
 Every public image on the site, plus the brand and product catalogs and
 homepage hero slideshow, are managed from the Supabase Dashboard. Changes
 made in the Table Editor are reflected on the live site on the next
-request — there is no admin UI in the application itself.
+request, and the bundled `/admin-dashboard` page provides a full in-app
+CMS (images, text, brands, products, team, theme) on top of the same
+tables.
 
 ---
 
@@ -54,7 +56,17 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role secret>
   `/admin-dashboard` page to upload files and update rows. Bypasses Row
   Level Security. Never use the `NEXT_PUBLIC_` prefix on this one.
 
-Three further **optional** variables (`RESEND_API_KEY`,
+Further **optional, server-side only** variables:
+
+- `ADMIN_DASHBOARD_PASSWORD` — when set, `/admin-dashboard` (the page and
+  every server action it calls) requires HTTP Basic auth with this
+  password. Strongly recommended in production; unset preserves the
+  historical open mode.
+- `NEXT_PUBLIC_SITE_URL` — the canonical public address (e.g.
+  `https://www.promoshopinc.com`), used for Open Graph URLs, the sitemap
+  and robots.txt. Falls back to Vercel's production URL when unset.
+
+Three more (`RESEND_API_KEY`,
 `QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM`, all server-side only)
 enable an email notification for every quote-request submission. With them
 unset, submissions are still saved to the `quote_requests` table — no email
@@ -140,11 +152,14 @@ The dashboard groups images by type:
 
 Requires `SUPABASE_SERVICE_ROLE_KEY` to be set on Vercel.
 
-The dashboard intentionally has no access control. Treat the URL as the
-secret. If it leaks, anyone who hits it can replace any image on the
-site (but nothing else — they cannot read quote requests, modify
-non-image columns, or alter the schema, since the service role key
-never leaves the Vercel server).
+By default the dashboard has no login screen — the URL is the secret —
+but setting `ADMIN_DASHBOARD_PASSWORD` in Vercel switches on an HTTP
+Basic-auth gate covering the page and all of its server actions
+(strongly recommended before launch; see `docs/ADMIN-LOGIN-SETUP.md`).
+If the URL leaks while the gate is off, anyone who hits it can edit the
+site's images, text, brands, products, team and theme — though they
+cannot read quote requests or alter the schema, since the service role
+key never leaves the Vercel server.
 
 ### Option 2 — Supabase Dashboard directly
 
@@ -202,7 +217,10 @@ Vercel-GitHub integration. Pull requests get preview deployments.
 
 In Vercel → Project → Settings → Environment Variables, set
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for the
-**Production**, **Preview**, and **Development** scopes.
+**Production**, **Preview**, and **Development** scopes. Also set
+`SUPABASE_SERVICE_ROLE_KEY` (admin dashboard writes),
+`ADMIN_DASHBOARD_PASSWORD` (admin access gate) and `NEXT_PUBLIC_SITE_URL`
+(canonical address) for Production — see the environment section above.
 
 ---
 
@@ -231,9 +249,9 @@ lib/
   auth/                  # Customer-auth provider (localStorage-backed)
   cms/                   # Static marketing copy (titles, body, etc.)
   seed-data/             # Compiled-in fallback catalog (used by the seed generator)
-public/                  # Static assets (favicons, font fallbacks)
+public/                  # Static assets (favicons, seeded imagery)
 scripts/
   generate-seed-sql.ts   # Regenerates supabase/migrations/0003_seed_data.sql
 supabase/
-  migrations/            # 0001_init, 0002_images_and_products, 0003_seed_data
+  migrations/            # 0001 → 0008, applied in order by hand (SQL Editor)
 ```

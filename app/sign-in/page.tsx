@@ -2,11 +2,11 @@
 
 import { Suspense, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { setFallbackUser } from "@/lib/auth/AuthProvider"
 import { toSafeRedirect } from "@/lib/auth/safe-redirect"
+import { SiteImage } from "@/components/site-image"
 
 export default function SignInPage() {
   return (
@@ -50,14 +50,15 @@ function SignInPageInner() {
   return (
     <div className="min-h-screen bg-[#f9f9f9] flex">
       {/* Left Panel - Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <main id="main-content" className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <Link href="/" className="inline-block mb-12">
-            <Image
-              src="/images/mainmemory/promoshop-logo.png"
-              alt="PromoShop Studio"
+            <SiteImage
+              imageId="site.logo"
+              defaultSrc="/images/mainmemory/promoshop-logo.png"
+              alt="PromoShop Inc"
               width={220}
-              height={72}
+              height={147}
               className="h-14 w-auto"
               unoptimized
             />
@@ -71,18 +72,20 @@ function SignInPageInner() {
           </p>
 
           {error && (
-            <div className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#ef473f] px-4 py-3 rounded mb-6 text-sm">
+            <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#d93e36] px-4 py-3 rounded mb-6 text-sm">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold tracking-wider text-[#999] uppercase mb-2">
+              <label htmlFor="signin-email" className="block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2">
                 Email Address
               </label>
               <input
+                id="signin-email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -92,12 +95,14 @@ function SignInPageInner() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold tracking-wider text-[#999] uppercase mb-2">
+              <label htmlFor="signin-password" className="block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="signin-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -107,21 +112,13 @@ function SignInPageInner() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#1a1a1a] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
                 </button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-[#e5e5e5] bg-white text-[#ef473f] focus:ring-[#ef473f]" />
-                <span className="text-sm text-[#666] font-visby">Remember me</span>
-              </label>
-              <Link href="#" className="text-sm text-[#ef473f] hover:underline font-visby">
-                Forgot password?
-              </Link>
             </div>
 
             <button
@@ -131,13 +128,13 @@ function SignInPageInner() {
             >
               {isLoading ? (
                 <>
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
                   Signing In...
                 </>
               ) : (
                 <>
                   Sign In
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </>
               )}
             </button>
@@ -146,17 +143,17 @@ function SignInPageInner() {
           <div className="mt-8 pt-8 border-t border-[#e5e5e5] text-center">
             <p className="text-[#666] font-visby">
               Don&apos;t have an account?{" "}
-              <Link href="/sign-up" className="text-[#ef473f] hover:underline font-semibold">Sign up</Link>
+              <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline font-semibold">Sign up</Link>
             </p>
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/" className="text-sm text-[#999] hover:text-[#1a1a1a] transition-colors font-visby">
+            <Link href="/" className="text-sm text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors font-visby">
               Back to Home
             </Link>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Right Panel - Branding.
           PS logo was invisible on the black panel (dark-on-dark). Wrapping
@@ -165,11 +162,12 @@ function SignInPageInner() {
       <div className="hidden lg:flex flex-1 bg-[#0d0d0d] border-l border-[#2a2a2a] items-center justify-center p-12">
         <div className="max-w-md text-center">
           <div className="inline-flex items-center justify-center bg-white rounded-2xl px-8 py-6 mb-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-            <Image
-              src="/images/mainmemory/promoshop-logo.png"
-              alt="PromoShop Studio"
+            <SiteImage
+              imageId="site.logo"
+              defaultSrc="/images/mainmemory/promoshop-logo.png"
+              alt="PromoShop Inc"
               width={260}
-              height={86}
+              height={173}
               className="h-16 w-auto"
               unoptimized
             />
@@ -178,8 +176,8 @@ function SignInPageInner() {
             Premium Branded Merchandise
           </h2>
           <p className="text-[#888] leading-relaxed font-visby">
-            Access your account to manage quotes, save your favorite products,
-            and auto-fill your information for faster ordering.
+            Access your account to manage quotes, save your information,
+            and auto-fill quote forms for faster ordering.
           </p>
         </div>
       </div>

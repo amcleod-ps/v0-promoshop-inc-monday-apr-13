@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
-import Image from "next/image"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { X, ChevronLeft, ChevronRight, Maximize2, Check } from "lucide-react"
 import type { Product, ProductColour } from "@/lib/products"
 import { useQuote } from "@/lib/quote-context"
+import { useLocale } from "@/lib/locale-context"
 import { useAuth } from "@/lib/auth/AuthProvider"
+import { SafeImage } from "@/components/safe-image"
 import { ProductLightbox } from "./product-lightbox"
 
 interface ProductDetailModalProps {
@@ -20,9 +21,10 @@ interface ProductDetailModalProps {
 // more sizes in a single action, then have the cross-product added to their
 // quote as individual line items. e.g. navy + (S,M,L,XL) → 4 line items.
 //
-// Unauthenticated guests now hit a sign-up gate on "Add to quote" (client
-// feedback Apr 16). We store a short return-to pointer in sessionStorage so
-// the sign-in page can bring them back to /my-quote after auth succeeds.
+// Unauthenticated guests still pass through the sign-up page on "Add to
+// quote" (client feedback Apr 16), but their selections are added to the
+// localStorage cart FIRST — the cart is not auth-gated, and discarding the
+// picks stranded every first-time visitor on an empty quote.
 export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailModalProps) {
   const [selectedColours, setSelectedColours] = useState<ProductColour[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
@@ -30,8 +32,11 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
   const [imageIndex, setImageIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const { addItem } = useQuote()
+  const { t } = useLocale()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // Reset selections whenever a new product is opened. Default-select the
   // first colour so the image carousel has something to show immediately;
@@ -67,6 +72,15 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     }
   }, [isOpen])
 
+  // Dialog focus management: move focus into the dialog on open and give it
+  // back to whatever opened it (the product card) on close.
+  useEffect(() => {
+    if (!isOpen) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    closeButtonRef.current?.focus()
+    return () => previouslyFocused?.focus()
+  }, [isOpen])
+
   const images = previewColour?.images ?? product?.colours[0]?.images ?? []
 
   const goPrev = useCallback(() => {
@@ -79,13 +93,42 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     setImageIndex((i) => (i + 1) % images.length)
   }, [images.length])
 
-  // Keyboard nav for the inline carousel (lightbox manages its own keys).
+  // Keyboard handling while the dialog is open (the lightbox manages its
+  // own keys): Escape closes, arrows drive the carousel, and Tab is trapped
+  // inside the dialog (aria-modal alone doesn't constrain keyboard focus).
   useEffect(() => {
     if (!isOpen || lightboxOpen) return
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose()
+        return
+      }
+      if (e.key === "Tab") {
+        const root = dialogRef.current
+        if (!root) return
+        const focusables = Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === first || !root.contains(active))) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+          e.preventDefault()
+          first.focus()
+        }
+        return
+      }
+      // Don't hijack arrow keys while the user is in a form control.
+      const target = e.target as HTMLElement | null
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
       if (e.key === "ArrowLeft") goPrev()
       else if (e.key === "ArrowRight") goNext()
-      else if (e.key === "Escape") onClose()
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
@@ -119,23 +162,20 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
 
   if (!product || !isOpen) return null
 
+  // Products created without explicit sizes (the dashboard allows it) are
+  // sold as one-size — otherwise "Add to Quote" could never be enabled.
+  const sizeOptions = product.sizes.length > 0 ? product.sizes : ["One Size"]
+
+  // imageIndex can briefly point past the end when the preview switches to
+  // a colour with fewer images (the reset effect runs a frame later).
+  const displayIndex = images.length > 0 ? Math.min(imageIndex, images.length - 1) : 0
+
   const handleAddToQuote = () => {
     if (!canAdd) return
 
-    // Sign-up gate for unauthenticated visitors. Save a return pointer so
-    // sign-in can bring them straight to /my-quote after success.
-    if (!isAuthenticated) {
-      try {
-        sessionStorage.setItem("promoshop_post_auth_redirect", "/my-quote")
-      } catch {
-        // sessionStorage unavailable (private mode) — redirect still works.
-      }
-      onClose()
-      router.push("/sign-up?redirect=/my-quote")
-      return
-    }
-
-    // Fan out the cartesian product as individual quote line items.
+    // Fan out the cartesian product as individual quote line items. This
+    // happens BEFORE any auth gating: the cart lives in localStorage and is
+    // not auth-gated, so the visitor's selections must never be discarded.
     for (const colour of selectedColours) {
       for (const size of selectedSizes) {
         addItem({
@@ -149,7 +189,10 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
       }
     }
     onClose()
-    router.push("/my-quote")
+
+    // Unauthenticated visitors pass through sign-up on their way to the
+    // quote; their items are already saved in the cart.
+    router.push(isAuthenticated ? "/my-quote" : "/sign-up?redirect=/my-quote")
   }
 
   return (
@@ -159,12 +202,17 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
         onClick={onClose}
       >
         <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="product-detail-title"
           className={`bg-[#ededed] rounded-lg w-full max-w-[1060px] max-h-[94vh] overflow-y-auto grid grid-cols-1 md:grid-cols-[55fr_45fr] shadow-2xl transition-transform duration-300 ${isOpen ? "translate-y-0" : "translate-y-6"}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left - Image carousel */}
           <div className="relative bg-[#ddd] rounded-t-lg md:rounded-l-lg md:rounded-tr-none overflow-hidden flex flex-col">
             <button
+              ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close"
               className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center z-20 hover:bg-[#ef473f] hover:text-white transition-colors"
@@ -173,16 +221,16 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
             </button>
 
             <div className="relative flex-1 min-h-[320px] md:min-h-[480px] bg-[#e0e0e0]">
-              {images[imageIndex] && (
+              {images[displayIndex] && (
                 <button
                   type="button"
                   onClick={() => setLightboxOpen(true)}
                   aria-label="Open full-screen view"
                   className="absolute inset-0 cursor-zoom-in group"
                 >
-                  <Image
-                    src={images[imageIndex]}
-                    alt={`${product.name} - ${previewColour?.name ?? ""} (${imageIndex + 1}/${images.length})`}
+                  <SafeImage
+                    src={images[displayIndex]}
+                    alt={`${product.name} - ${previewColour?.name ?? ""} (${displayIndex + 1}/${images.length})`}
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 55vw"
@@ -229,11 +277,12 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                     type="button"
                     onClick={() => setImageIndex(i)}
                     aria-label={`Show image ${i + 1}`}
+                    aria-current={i === displayIndex}
                     className={`relative w-16 h-16 rounded overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                      i === imageIndex ? "border-[#ef473f]" : "border-transparent hover:border-[#999]"
+                      i === displayIndex ? "border-[#ef473f]" : "border-transparent hover:border-[#999]"
                     }`}
                   >
-                    <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                    <SafeImage src={img} alt="" fill className="object-cover" sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -243,15 +292,18 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
           {/* Right - Info */}
           <div className="p-7 md:p-11 flex flex-col bg-[#ededed] rounded-b-lg md:rounded-r-lg md:rounded-bl-none overflow-y-auto">
             {/* Product Name */}
-            <h2 className="font-extrabold text-2xl md:text-3xl leading-tight uppercase text-black tracking-tight mb-7">
+            <h2
+              id="product-detail-title"
+              className="font-extrabold text-2xl md:text-3xl leading-tight uppercase text-black tracking-tight mb-7"
+            >
               {product.name}
             </h2>
 
             {/* Colour Selection (multi-select). Clicking adds/removes; the
                 coloured chips below list every selected colour. */}
             <div className="mb-7">
-              <p className="text-sm text-[#111] mb-3.5">
-                Select your colours:{" "}
+              <p className="text-sm text-[#111111] mb-3.5">
+                Select your {t("colors")}:{" "}
                 <strong>
                   {selectedColours.length > 0
                     ? selectedColours.map((c) => c.name).join(", ")
@@ -287,11 +339,11 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
 
             {/* Size Selection (multi-select). */}
             <div className="mb-7">
-              <p className="text-sm text-[#111] mb-3">
+              <p className="text-sm text-[#111111] mb-3">
                 Select your sizes{selectedSizes.length > 0 ? <>: <strong>{selectedSizes.join(", ")}</strong></> : null}
               </p>
               <div className="flex flex-wrap gap-2">
-                {product.sizes.map((size, index) => {
+                {sizeOptions.map((size, index) => {
                   const active = selectedSizes.includes(size)
                   return (
                     <button
@@ -302,7 +354,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                       className={`px-5 py-2.5 border rounded text-sm font-medium uppercase tracking-wide transition-colors ${
                         active
                           ? "border-black bg-black text-white"
-                          : "border-[#bbb] bg-[#ededed] text-[#111] hover:border-black"
+                          : "border-[#bbb] bg-[#ededed] text-[#111111] hover:border-black"
                       }`}
                     >
                       {size}
@@ -326,7 +378,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                 : "Add to Quote"}
             </button>
             <p className={`text-xs text-[#777] mb-5 ${canAdd ? "invisible" : ""}`}>
-              Pick at least one colour and one size. Each combination is added as its own line item.
+              Pick at least one {t("color")} and one size. Each combination is added as its own line item.
             </p>
 
             {/* Description */}
@@ -335,7 +387,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                 <h4 className="font-extrabold text-sm tracking-wider uppercase text-black mb-3">
                   Product Details
                 </h4>
-                <p className="text-sm text-[#111] leading-relaxed">
+                <p className="text-sm text-[#111111] leading-relaxed">
                   {product.description}
                 </p>
                 <div className="mt-4 space-y-2 text-sm text-[#666]">
@@ -354,7 +406,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
       <ProductLightbox
         isOpen={lightboxOpen}
         images={images}
-        initialIndex={imageIndex}
+        initialIndex={displayIndex}
         onClose={() => setLightboxOpen(false)}
         onIndexChange={setImageIndex}
         title={`${product.name}${previewColour ? ` \u2014 ${previewColour.name}` : ""}`}

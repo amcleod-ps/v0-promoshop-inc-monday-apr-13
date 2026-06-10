@@ -4,7 +4,6 @@ import { Analytics } from '@vercel/analytics/next'
 import { QuoteProvider } from '@/lib/quote-context'
 import { LocaleProvider } from '@/lib/locale-context'
 import { AuthProvider } from '@/lib/auth/AuthProvider'
-import { ThemeVarsProvider } from '@/components/theme-vars-provider'
 import { SiteImagesProvider } from '@/components/site-images-provider'
 import { SiteContentProvider } from '@/components/site-content-provider'
 import { TeamMembersProvider } from '@/components/team-provider'
@@ -12,6 +11,7 @@ import { getSiteImagesMap } from '@/lib/supabase/images'
 import { getSiteContentMap } from '@/lib/supabase/content'
 import { getTeamMembers } from '@/lib/supabase/team'
 import { getSiteThemeMap, themeOverrideCss } from '@/lib/supabase/theme'
+import { SITE_URL } from '@/lib/site-url'
 import './globals.css'
 
 // Force every page render to fetch fresh data so URL changes made in the
@@ -37,9 +37,20 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'PromoShop Inc | Promotional Products',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'PromoShop Inc | Promotional Products',
+    template: '%s | PromoShop Inc',
+  },
   description: 'Welcome to our store, where promoting your business is our business. Born from an expertise in building brands, we offer unique, quality promotional products, excellent service, and customer-focused marketing.',
-  generator: 'v0.app',
+  alternates: { canonical: './' },
+  openGraph: {
+    siteName: 'PromoShop Inc',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+  },
   icons: {
     icon: [
       {
@@ -81,18 +92,22 @@ export default async function RootLayout({
         <style id="site-theme-override" dangerouslySetInnerHTML={{ __html: overrideCss }} />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-white focus:text-[#1a1a1a] focus:px-4 focus:py-2 focus:rounded focus:shadow-lg focus:outline focus:outline-2 focus:outline-[#1a1a1a]"
+        >
+          Skip to main content
+        </a>
         <AuthProvider>
           <LocaleProvider>
             <QuoteProvider>
-              <ThemeVarsProvider>
-                <SiteImagesProvider value={siteImages}>
-                  <SiteContentProvider value={siteContent}>
-                    <TeamMembersProvider value={teamMembers}>
-                      {children}
-                    </TeamMembersProvider>
-                  </SiteContentProvider>
-                </SiteImagesProvider>
-              </ThemeVarsProvider>
+              <SiteImagesProvider value={siteImages}>
+                <SiteContentProvider value={siteContent}>
+                  <TeamMembersProvider value={teamMembers}>
+                    {children}
+                  </TeamMembersProvider>
+                </SiteContentProvider>
+              </SiteImagesProvider>
             </QuoteProvider>
           </LocaleProvider>
         </AuthProvider>

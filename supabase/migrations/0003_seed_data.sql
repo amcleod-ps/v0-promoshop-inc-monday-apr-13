@@ -3,9 +3,10 @@
 --
 -- Apply AFTER 0001_init.sql and 0002_images_and_products.sql.
 -- Idempotent AND admin-safe: every insert is keyed (slug / sku / fixed id /
--- unique colour+image keys) so re-running never duplicates rows, never
--- deletes admin-added colours or uploaded gallery images, and only
--- refreshes the seeded defaults.
+-- unique colour+image keys) so re-running never duplicates rows and never
+-- overwrites admin edits — existing brands, products, colours, slides and
+-- images are left untouched (inserts use DO NOTHING / no-op conflict
+-- handling; site_images refresh their admin-facing label only).
 
 begin;
 
@@ -18,223 +19,83 @@ create unique index if not exists product_images_colour_url_key
 -- brands -----------------------------------------------------------
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('patagonia', 'Patagonia', '/images/mainmemory/1.png', NULL, 'Outdoor apparel and gear built for adventure. Known for quality, durability, and environmental responsibility.', '{"Jackets","Tops","Vests","Bags"}', true, true, 0)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('yeti', 'YETI', NULL, NULL, 'Premium coolers, drinkware, and gear designed for the wild. Built to withstand the elements.', '{"Drinkware","Coolers","Bags"}', true, true, 1)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('stanley', 'Stanley', '/images/mainmemory/6.png', NULL, 'Legendary drinkware with over 100 years of heritage. Known for rugged durability and timeless design.', '{"Drinkware"}', true, true, 2)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('jbl', 'JBL', NULL, NULL, 'Premium audio equipment and speakers. Professional-grade sound for any environment.', '{"Tech","Audio"}', true, true, 3)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('rhone', 'Rhone', '/images/mainmemory/11.png', NULL, 'Performance apparel designed for the modern athlete. Premium fabrics with innovative technology.', '{"Tops","Activewear"}', true, true, 4)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('vssl', 'VSSL', NULL, NULL, 'Adventure-ready gear and drinkware. Designed for those who push boundaries.', '{"Drinkware","Outdoor"}', true, true, 5)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('marine-layer', 'Marine Layer', NULL, NULL, 'California-inspired casual wear. Exceptionally soft fabrics with laid-back style.', '{"Tops","Casual"}', false, true, 6)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('tentree', 'Tentree', NULL, NULL, 'Sustainable apparel with a mission. Every purchase plants 10 trees.', '{"Tops","Sustainable"}', false, true, 7)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('cotopaxi', 'Cotopaxi', NULL, NULL, 'Colorful outdoor gear with a conscience. Adventure-ready and responsibly made.', '{"Bags","Jackets","Outdoor"}', false, true, 8)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('herschel', 'Herschel', NULL, NULL, 'Modern bags and accessories with heritage design. Perfect for work and travel.', '{"Bags","Accessories"}', false, true, 9)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('the-north-face', 'The North Face', NULL, NULL, 'Iconic outdoor brand for explorers. Technical gear for any adventure.', '{"Jackets","Bags","Outdoor"}', false, true, 10)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('nike', 'Nike', NULL, NULL, 'World-renowned athletic wear. Innovation and performance in every product.', '{"Tops","Activewear","Accessories"}', false, true, 11)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('peter-millar', 'Peter Millar', '/images/mainmemory/2.png', NULL, 'Luxury golf and lifestyle apparel. Refined performance wear with timeless elegance and exceptional quality.', '{"Tops","Polos","Golf"}', true, true, 12)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('johnnie-o', 'Johnnie-O', '/images/mainmemory/5.png', NULL, 'West Coast lifestyle brand blending California cool with East Coast prep. Comfortable, versatile performance wear.', '{"Tops","Casual","Golf"}', true, true, 13)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('helly-hansen', 'Helly Hansen', '/images/mainmemory/3.png', NULL, 'Norwegian heritage brand for sailing and outdoor adventures. Professional-grade protection with clean marine design.', '{"Jackets","Outerwear","Marine"}', true, true, 14)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('titleist', 'Titleist', '/images/mainmemory/7.png', NULL, 'The #1 ball in golf. Premium golf equipment trusted by professionals worldwide.', '{"Golf","Accessories"}', true, true, 15)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('lululemon', 'lululemon', '/images/mainmemory/8.png', NULL, 'Premium athletic and lifestyle apparel. Technical fabrics engineered for performance and comfort.', '{"Tops","Activewear","Accessories"}', true, true, 16)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('travismathew', 'TravisMathew', '/images/mainmemory/9.png', NULL, 'California-inspired performance lifestyle brand. Golf and casual wear built for comfort and style.', '{"Tops","Golf","Casual"}', true, true, 17)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('victorinox', 'Victorinox', '/images/mainmemory/10.png', NULL, 'Swiss precision and craftsmanship. Iconic knives, tools, and accessories built to last a lifetime.', '{"Accessories","Outdoor"}', true, true, 18)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 insert into public.brands (slug, name, logo_url, website_url, description, categories, featured, is_active, sort_order)
 values ('stio', 'Stio', '/images/mainmemory/4.png', NULL, 'Mountain-inspired technical apparel. Performance outdoor gear rooted in Jackson Hole.', '{"Jackets","Tops","Outdoor"}', true, true, 19)
-on conflict (slug) do update set
-  name = excluded.name,
-  logo_url = excluded.logo_url,
-  website_url = excluded.website_url,
-  description = excluded.description,
-  categories = excluded.categories,
-  featured = excluded.featured,
-  sort_order = excluded.sort_order;
+on conflict (slug) do nothing;
 
 -- hero_slides ------------------------------------------------------
 insert into public.hero_slides (id, title, subtitle, cta_text, cta_url, image_url, bg_color, is_active, sort_order)
@@ -261,300 +122,243 @@ on conflict (id) do nothing;
 insert into public.site_images (key, label, url, alt_text)
 values ('site.logo', 'Site logo (header and footer)', '/images/mainmemory/promoshop-logo.png', 'PromoShop Studio')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('about.hero', 'About page hero image', '/images/mainmemory/11.png', 'Outside of the PromoShop building')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.patagonia.logo', 'Brand logo: Patagonia', '/images/mainmemory/1.png', 'Patagonia logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.patagonia.lifestyle', 'Brand lifestyle backdrop: Patagonia', '', 'Patagonia lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.yeti.logo', 'Brand logo: YETI', '', 'YETI logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.yeti.lifestyle', 'Brand lifestyle backdrop: YETI', '', 'YETI lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.stanley.logo', 'Brand logo: Stanley', '/images/mainmemory/6.png', 'Stanley logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.stanley.lifestyle', 'Brand lifestyle backdrop: Stanley', '', 'Stanley lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.jbl.logo', 'Brand logo: JBL', '', 'JBL logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.jbl.lifestyle', 'Brand lifestyle backdrop: JBL', '', 'JBL lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.rhone.logo', 'Brand logo: Rhone', '/images/mainmemory/11.png', 'Rhone logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.rhone.lifestyle', 'Brand lifestyle backdrop: Rhone', '', 'Rhone lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.vssl.logo', 'Brand logo: VSSL', '', 'VSSL logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.vssl.lifestyle', 'Brand lifestyle backdrop: VSSL', '', 'VSSL lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.marine-layer.logo', 'Brand logo: Marine Layer', '', 'Marine Layer logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.marine-layer.lifestyle', 'Brand lifestyle backdrop: Marine Layer', '', 'Marine Layer lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.tentree.logo', 'Brand logo: Tentree', '', 'Tentree logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.tentree.lifestyle', 'Brand lifestyle backdrop: Tentree', '', 'Tentree lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.cotopaxi.logo', 'Brand logo: Cotopaxi', '', 'Cotopaxi logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.cotopaxi.lifestyle', 'Brand lifestyle backdrop: Cotopaxi', '', 'Cotopaxi lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.herschel.logo', 'Brand logo: Herschel', '', 'Herschel logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.herschel.lifestyle', 'Brand lifestyle backdrop: Herschel', '', 'Herschel lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.the-north-face.logo', 'Brand logo: The North Face', '', 'The North Face logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.the-north-face.lifestyle', 'Brand lifestyle backdrop: The North Face', '', 'The North Face lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.nike.logo', 'Brand logo: Nike', '', 'Nike logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.nike.lifestyle', 'Brand lifestyle backdrop: Nike', '', 'Nike lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.peter-millar.logo', 'Brand logo: Peter Millar', '/images/mainmemory/2.png', 'Peter Millar logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.peter-millar.lifestyle', 'Brand lifestyle backdrop: Peter Millar', '', 'Peter Millar lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.johnnie-o.logo', 'Brand logo: Johnnie-O', '/images/mainmemory/5.png', 'Johnnie-O logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.johnnie-o.lifestyle', 'Brand lifestyle backdrop: Johnnie-O', '', 'Johnnie-O lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.helly-hansen.logo', 'Brand logo: Helly Hansen', '/images/mainmemory/3.png', 'Helly Hansen logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.helly-hansen.lifestyle', 'Brand lifestyle backdrop: Helly Hansen', '', 'Helly Hansen lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.titleist.logo', 'Brand logo: Titleist', '/images/mainmemory/7.png', 'Titleist logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.titleist.lifestyle', 'Brand lifestyle backdrop: Titleist', '', 'Titleist lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.lululemon.logo', 'Brand logo: lululemon', '/images/mainmemory/8.png', 'lululemon logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.lululemon.lifestyle', 'Brand lifestyle backdrop: lululemon', '', 'lululemon lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.travismathew.logo', 'Brand logo: TravisMathew', '/images/mainmemory/9.png', 'TravisMathew logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.travismathew.lifestyle', 'Brand lifestyle backdrop: TravisMathew', '', 'TravisMathew lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.victorinox.logo', 'Brand logo: Victorinox', '/images/mainmemory/10.png', 'Victorinox logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.victorinox.lifestyle', 'Brand lifestyle backdrop: Victorinox', '', 'Victorinox lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.stio.logo', 'Brand logo: Stio', '/images/mainmemory/4.png', 'Stio logo')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('brand.stio.lifestyle', 'Brand lifestyle backdrop: Stio', '', 'Stio lifestyle')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('team.phil-duym', 'Team photo: Phil Duym (Owner & President)', '/placeholder-user.jpg', 'Phil Duym')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('team.amy-duquette', 'Team photo: Amy Duquette (Account Executive)', '/placeholder-user.jpg', 'Amy Duquette')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('team.ania-wlodarkiewicz', 'Team photo: Ania Wlodarkiewicz (Account Executive)', '/placeholder-user.jpg', 'Ania Wlodarkiewicz')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 insert into public.site_images (key, label, url, alt_text)
 values ('team.alex-cyrenne', 'Team photo: Alex Cyrenne (Account Executive)', '/placeholder-user.jpg', 'Alex Cyrenne')
 on conflict (key) do update set
-  label = excluded.label,
-  alt_text = excluded.alt_text;
+  label = excluded.label;
 
 -- products --------------------------------------------------------
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('DRK 004', 'VSSL Rift Tumbler 16 oz', 'Drinkware', 'Premium 16oz tumbler with double-wall vacuum insulation. Perfect for hot or cold beverages on the go.', '{"vssl"}', '{"Unisex"}', '{"16oz"}', 24, '{}', '{}', true, 0)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 004', 'Sahara', '#c4a96e', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -568,8 +372,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 004', 'Pacific Blue', '#2e7fa0', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -581,8 +384,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 004', 'Ash', '#b0aba3', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -594,8 +396,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 004', 'Stone', '#c2b89a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -607,8 +408,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 004', 'Wild Sage', '#8aad7e', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -618,24 +418,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('DRK 008', 'VSSL Nest Mug 10oz', 'Drinkware', 'Compact 10oz mug with stackable design. Great for travel and outdoor adventures.', '{"vssl"}', '{"Unisex"}', '{"10oz"}', 24, '{}', '{}', true, 1)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 008', 'Black', '#1a1a1a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -648,8 +437,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('DRK 008', 'Cream', '#f5eed8', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -659,24 +447,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 001', 'Rhone Course to Court 1/4 Zip', 'Tops', 'Versatile 1/4 zip pullover designed for performance. Moisture-wicking fabric with 4-way stretch.', '{"rhone"}', '{"Womens"}', '{"XS","S","M","L","XL","XXL"}', 24, '{}', '{}', true, 2)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 001', 'Snow White', '#f8f8f8', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -690,8 +467,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 001', 'Navy Blue', '#1b2a4a', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -703,8 +479,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 001', 'Sand', '#d4c5a0', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -716,8 +491,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 001', 'Black', '#1a1a1a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -727,24 +501,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 009', 'Rhone Rise 1/4 Zip', 'Tops', 'Premium quarter-zip with soft-touch fabric. Perfect for layering or standalone wear.', '{"rhone"}', '{"Mens"}', '{"S","M","L","XL","XXL"}', 24, '{}', '{}', true, 3)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 009', 'Black', '#1a1a1a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -758,8 +521,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 009', 'Bright White', '#ffffff', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -771,8 +533,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 009', 'Navy Blue', '#1b2a4a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -784,8 +545,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 009', 'Asphalt', '#5c5c5c', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -795,24 +555,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('JAK 003', 'Patagonia Better Sweater Jacket', 'Jackets', 'Classic Patagonia fleece jacket made with recycled polyester. Warm, durable, and eco-friendly.', '{"patagonia"}', '{"Mens"}', '{"S","M","L","XL","XXL"}', 24, '{}', '{}', true, 4)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'Black', '#1a1a1a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -826,8 +575,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'Stonewash', '#a8b5c4', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -839,8 +587,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'New Navy', '#1d3461', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -852,8 +599,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'River Rock Green', '#6e8c6a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -865,8 +611,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'Nautilus Tan', '#c9b89d', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -878,8 +623,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 003', 'Grayling Brown', '#6b5a4e', 5)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -889,24 +633,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('JAK 004', 'Patagonia Better Sweater Jacket (Womens)', 'Jackets', 'Women''s fit Better Sweater with feminine contours. Warm fleece with smooth exterior.', '{"patagonia"}', '{"Womens"}', '{"XS","S","M","L","XL"}', 24, '{}', '{}', true, 5)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 004', 'Black', '#1a1a1a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -920,8 +653,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 004', 'Birch White', '#f0ede6', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -933,8 +665,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 004', 'New Navy', '#1d3461', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -946,8 +677,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 004', 'River Rock Green', '#6e8c6a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -959,8 +689,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 004', 'Light Violet', '#b28fc0', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -970,24 +699,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TEC 001', 'JBL GO 4', 'Tech', 'Ultra-portable Bluetooth speaker with JBL Pro Sound. Waterproof and dustproof for outdoor use.', '{"jbl"}', '{"Unisex"}', '{"One Size"}', 12, '{}', '{}', true, 6)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TEC 001', 'White', '#f5f5f5', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1001,8 +719,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TEC 001', 'Black', '#1a1a1a', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1014,8 +731,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TEC 001', 'Blue', '#4472c4', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1027,8 +743,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TEC 001', 'Red', '#c0392b', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1038,24 +753,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 010', 'Peter Millar Raglan Sleeve Perth Layer Quarter-Zip', 'Tops', 'The Peter Millar Raglan Sleeve Perth Layer Quarter-Zip sets the standard for clean, classic sport style. Designed with a modern raglan sleeve and refined kissing welt placket, it''s finished with a subtle metallic zipper for an elevated touch. Crafted from a four-way stretch performance blend, it offers moisture-wicking, quick-dry comfort and easy care, along with UPF 50+ sun protection. Lightweight and versatile, it''s the perfect layering piece for the course, office, or weekend.', '{"peter-millar"}', '{"Womens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 7)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 010', 'Navy', '#1b2a4a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1067,8 +771,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 010', 'White', '#ffffff', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1080,8 +783,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 010', 'Black', '#1a1a1a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1091,24 +793,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 011', 'Peter Millar Performance Button Polo', 'Tops', 'The Peter Millar Women''s Performance Button Polo is crafted from the brand''s signature performance fabric for exceptional softness and a fluid, flattering drape. Designed for superior comfort on and off the course, it keeps you cool, polished, and confident throughout the day. Made with four-way stretch and antimicrobial, moisture-wicking, quick-dry technology, it also offers UPF 50+ sun protection and easy-care convenience. Finished with a self-fabric collar, four-button placket, and notched hem, it''s a refined essential built for modern performance.', '{"peter-millar"}', '{"Womens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 8)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 011', 'Navy', '#1b2a4a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1120,8 +811,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 011', 'White', '#ffffff', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1133,8 +823,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 011', 'Black', '#1a1a1a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1144,24 +833,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 012', 'Peter Millar Banded Sport Mesh Sleeveless Button Polo', 'Tops', 'The Peter Millar Banded Sport Mesh Sleeveless Button Polo is a course classic designed for effortless wear long after your round. Crafted from incredibly soft jersey fabric with a fluid drape, it delivers moisture-wicking comfort, odor resistance, and four-way stretch for all-day performance. With UPF 50+ sun protection, it''s ideal for extended time outdoors. Finished with a self-fabric collar, four-button placket, and a flattering flared notched hem, this sleeveless polo blends athletic function with polished, feminine style.', '{"peter-millar"}', '{"Womens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 9)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 012', 'Navy', '#1b2a4a', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1173,8 +851,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 012', 'White', '#ffffff', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1186,8 +863,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 012', 'Black', '#1a1a1a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1197,24 +873,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 013', 'Peter Millar Perth Performance Quarter-Zip', 'Tops', 'The Peter Millar Perth Performance Quarter-Zip (Men''s) is crafted from signature high-tech loop terry fabric that delivers premium comfort with modern performance. Designed with four-way stretch and two-yarn moisture-wicking technology, it dries quickly and provides UPF 50+ sun protection for all-day wear. Styled with a print zipper, mock collar, and banded cuffs and hem, this classic-fit layer offers a polished sport look. Finished with the Peter Millar logo on the back yoke, it''s an easy-care essential for the course, office, or weekend.', '{"peter-millar"}', '{"Mens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 10)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Cottage Blue', '#6b8aa8', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1226,8 +891,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Black', '#1a1a1a', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1239,8 +903,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'British Grey', '#8c8c8c', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1252,8 +915,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Iron', '#4a4a4a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1265,8 +927,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Navy', '#1b2a4a', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1278,8 +939,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'White', '#ffffff', 5)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1291,8 +951,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Red', '#c0392b', 6)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1304,8 +963,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Blue', '#4472c4', 7)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1317,8 +975,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 013', 'Green', '#2e7d32', 8)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1328,24 +985,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 014', 'Johnnie-O Course Long Sleeve T-Shirt', 'Tops', 'The Johnnie-O Course Long Sleeve T-Shirt is a performance-driven essential designed for active days and everyday comfort. Made from a soft stretch blend of polyester, lyocell, and spandex, this Dri-Release® crew delivers moisture-wicking performance with a lightweight, breathable feel. Finished with contrast neck tape, tonal reverse coverstitch detailing, and a reflective script logo at the back shoulder, it blends athletic function with clean, modern style.', '{"johnnie-o"}', '{"Mens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 11)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 014', 'Wake', '#1e3a5f', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1357,8 +1003,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 014', 'White', '#ffffff', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1370,8 +1015,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 014', 'Heather Black', '#3a3a3a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1383,8 +1027,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 014', 'Seal', '#3d4a4f', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1394,24 +1037,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('TOP 015', 'Johnnie-O Course T-Shirt', 'Tops', 'The Johnnie-O Course T-Shirt is a lightweight performance essential built for movement and everyday wear. Crafted from a soft stretch blend of polyester, lyocell, and spandex, this Dri-Release® crew neck tee delivers moisture-wicking comfort with a smooth, breathable feel. Designed with contrast neck tape, tonal reverse coverstitch detailing, and a reflective script logo at the back shoulder, it offers a clean, athletic look with subtle performance-driven touches.', '{"johnnie-o"}', '{"Mens"}', '{"XS","S","M","L","XL","XXL"}', 12, '{}', '{}', true, 12)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'White', '#ffffff', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1423,8 +1055,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Seal', '#3d4a4f', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1436,8 +1067,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Wake', '#1e3a5f', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1449,8 +1079,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Heather Black', '#3a3a3a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1462,8 +1091,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Barrels Blue', '#5b8eb5', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1475,8 +1103,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Malibu', '#f5a623', 5)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1488,8 +1115,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Rouge Red', '#a32638', 6)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1501,8 +1127,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Thunder', '#5c5c5c', 7)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1514,8 +1139,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('TOP 015', 'Lobster', '#e74c3c', 8)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1525,24 +1149,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('JAK 005', 'Helly Hansen Crew Insulator 2.0 Jacket (Womens)', 'Jackets', 'The Helly Hansen Women''s Crew Insulator Jacket 2.0 delivers lightweight warmth with a clean, marine-inspired design that transitions effortlessly from the water to the city. Insulated with 80% recycled PrimaLoft® Black, it provides reliable comfort while maintaining a streamlined silhouette. Constructed with a PFC-free, water-repellent microfiber shell, it helps keep you dry in changing conditions. Soft, comfortable, and versatile, this classic crew layer blends sustainable insulation with everyday performance.', '{"helly-hansen"}', '{"Womens"}', '{"S","M","L","XL","XXL"}', 12, '{}', '{}', true, 13)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 005', 'White', '#ffffff', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1554,8 +1167,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 005', 'Navy', '#1b2a4a', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1567,8 +1179,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 005', 'Ultra Blue', '#0066cc', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1580,8 +1191,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 005', 'Magenta 2.0', '#c2185b', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1591,24 +1201,13 @@ on conflict (colour_id, url) do nothing;
 
 insert into public.products (sku, name, category, description, brand_slugs, genders, sizes, min_qty, deco_locations, deco_methods, is_active, sort_order)
 values ('JAK 006', 'Helly Hansen Crew Insulator 2.0 Jacket (Mens)', 'Jackets', 'The Helly Hansen Crew Insulator Jacket is a lightweight, versatile layer designed to keep you warm on the water and polished in the city. Featuring 80% recycled PrimaLoft® Black insulation, it delivers reliable warmth without added bulk. Constructed with a PFC-free, water-repellent microfiber shell, it helps protect against light moisture while maintaining a clean, classic marine look. Soft, comfortable, and easy to wear, this insulated jacket blends sustainable materials with everyday performance.', '{"helly-hansen"}', '{"Mens"}', '{"S","M","L","XL","XXL"}', 12, '{}', '{}', true, 14)
-on conflict (sku) do update set
-  name = excluded.name,
-  category = excluded.category,
-  description = excluded.description,
-  brand_slugs = excluded.brand_slugs,
-  genders = excluded.genders,
-  sizes = excluded.sizes,
-  min_qty = excluded.min_qty,
-  deco_locations = excluded.deco_locations,
-  deco_methods = excluded.deco_methods,
-  sort_order = excluded.sort_order;
+on conflict (sku) do nothing;
 
 with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 006', 'Ebony', '#2b2b2b', 0)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1620,8 +1219,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 006', 'Red', '#c0392b', 1)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1633,8 +1231,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 006', 'Navy', '#1b2a4a', 2)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1646,8 +1243,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 006', 'Black', '#1a1a1a', 3)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)
@@ -1659,8 +1255,7 @@ with seed_colour as (
   insert into public.product_colours (product_sku, name, hex, sort_order)
   values ('JAK 006', 'Washed Navy', '#4a6178', 4)
   on conflict (product_sku, name) do update set
-    hex = excluded.hex,
-    sort_order = excluded.sort_order
+    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated
   returning id
 )
 insert into public.product_images (product_sku, colour_id, label, url, alt_text, sort_order)

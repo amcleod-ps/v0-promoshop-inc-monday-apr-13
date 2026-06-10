@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ContactSection } from "@/components/contact-section"
@@ -5,6 +6,12 @@ import { ABOUT_CONTENT } from "@/lib/cms/about"
 import { SiteImage } from "@/components/site-image"
 import { TeamSection } from "@/components/team-section"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+
+export const metadata: Metadata = {
+  title: "About Us",
+  description:
+    "Meet PromoShop — a Top 40 promotional merchandise company partnering with recognizable global brands to create memorable merchandise experiences.",
+}
 
 export default async function AboutPage() {
   const content = await getSiteContentMap()
@@ -19,6 +26,7 @@ export default async function AboutPage() {
     <div className="min-h-screen bg-[#111111] text-white">
       <Header />
 
+      <main id="main-content">
       {/* Hero Section — image LEFT, text RIGHT */}
       <section className="relative bg-[#0d0d0d] overflow-hidden">
         {/* Large red accent stripe */}
@@ -62,6 +70,7 @@ export default async function AboutPage() {
 
       {/* Contact Section */}
       <ContactSection />
+      </main>
 
       <Footer />
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, ShoppingBag, Phone, Heart, User } from "lucide-react"
+import { Menu, X, ShoppingBag, Phone, User, LogOut } from "lucide-react"
 import { useLocale } from "@/lib/locale-context"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { SiteImage } from "@/components/site-image"
@@ -17,22 +17,11 @@ const navigation = [
   { name: "About", href: "/about" },
 ]
 
-export function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const pathname = usePathname()
-  const { locale, config, setLocale } = useLocale()
-  const { isAuthenticated } = useAuth()
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  const LocaleToggle = ({ className = "" }: { className?: string }) => (
+// Module-level (not defined inside Header's render) so React keeps a stable
+// component identity instead of remounting the toggle on every re-render.
+function LocaleToggle({ className = "" }: { className?: string }) {
+  const { locale, setLocale } = useLocale()
+  return (
     <div className={`inline-flex items-center rounded-full border border-[#e5e5e5] p-0.5 ${className}`} role="group" aria-label="Select region">
       <button
         type="button"
@@ -60,6 +49,22 @@ export function Header() {
       </button>
     </div>
   )
+}
+
+export function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
+  const { config } = useLocale()
+  const { isAuthenticated, user, signOut } = useAuth()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   return (
     <header className={`bg-white ${scrolled ? "shadow-md" : ""} sticky top-0 z-50 transition-all duration-300`}>
@@ -74,15 +79,30 @@ export function Header() {
             {config.supportLineLabel}
           </a>
           <div className="hidden sm:flex items-center gap-4">
-            {isAuthenticated ? null : (
+            {isAuthenticated ? (
+              <>
+                <span className="flex items-center gap-1.5 text-xs font-visby">
+                  <User className="w-3 h-3" aria-hidden="true" />
+                  {user?.firstName || user?.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors"
+                >
+                  <LogOut className="w-3 h-3" aria-hidden="true" />
+                  Sign out
+                </button>
+              </>
+            ) : (
               <Link href="/sign-in" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
-                <User className="w-3 h-3" />
+                <User className="w-3 h-3" aria-hidden="true" />
                 Login / Register
               </Link>
             )}
             <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
-              <Heart className="w-3 h-3" />
-              Wishlist
+              <ShoppingBag className="w-3 h-3" aria-hidden="true" />
+              My Quote
             </Link>
           </div>
         </div>
@@ -92,11 +112,13 @@ export function Header() {
       <nav className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
+          {/* Declared dimensions must match the real 3:2 file ratio or the
+              nav reflows when the image decodes (layout shift). */}
           <SiteImage
             imageId="site.logo"
             defaultSrc={HOME_CONTENT.hero.logo}
             alt={HOME_CONTENT.hero.logoAlt}
-            width={320}
+            width={165}
             height={110}
             className="h-20 lg:h-24 w-auto"
             priority
@@ -111,9 +133,10 @@ export function Header() {
               <Link
                 key={item.name}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={`text-sm font-bold uppercase tracking-wider px-4 py-2 rounded-full transition-colors ${
                   isActive
-                    ? "text-[#ef473f] bg-[#ef473f]/5"
+                    ? "text-[#d93e36] bg-[#ef473f]/5 underline underline-offset-8"
                     : "text-[#373a36] hover:text-[#ef473f]"
                 }`}
               >
@@ -140,19 +163,21 @@ export function Header() {
           type="button"
           className="lg:hidden text-[#373a36]"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-menu"
         >
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">{mobileMenuOpen ? "Close menu" : "Open menu"}</span>
           {mobileMenuOpen ? (
-            <X className="h-6 w-6" />
+            <X className="h-6 w-6" aria-hidden="true" />
           ) : (
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6" aria-hidden="true" />
           )}
         </button>
       </nav>
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-[#e5e5e5]">
+        <div id="mobile-menu" className="lg:hidden bg-white border-t border-[#e5e5e5]">
           <div className="space-y-1 px-6 py-4">
             {navigation.map((item) => {
               const isActive = pathname === item.href
@@ -160,8 +185,9 @@ export function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={`block py-3 text-base font-bold uppercase tracking-wider transition-colors ${
-                    isActive ? "text-[#ef473f]" : "text-[#373a36] hover:text-[#ef473f]"
+                    isActive ? "text-[#d93e36] underline underline-offset-4" : "text-[#373a36] hover:text-[#ef473f]"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -171,7 +197,7 @@ export function Header() {
             })}
             <div className="pt-4 border-t border-[#e5e5e5] flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold tracking-wider uppercase text-[#999]">Region</span>
+                <span className="text-xs font-bold tracking-wider uppercase text-[#6b6b6b]">Region</span>
                 <LocaleToggle />
               </div>
               <a
@@ -189,7 +215,18 @@ export function Header() {
                 <ShoppingBag className="w-4 h-4" />
                 Get a Quote
               </Link>
-              {!isAuthenticated && (
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    signOut()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="block w-full py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"
+                >
+                  Sign out{user?.firstName ? ` (${user.firstName})` : ""}
+                </button>
+              ) : (
                 <Link
                   href="/sign-in"
                   className="block py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react"
 import type { SiteImageMap } from "@/lib/supabase/images"
+import { withCacheBust } from "@/lib/cache-bust"
 
 const SiteImagesContext = createContext<SiteImageMap>({})
 
@@ -28,7 +29,7 @@ export function useSiteImageUrl(key: string, fallback: string): string {
   const map = useContext(SiteImagesContext)
   const row = map[key]
   if (row?.url) {
-    return `${row.url}?v=${encodeURIComponent(row.updatedAt)}`
+    return withCacheBust(row.url, row.updatedAt)
   }
   return fallback
 }

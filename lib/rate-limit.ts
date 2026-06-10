@@ -25,7 +25,16 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
     return false
   }
 
-  if (!WINDOWS.has(key) && WINDOWS.size >= MAX_TRACKED_KEYS) WINDOWS.clear()
+  if (!WINDOWS.has(key) && WINDOWS.size >= MAX_TRACKED_KEYS) {
+    // Evict the oldest-inserted entries instead of clearing everything —
+    // a full clear() would let a distributed attacker reset every active
+    // bucket (including their own) just by burning through 5,000 keys.
+    let toEvict = Math.ceil(MAX_TRACKED_KEYS / 10)
+    for (const oldest of WINDOWS.keys()) {
+      WINDOWS.delete(oldest)
+      if (--toEvict <= 0) break
+    }
+  }
   hits.push(now)
   WINDOWS.set(key, hits)
   return true

@@ -74,7 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
 
   const signOut = useCallback(async () => {
     if (typeof window === "undefined") return
-    window.localStorage.removeItem(USER_KEY)
+    try {
+      window.localStorage.removeItem(USER_KEY)
+    } catch {
+      // Storage unavailable — the in-memory state still signs the user out.
+    }
     setUser(null)
   }, [])
 
@@ -111,14 +115,20 @@ export function setFallbackUser(user: {
   company?: string
 }): void {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(
-    USER_KEY,
-    JSON.stringify({
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName ?? "",
-      company: user.company ?? "",
-    }),
-  )
+  try {
+    window.localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName ?? "",
+        company: user.company ?? "",
+      }),
+    )
+  } catch (e) {
+    // Storage full/disabled: the session still proceeds, it just won't
+    // survive a reload. Never let this throw inside a submit handler.
+    console.error("Could not persist user to localStorage:", e)
+  }
   window.dispatchEvent(new StorageEvent("storage", { key: USER_KEY }))
 }

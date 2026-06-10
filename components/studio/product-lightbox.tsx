@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import Image from "next/image"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { SafeImage } from "@/components/safe-image"
 
 interface ProductLightboxProps {
   isOpen: boolean
@@ -23,32 +23,63 @@ export function ProductLightbox({
 }: ProductLightboxProps) {
   const [index, setIndex] = useState(initialIndex)
   const touchStartX = useRef<number | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (isOpen) setIndex(initialIndex)
   }, [initialIndex, isOpen])
 
+  // Dialog focus management: focus moves in on open, returns to the
+  // trigger (the modal's zoom button) on close.
+  useEffect(() => {
+    if (!isOpen) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    closeButtonRef.current?.focus()
+    return () => previouslyFocused?.focus()
+  }, [isOpen])
+
   const goPrev = useCallback(() => {
-    setIndex((i) => {
-      const next = (i - 1 + images.length) % images.length
-      onIndexChange(next)
-      return next
-    })
-  }, [images.length, onIndexChange])
+    setIndex((i) => (i - 1 + images.length) % images.length)
+  }, [images.length])
 
   const goNext = useCallback(() => {
-    setIndex((i) => {
-      const next = (i + 1) % images.length
-      onIndexChange(next)
-      return next
-    })
-  }, [images.length, onIndexChange])
+    setIndex((i) => (i + 1) % images.length)
+  }, [images.length])
+
+  // Keep the parent carousel in sync as a side effect of index changes
+  // (calling the parent setter inside our own state updater triggers
+  // setState-during-render warnings under StrictMode).
+  useEffect(() => {
+    if (isOpen) onIndexChange(index)
+  }, [index, isOpen, onIndexChange])
 
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-      else if (e.key === "ArrowLeft") goPrev()
+      if (e.key === "Escape") {
+        onClose()
+        return
+      }
+      if (e.key === "Tab") {
+        // Trap focus inside the lightbox (its three buttons).
+        const root = rootRef.current
+        if (!root) return
+        const focusables = Array.from(root.querySelectorAll<HTMLElement>("button:not([disabled])"))
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === first || !root.contains(active))) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+          e.preventDefault()
+          first.focus()
+        }
+        return
+      }
+      if (e.key === "ArrowLeft") goPrev()
       else if (e.key === "ArrowRight") goNext()
     }
     window.addEventListener("keydown", handler)
@@ -73,6 +104,10 @@ export function ProductLightbox({
 
   return (
     <div
+      ref={rootRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${title} — full-screen image view`}
       className="fixed inset-0 z-[60] bg-black/95 flex flex-col"
       onClick={onClose}
       onTouchStart={handleTouchStart}
@@ -89,6 +124,7 @@ export function ProductLightbox({
             {index + 1} / {images.length}
           </span>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close full-screen view"
@@ -105,7 +141,7 @@ export function ProductLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full h-full max-w-5xl">
-          <Image
+          <SafeImage
             key={images[index]}
             src={images[index]}
             alt={`${title} (${index + 1}/${images.length})`}

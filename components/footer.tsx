@@ -1,16 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
-import { Instagram, Linkedin, Facebook, Twitter, ArrowRight } from "lucide-react"
+import { Mail } from "lucide-react"
 import { useLocale } from "@/lib/locale-context"
 import { SiteImage } from "@/components/site-image"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { useSiteText } from "@/components/site-content-provider"
 
 export function Footer() {
-  const [email, setEmail] = useState("")
-  const [subscribed, setSubscribed] = useState(false)
   const { config } = useLocale()
   const tagline = useSiteText(
     "footer.tagline",
@@ -25,19 +22,9 @@ export function Footer() {
   // places instead of leaving the footer stale.
   const contactEmail = useSiteText("contact.section.email", "info@promoshopinc.com")
 
-  const socialLinks = [
-    { name: "Instagram", icon: Instagram, href: "#" },
-    { name: "LinkedIn", icon: Linkedin, href: "#" },
-    { name: "Facebook", icon: Facebook, href: "#" },
-    { name: "Twitter / X", icon: Twitter, href: "#" },
-  ]
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubscribed(true)
-    setEmail("")
-    setTimeout(() => setSubscribed(false), 3000)
-  }
+  // Social icons removed for launch: every profile URL was a dead "#"
+  // placeholder. Restore the icon row (see git history) once the client
+  // supplies real profile links.
 
   return (
     // Footer repainted white per client feedback (Apr 16). Sky-blue (#bde7ff)
@@ -54,9 +41,9 @@ export function Footer() {
               <SiteImage
                 imageId="site.logo"
                 defaultSrc={HOME_CONTENT.hero.logo}
-                alt="PromoShop Studio"
-                width={200}
-                height={68}
+                alt="PromoShop Inc"
+                width={165}
+                height={110}
                 className="h-14 w-auto"
                 unoptimized
               />
@@ -65,47 +52,21 @@ export function Footer() {
               {tagline}
             </p>
 
-            {/* Newsletter Signup */}
+            {/* Newsletter: the previous inline form was never wired to a
+                backend (the address was silently discarded), so it now
+                routes interest through a real mailto until the client picks
+                a mailing-list provider. */}
             <div className="mb-6">
-              <h4 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-3">
+              <h3 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-3">
                 {newsletterHeading}
-              </h4>
-              {subscribed ? (
-                <p className="text-sm text-[#4a9b2f] font-semibold">Thanks for subscribing!</p>
-              ) : (
-                <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-                  <input
-                    type="email"
-                    required
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 bg-white border border-[#d4d4d4] text-[#111] px-4 py-2.5 rounded-full text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#999]"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-[#ef473f] text-white px-4 py-2.5 rounded-full hover:opacity-90 transition-opacity"
-                    aria-label="Subscribe to newsletter"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </form>
-              )}
-            </div>
-
-            {/* Social Media Icons */}
-            <div className="flex gap-3">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  aria-label={social.name}
-                  title={social.name}
-                  className="w-10 h-10 rounded-full border border-[#d4d4d4] bg-white flex items-center justify-center text-[#666] hover:text-white hover:bg-[#ef473f] hover:border-[#ef473f] transition-colors"
-                >
-                  <social.icon className="w-5 h-5" />
-                </a>
-              ))}
+              </h3>
+              <a
+                href={`mailto:${contactEmail}?subject=${encodeURIComponent("Newsletter signup")}`}
+                className="inline-flex items-center gap-2 text-sm font-visby text-[#555] hover:text-[#d93e36] transition-colors underline underline-offset-2"
+              >
+                <Mail className="w-4 h-4" aria-hidden="true" />
+                Email us to join our mailing list
+              </a>
             </div>
           </div>
 
@@ -128,16 +89,17 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Collections */}
+          {/* Collections — only categories that actually exist in the
+              catalog; each link pre-filters the studio grid. */}
           <div>
             <h3 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-4">
               Collections
             </h3>
             <ul className="space-y-2">
-              {["Drinkware", "Tops", "Jackets", "Tech", "Bags", "Eco-Aware"].map((item) => (
+              {["Drinkware", "Tops", "Jackets", "Tech"].map((item) => (
                 <li key={item}>
                   <Link
-                    href="/studio"
+                    href={`/studio?category=${encodeURIComponent(item)}`}
                     className="text-sm font-visby text-[#555] hover:text-[#ef473f] transition-colors"
                   >
                     {item}
@@ -177,31 +139,13 @@ export function Footer() {
           </p>
         </div>
 
-        {/* Bottom Bar */}
+        {/* Bottom Bar. Privacy/Terms/Shipping links removed for launch:
+            they pointed at "#" — no policy pages exist yet. Restore them
+            (real routes) once the client supplies the policy copy. */}
         <div className="mt-8 pt-8 border-t border-[#e5e5e5] flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm font-visby text-[#777]">
+          <p className="text-sm font-visby text-[#6b6b6b]">
             &copy; {new Date().getFullYear()} PromoShop Inc. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link
-              href="#"
-              className="text-sm font-visby text-[#777] hover:text-[#ef473f] transition-colors underline-offset-2 hover:underline"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              href="#"
-              className="text-sm font-visby text-[#777] hover:text-[#ef473f] transition-colors underline-offset-2 hover:underline"
-            >
-              Terms of Service
-            </Link>
-            <Link
-              href="#"
-              className="text-sm font-visby text-[#777] hover:text-[#ef473f] transition-colors underline-offset-2 hover:underline"
-            >
-              Shipping Policy
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

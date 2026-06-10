@@ -1,4 +1,6 @@
+import { cache } from "react"
 import { createClient } from "./server"
+import { withCacheBust } from "@/lib/cache-bust"
 
 export interface SupabaseTeamMember {
   slug: string
@@ -13,7 +15,7 @@ export interface SupabaseTeamMember {
 
 function bustedUrl(url: string | null | undefined, updatedAt: string): string | null {
   if (!url) return null
-  return `${url}?v=${encodeURIComponent(updatedAt)}`
+  return withCacheBust(url, updatedAt)
 }
 
 /**
@@ -24,7 +26,7 @@ function bustedUrl(url: string | null | undefined, updatedAt: string): string | 
  * real answer ("the admin removed everyone") and renders an empty roster
  * rather than resurrecting the static one.
  */
-export async function getTeamMembers(): Promise<SupabaseTeamMember[] | null> {
+export const getTeamMembers = cache(async (): Promise<SupabaseTeamMember[] | null> => {
   let supabase
   try {
     supabase = await createClient()
@@ -43,4 +45,4 @@ export async function getTeamMembers(): Promise<SupabaseTeamMember[] | null> {
     ...row,
     image_url: bustedUrl(row.image_url, row.updated_at),
   }))
-}
+})

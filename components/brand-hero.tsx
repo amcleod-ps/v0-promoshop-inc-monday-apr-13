@@ -25,7 +25,8 @@ export function BrandHero({ brand }: Props) {
         <SiteImage
           imageId={lifestyleId}
           defaultSrc=""
-          alt={`${brand.name} lifestyle`}
+          alt=""
+          aria-hidden="true"
           width={1600}
           height={600}
           className="absolute inset-0 w-full h-full object-cover"

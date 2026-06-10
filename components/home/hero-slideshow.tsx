@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
 import { useImageSrc } from "@/hooks/use-image-src"
+import { useSiteImageAlt } from "@/components/site-images-provider"
 
 export interface HeroSlide {
   src: string
@@ -35,7 +36,11 @@ function Slide({
   // dashboard — normally slide images are managed per-slide in the Hero
   // slides section instead.
   const overrideSrc = useImageSrc(`home.slideshow.${slideIndex}`, "")
+  // When the override swaps the image, the original slide's alt text would
+  // describe the wrong picture — prefer the override row's alt_text.
+  const overrideAlt = useSiteImageAlt(`home.slideshow.${slideIndex}`)
   const src = overrideSrc || slide.src
+  const alt = overrideSrc ? (overrideAlt ?? slide.alt) : slide.alt
   const showCta = !!(slide.cta_text && slide.cta_url)
 
   return (
@@ -47,8 +52,17 @@ function Slide({
       aria-hidden={!active}
     >
       {src ? (
+        // The first slide is the homepage's LCP candidate — fetch it first;
+        // the hidden slides can wait so they don't compete for bandwidth.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={slide.alt} className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          fetchPriority={slideIndex === 1 ? "high" : undefined}
+          loading={slideIndex === 1 ? undefined : "lazy"}
+          decoding={slideIndex === 1 ? undefined : "async"}
+        />
       ) : null}
 
       {/* Per-slide subtitle + CTA, edited from /admin-dashboard. The title
@@ -66,6 +80,9 @@ function Slide({
           {showCta ? (
             <a
               href={slide.cta_url!}
+              // Inactive slides are aria-hidden; their CTA must also leave
+              // the tab order or keyboard focus lands on an invisible link.
+              tabIndex={active ? 0 : -1}
               className="inline-flex items-center gap-2 rounded-full bg-[#ef473f] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#d93e36]"
             >
               {slide.cta_text}
@@ -79,7 +96,12 @@ function Slide({
 
 export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps) {
   const [index, setIndex] = useState(0)
-  const [paused, setPaused] = useState(false)
+  const [hoverPaused, setHoverPaused] = useState(false)
+  const [focusPaused, setFocusPaused] = useState(false)
+  // Explicit pause control — WCAG 2.2.2 requires a way to stop auto-playing
+  // content that doesn't depend on having a mouse to hover with.
+  const [userPaused, setUserPaused] = useState(false)
+  const paused = hoverPaused || focusPaused || userPaused
 
   useEffect(() => {
     if (paused || slides.length < 2) return
@@ -87,7 +109,9 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
       setIndex((prev) => (prev + 1) % slides.length)
     }, intervalMs)
     return () => clearInterval(id)
-  }, [paused, slides.length, intervalMs])
+    // `index` in the deps restarts the timer after manual navigation, so a
+    // click just before the tick doesn't advance twice in quick succession.
+  }, [paused, slides.length, intervalMs, index])
 
   if (slides.length === 0) return null
 
@@ -97,9 +121,16 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
 
   return (
     <div
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured highlights"
       className="relative h-72 lg:h-full lg:min-h-[500px] overflow-hidden"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseEnter={() => setHoverPaused(true)}
+      onMouseLeave={() => setHoverPaused(false)}
+      onFocus={() => setFocusPaused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusPaused(false)
+      }}
     >
       {slides.map((slide, i) => (
         <Slide
@@ -118,7 +149,7 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
             aria-label="Previous slide"
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -126,7 +157,17 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
             aria-label="Next slide"
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setUserPaused((p) => !p)}
+            aria-label={userPaused ? "Resume slideshow" : "Pause slideshow"}
+            aria-pressed={userPaused}
+            className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
+          >
+            {userPaused ? <Play className="w-4 h-4" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
           </button>
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
@@ -136,6 +177,7 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
                 type="button"
                 onClick={() => go(i)}
                 aria-label={`Go to slide ${i + 1}`}
+                aria-current={i === index}
                 className={`h-2 rounded-full transition-all ${
                   i === index ? "bg-[#ef473f] w-6" : "bg-white/70 hover:bg-white w-2"
                 }`}

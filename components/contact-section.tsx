@@ -21,8 +21,10 @@ export function ContactSection() {
     company: "",
     message: "",
     // Honeypot — hidden from real visitors; bots that autofill it are
-    // silently discarded server-side.
-    website: ""
+    // silently discarded server-side. Deliberately NOT named "website":
+    // Chrome's address autofill matches that name and would silently
+    // swallow real submissions from visitors with autofill profiles.
+    hpCheck: ""
   })
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -45,7 +47,7 @@ export function ContactSection() {
         phone: formData.phone || undefined,
         company: formData.company || undefined,
         message: formData.message,
-        website: formData.website || undefined,
+        hp_check: formData.hpCheck || undefined,
       })
 
       if (result.success) {
@@ -57,7 +59,7 @@ export function ContactSection() {
           phone: "",
           company: "",
           message: "",
-          website: ""
+          hpCheck: ""
         })
         setTimeout(() => setSubmitted(false), 5000)
       } else {
@@ -94,7 +96,7 @@ export function ContactSection() {
                 <div className="space-y-1 text-[#888] font-visby">
                   {config.allContacts.map((contact) => (
                     <p key={contact.phoneHref}>
-                      <span className="text-[#666] text-sm">{contact.phoneLabel}: </span>
+                      <span className="text-[#999] text-sm">{contact.phoneLabel}: </span>
                       <a href={contact.phoneHref} className="hover:text-[#ef473f] transition-colors">{contact.phone}</a>
                     </p>
                   ))}
@@ -135,7 +137,7 @@ export function ContactSection() {
           {/* Contact Form */}
           <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-8 shadow-sm">
             {submitted ? (
-              <div className="h-full flex items-center justify-center text-center">
+              <div role="status" className="h-full flex items-center justify-center text-center">
                 <div>
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#6abf4b]/10 flex items-center justify-center">
                     <svg className="w-8 h-8 text-[#6abf4b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,19 +153,19 @@ export function ContactSection() {
                 {/* Honeypot field: visually removed, skipped by keyboard and
                     screen readers. Real visitors never fill it. */}
                 <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-                  <label htmlFor="contact-website">Website</label>
+                  <label htmlFor="contact-hp-check">Leave this field empty</label>
                   <input
                     type="text"
-                    id="contact-website"
-                    name="website"
+                    id="contact-hp-check"
+                    name="hp_check"
                     tabIndex={-1}
                     autoComplete="off"
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    value={formData.hpCheck}
+                    onChange={(e) => setFormData({ ...formData, hpCheck: e.target.value })}
                   />
                 </div>
                 {error && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
+                  <div role="alert" className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                     {error}
                   </div>
                 )}
@@ -175,10 +177,12 @@ export function ContactSection() {
                     <input
                       type="text"
                       id="firstName"
+                      autoComplete="given-name"
+                      maxLength={100}
                       required
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#555]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="First name"
                     />
                   </div>
@@ -189,10 +193,12 @@ export function ContactSection() {
                     <input
                       type="text"
                       id="lastName"
+                      autoComplete="family-name"
+                      maxLength={100}
                       required
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#555]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="Last name"
                     />
                   </div>
@@ -205,10 +211,12 @@ export function ContactSection() {
                     <input
                       type="email"
                       id="contact-email"
+                      autoComplete="email"
+                      maxLength={254}
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#555]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="you@company.com"
                     />
                   </div>
@@ -219,9 +227,11 @@ export function ContactSection() {
                     <input
                       type="tel"
                       id="phone"
+                      autoComplete="tel"
+                      maxLength={50}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#555]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="(555) 123-4567"
                     />
                   </div>
@@ -233,9 +243,11 @@ export function ContactSection() {
                   <input
                     type="text"
                     id="company"
+                    autoComplete="organization"
+                    maxLength={200}
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#555]"
+                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
                     placeholder="Your company name"
                   />
                 </div>
@@ -246,10 +258,11 @@ export function ContactSection() {
                   <textarea
                     id="message"
                     required
+                    maxLength={10000}
                     rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors resize-none placeholder:text-[#555]"
+                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors resize-none placeholder:text-[#8a8a8a]"
                     placeholder="Tell us about your project..."
                   />
                 </div>

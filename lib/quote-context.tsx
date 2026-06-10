@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
 
 export interface QuoteItem {
   id: string
@@ -57,6 +57,24 @@ const defaultProjectInfo: QuoteProjectInfo = {
   notes: "",
 }
 
+// Hard ceiling on a single line item's quantity — generous for promo
+// orders, small enough to stop a tampered/corrupt value from breaking
+// the serialized submission.
+export const MAX_ITEM_QUANTITY = 100000
+
+function clampQuantity(value: unknown): number {
+  const n = Math.floor(Number(value))
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.min(n, MAX_ITEM_QUANTITY)
+}
+
+// next/image throws on src values that are neither a path nor an absolute
+// URL, so only keep image strings that can actually render.
+function safeImagePath(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  return /^(\/|https?:\/\/)/.test(value) ? value : null
+}
+
 // localStorage is user-writable and can hold stale data from an older schema.
 // Parse defensively so a bad value can't crash the cart (items.map /
 // items.length) or de-control the form inputs (value={undefined}).
@@ -67,17 +85,30 @@ function parseQuoteItems(raw: string | null): QuoteItem[] {
     if (!Array.isArray(parsed)) return []
     return parsed
       .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null)
-      .map((it) => ({
-        id: String(it.id ?? `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`),
-        productSku: String(it.productSku ?? ""),
-        productName: String(it.productName ?? ""),
-        colour: String(it.colour ?? ""),
-        size: String(it.size ?? ""),
-        quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : 1,
-        ...(typeof it.image === "string" ? { image: it.image } : {}),
-      }))
+      .map((it) => {
+        const image = safeImagePath(it.image)
+        return {
+          id: String(it.id ?? `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`),
+          productSku: String(it.productSku ?? ""),
+          productName: String(it.productName ?? ""),
+          colour: String(it.colour ?? ""),
+          size: String(it.size ?? ""),
+          quantity: clampQuantity(it.quantity),
+          ...(image ? { image } : {}),
+        }
+      })
   } catch {
     return []
+  }
+}
+
+// Storage can be full or disabled (private mode, quota); a failed save must
+// never crash the render — the in-memory cart keeps working for the session.
+function trySetItem(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch (e) {
+    console.error(`Could not persist ${key} to localStorage:`, e)
   }
 }
 
@@ -119,70 +150,108 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     setIsLoaded(true)
   }, [])
 
+  // Keep this tab in sync when another tab edits the cart (the `storage`
+  // event only fires in *other* documents, so this can't loop).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "promoshop_quote_items") {
+        setItems(parseQuoteItems(e.newValue))
+      } else if (e.key === "promoshop_quote_contact") {
+        setContactInfoState(mergeStringShape(e.newValue, defaultContactInfo))
+      } else if (e.key === "promoshop_quote_project") {
+        setProjectInfoState(mergeStringShape(e.newValue, defaultProjectInfo))
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
   // Save to localStorage on changes
   useEffect(() => {
     if (!isLoaded) return
-    localStorage.setItem("promoshop_quote_items", JSON.stringify(items))
+    trySetItem("promoshop_quote_items", JSON.stringify(items))
   }, [items, isLoaded])
 
   useEffect(() => {
     if (!isLoaded) return
-    localStorage.setItem("promoshop_quote_contact", JSON.stringify(contactInfo))
+    trySetItem("promoshop_quote_contact", JSON.stringify(contactInfo))
   }, [contactInfo, isLoaded])
 
   useEffect(() => {
     if (!isLoaded) return
-    localStorage.setItem("promoshop_quote_project", JSON.stringify(projectInfo))
+    trySetItem("promoshop_quote_project", JSON.stringify(projectInfo))
   }, [projectInfo, isLoaded])
 
-  const addItem = (item: Omit<QuoteItem, "id">) => {
-    const newItem: QuoteItem = {
-      ...item,
-      id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    }
-    setItems((prev) => [...prev, newItem])
-  }
+  const addItem = useCallback((item: Omit<QuoteItem, "id">) => {
+    setItems((prev) => {
+      // Same product/colour/size already in the cart → merge quantities
+      // instead of stacking duplicate quantity-1 lines.
+      const existing = prev.find(
+        (it) =>
+          it.productSku === item.productSku &&
+          it.colour === item.colour &&
+          it.size === item.size,
+      )
+      if (existing) {
+        return prev.map((it) =>
+          it.id === existing.id
+            ? { ...it, quantity: clampQuantity(it.quantity + item.quantity) }
+            : it,
+        )
+      }
+      const newItem: QuoteItem = {
+        ...item,
+        quantity: clampQuantity(item.quantity),
+        id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      }
+      return [...prev, newItem]
+    })
+  }, [])
 
-  const removeItem = (id: string) => {
+  const removeItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id))
-  }
+  }, [])
 
-  const updateItem = (id: string, updates: Partial<QuoteItem>) => {
+  const updateItem = useCallback((id: string, updates: Partial<QuoteItem>) => {
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const next = { ...item, ...updates }
+        if (updates.quantity !== undefined) next.quantity = clampQuantity(updates.quantity)
+        return next
+      })
     )
-  }
+  }, [])
 
-  const clearItems = () => {
+  const clearItems = useCallback(() => {
     setItems([])
-  }
+  }, [])
 
-  const setContactInfo = (info: Partial<QuoteContactInfo>) => {
+  const setContactInfo = useCallback((info: Partial<QuoteContactInfo>) => {
     setContactInfoState((prev) => ({ ...prev, ...info }))
-  }
+  }, [])
 
-  const setProjectInfo = (info: Partial<QuoteProjectInfo>) => {
+  const setProjectInfo = useCallback((info: Partial<QuoteProjectInfo>) => {
     setProjectInfoState((prev) => ({ ...prev, ...info }))
-  }
+  }, [])
 
-  return (
-    <QuoteContext.Provider
-      value={{
-        items,
-        contactInfo,
-        projectInfo,
-        addItem,
-        removeItem,
-        updateItem,
-        clearItems,
-        setContactInfo,
-        setProjectInfo,
-        isLoaded,
-      }}
-    >
-      {children}
-    </QuoteContext.Provider>
+  const value = useMemo(
+    () => ({
+      items,
+      contactInfo,
+      projectInfo,
+      addItem,
+      removeItem,
+      updateItem,
+      clearItems,
+      setContactInfo,
+      setProjectInfo,
+      isLoaded,
+    }),
+    [items, contactInfo, projectInfo, addItem, removeItem, updateItem, clearItems, setContactInfo, setProjectInfo, isLoaded],
   )
+
+  return <QuoteContext.Provider value={value}>{children}</QuoteContext.Provider>
 }
 
 export function useQuote() {

@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
+import { useLocale } from "@/lib/locale-context"
 import type { Product } from "@/lib/products"
 
 // Brand page products grid — client-side so the detail modal can open in
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function BrandProductsGrid({ products, brandName }: Props) {
+  const { t } = useLocale()
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -36,7 +38,7 @@ export function BrandProductsGrid({ products, brandName }: Props) {
           Products Coming Soon
         </p>
         <p className="text-[#666] mb-6">
-          We&apos;re adding {brandName} products to our catalog. Contact us for availability.
+          We&apos;re adding {brandName} products to our {t("catalog")}. Contact us for availability.
         </p>
         <Link
           href="/#contact"
