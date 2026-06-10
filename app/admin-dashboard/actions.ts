@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 
@@ -106,6 +107,11 @@ export async function replaceImage(
   id: string,
   formData: FormData,
 ): Promise<ReplaceResult> {
+  // Server actions are invocable from any route via their Next-Action id,
+  // so the proxy.ts gate on /admin-dashboard alone cannot protect them —
+  // each action re-verifies the (optional) admin password itself.
+  const denied = await requireAdminAction()
+  if (denied) return denied
   // Validate the target BEFORE touching storage so a bad target can never
   // leave an orphaned file under an unintended path.
   if (!REPLACE_TARGETS.includes(target)) {
@@ -168,6 +174,8 @@ export async function removeImage(
   target: ReplaceTarget,
   id: string,
 ): Promise<SimpleResult> {
+  const denied = await requireAdminAction()
+  if (denied) return denied
   if (!id || typeof id !== "string") {
     return { ok: false, error: "Missing row identifier." }
   }
@@ -379,6 +387,8 @@ export async function updateSiteContent(
   label: string,
   value: string,
 ): Promise<SimpleResult> {
+  const denied = await requireAdminAction()
+  if (denied) return denied
   if (!key) return { ok: false, error: "Missing content key." }
   if (typeof value !== "string") return { ok: false, error: "Value must be text." }
   if (value.length > MAX_TEXT_LEN) {
@@ -423,6 +433,8 @@ export async function updateHeroSlideText(
   field: HeroSlideField,
   value: string,
 ): Promise<SimpleResult> {
+  const denied = await requireAdminAction()
+  if (denied) return denied
   if (!id) return { ok: false, error: "Missing slide id." }
   if (!HERO_SLIDE_FIELDS.includes(field)) {
     return { ok: false, error: `Unknown field: ${String(field)}` }
@@ -481,6 +493,8 @@ export async function updateBrandText(
   field: BrandField,
   value: string,
 ): Promise<SimpleResult> {
+  const denied = await requireAdminAction()
+  if (denied) return denied
   if (!slug) return { ok: false, error: "Missing brand slug." }
   if (!BRAND_FIELDS.includes(field)) {
     return { ok: false, error: `Unknown field: ${String(field)}` }
