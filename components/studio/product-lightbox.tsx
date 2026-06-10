@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { SafeImage } from "@/components/safe-image"
+import { withMinImageWidth } from "@/lib/image-resolution"
 import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
 
 interface ProductLightboxProps {
@@ -131,7 +132,9 @@ export function ProductLightbox({
         <div className="relative w-full h-full max-w-5xl">
           <SafeImage
             key={images[index]}
-            src={images[index]}
+            // Full-screen view — ask Squarespace for its largest cached size
+            // so high-res sources aren't served as soft 500px thumbnails.
+            src={withMinImageWidth(images[index], 2500)}
             alt={`${title} (${index + 1}/${images.length})`}
             fill
             className="object-contain"

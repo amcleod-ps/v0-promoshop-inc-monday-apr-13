@@ -8,6 +8,8 @@ import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { useLocale } from "@/lib/locale-context"
+import { useSiteText } from "@/components/site-content-provider"
+import { textFallback } from "@/lib/cms/text-slots"
 import type { Product } from "@/lib/products"
 
 interface Props {
@@ -20,6 +22,17 @@ interface Props {
 
 export default function StudioClient({ products, categories, brands, initialCategory }: Props) {
   const { t } = useLocale()
+  const pageEyebrow = useSiteText(
+    "studio.page.eyebrow",
+    `PromoShop Studio — Product ${t("Catalog")}`,
+  )
+  const pageHeading = useSiteText("studio.page.heading", textFallback("studio.page.heading"))
+  const bannerHeading = useSiteText("studio.banner.heading", textFallback("studio.banner.heading"))
+  const bannerBody = useSiteText(
+    "studio.banner.body",
+    `Start a quote to unlock pricing, quantities, and full ${t("customization")} options.`,
+  )
+  const bannerCta = useSiteText("studio.banner.cta", textFallback("studio.banner.cta"))
   const [searchTerm, setSearchTerm] = useState("")
   const [activeCategory, setActiveCategory] = useState(
     initialCategory && categories.includes(initialCategory) ? initialCategory : "All",
@@ -86,14 +99,16 @@ export default function StudioClient({ products, categories, brands, initialCate
       <div className="px-6 lg:px-10 pt-10 pb-5 flex flex-wrap justify-between items-end gap-4">
         <div>
           <p className="text-[10px] font-bold tracking-[0.3em] text-[#6b6b6b] uppercase mb-1.5">
-            PromoShop Studio — Product {t("Catalog")}
+            {pageEyebrow}
           </p>
           <h1 className="text-4xl lg:text-6xl font-extrabold uppercase tracking-tight text-black">
-            Browse Our Products
+            {pageHeading}
           </h1>
         </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative">
+        <div className="flex items-center gap-4 flex-wrap w-full sm:w-auto">
+          {/* Full-width on phones — the fixed 280px box overflowed viewports
+              narrower than ~330px. */}
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888]" aria-hidden="true" />
             <input
               type="text"
@@ -101,7 +116,7 @@ export default function StudioClient({ products, categories, brands, initialCate
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-black text-white pl-10 pr-4 py-3 rounded text-xs font-bold tracking-wider uppercase w-[280px] outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed] placeholder:text-[#999]"
+              className="bg-black text-white pl-10 pr-4 py-3 rounded text-xs font-bold tracking-wider uppercase w-full sm:w-[280px] outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed] placeholder:text-[#999]"
             />
           </div>
           <Link
@@ -117,7 +132,11 @@ export default function StudioClient({ products, categories, brands, initialCate
       {/* Body: Sidebar + Grid */}
       <div className="flex flex-col lg:flex-row px-6 lg:px-10 pb-20 gap-6 lg:gap-10">
         {/* Sidebar */}
-        <aside className="w-full lg:w-[180px] flex-shrink-0 lg:sticky lg:top-5">
+        {/* top-44 clears the sticky site header (~165px tall on desktop) —
+            with the old top-5 the filters pinned underneath it and were
+            unreadable while scrolling. self-start is required for sticky to
+            work inside a stretched flex row. */}
+        <aside className="w-full lg:w-[180px] flex-shrink-0 lg:sticky lg:top-44 lg:self-start">
           {/* Category Filter */}
           <div className="mb-7">
             <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
@@ -229,17 +248,17 @@ export default function StudioClient({ products, categories, brands, initialCate
       <div className="mx-6 lg:mx-10 mb-10 bg-black rounded-lg p-8 lg:p-10 flex flex-wrap items-center justify-between gap-5">
         <div>
           <h2 className="font-extrabold text-xl lg:text-2xl uppercase text-white mb-1">
-            Ready to Order?
+            {bannerHeading}
           </h2>
           <p className="text-[#999] text-sm">
-            Start a quote to unlock pricing, quantities, and full {t("customization")} options.
+            {bannerBody}
           </p>
         </div>
         <Link
           href="/my-quote"
           className="inline-flex items-center gap-2.5 bg-[#ef473f] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
         >
-          Start Your Quote
+          {bannerCta}
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Link>
       </div>

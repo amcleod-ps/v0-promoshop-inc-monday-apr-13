@@ -189,6 +189,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#f5f5f5",
     padding: "1px 6px",
     borderRadius: 3,
+    // UUID-bearing keys have no break points — without this they widen the
+    // card past phone viewports.
+    overflowWrap: "anywhere",
   },
   hint: { color: "#888" },
   input: {

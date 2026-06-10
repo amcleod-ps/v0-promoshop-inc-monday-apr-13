@@ -174,7 +174,7 @@ export function ContactSection() {
                       required
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="First name"
                     />
                   </div>
@@ -190,7 +190,7 @@ export function ContactSection() {
                       required
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="Last name"
                     />
                   </div>
@@ -208,7 +208,7 @@ export function ContactSection() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="you@company.com"
                     />
                   </div>
@@ -223,7 +223,7 @@ export function ContactSection() {
                       maxLength={50}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="(555) 123-4567"
                     />
                   </div>
@@ -239,7 +239,7 @@ export function ContactSection() {
                     maxLength={200}
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors placeholder:text-[#8a8a8a]"
+                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
                     placeholder="Your company name"
                   />
                 </div>
@@ -254,7 +254,7 @@ export function ContactSection() {
                     rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors resize-none placeholder:text-[#8a8a8a]"
+                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors resize-none placeholder:text-[#8a8a8a]"
                     placeholder="Tell us about your project..."
                   />
                 </div>

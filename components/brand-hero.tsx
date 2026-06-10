@@ -5,6 +5,8 @@ import { SiteImage } from "@/components/site-image"
 import { BrandLogo } from "@/components/brand-logo"
 import { brandLifestyleId } from "@/lib/image-registry"
 import { useImageSrc } from "@/hooks/use-image-src"
+import { useSiteText } from "@/components/site-content-provider"
+import { imageFitClass, imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 
 // Brand detail hero — renders the brand LOGO (not text) with an optional
 // lifestyle image behind it per client feedback (Apr 16). When no lifestyle
@@ -17,6 +19,10 @@ interface Props {
 export function BrandHero({ brand }: Props) {
   const lifestyleId = brandLifestyleId(brand.slug)
   const lifestyleSrc = useImageSrc(lifestyleId, "")
+  // Admin-chosen display mode for the backdrop (cover crops to fill).
+  const lifestyleFit = normalizeImageFit(
+    useSiteText(imageFitKey(lifestyleId), "cover"),
+  )
 
   return (
     <div className="relative overflow-hidden rounded-xl mb-8 border border-[#d8e8f3]">
@@ -29,7 +35,7 @@ export function BrandHero({ brand }: Props) {
           aria-hidden="true"
           width={1600}
           height={600}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full ${imageFitClass(lifestyleFit)}`}
           unoptimized
         />
       ) : (

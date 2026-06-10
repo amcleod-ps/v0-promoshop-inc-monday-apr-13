@@ -8,6 +8,8 @@ import { getBrandBySlug, type Brand } from "@/lib/brands"
 import { PRODUCTS } from "@/lib/products"
 import { getAllProducts } from "@/lib/supabase/products"
 import { getSupabaseBrandBySlug } from "@/lib/supabase/data"
+import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+import { textFallback } from "@/lib/cms/text-slots"
 import { BrandHero } from "@/components/brand-hero"
 import { BrandProductsGrid } from "@/components/brand-products-grid"
 
@@ -41,10 +43,29 @@ export default async function BrandPage({ params }: BrandPageProps) {
   // fallback for an actual Supabase outage: when the database answers "no
   // such brand" (including soft-deleted brands, which RLS hides from the
   // anon key), this 404s instead of resurrecting the seed version.
-  const [lookup, products] = await Promise.all([
+  // getSiteContentMap is request-cached (the layout already fetches it), so
+  // resolving the editable CTA/banner copy here costs no extra query.
+  const [lookup, products, content] = await Promise.all([
     getSupabaseBrandBySlug(slug),
     getAllProducts(),
+    getSiteContentMap(),
   ])
+  const quoteCta = resolveSiteText(content, "brands.detail.cta", textFallback("brands.detail.cta"))
+  const bannerHeading = resolveSiteText(
+    content,
+    "brands.detail.banner.heading",
+    textFallback("brands.detail.banner.heading"),
+  )
+  const bannerBody = resolveSiteText(
+    content,
+    "brands.detail.banner.body",
+    textFallback("brands.detail.banner.body"),
+  )
+  const bannerCta = resolveSiteText(
+    content,
+    "brands.detail.banner.cta",
+    textFallback("brands.detail.banner.cta"),
+  )
 
   let resolved: Brand | undefined
   if (lookup.ok) {
@@ -113,7 +134,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
               href="/my-quote"
               className="inline-flex items-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap self-start"
             >
-              START MY QUOTE
+              {quoteCta}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -152,17 +173,17 @@ export default async function BrandPage({ params }: BrandPageProps) {
           <div className="bg-black rounded-lg p-8 lg:p-10 flex flex-wrap items-center justify-between gap-5">
             <div>
               <h3 className="font-extrabold text-xl lg:text-2xl uppercase text-white mb-1">
-                Explore More Brands
+                {bannerHeading}
               </h3>
               <p className="text-[#888] text-sm">
-                Discover our full collection of premium brand partners.
+                {bannerBody}
               </p>
             </div>
             <Link
               href="/brands"
               className="inline-flex items-center gap-2.5 bg-[#ef473f] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              View All Brands
+              {bannerCta}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

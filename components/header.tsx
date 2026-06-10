@@ -8,6 +8,8 @@ import { useLocale } from "@/lib/locale-context"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { SiteImage } from "@/components/site-image"
 import { useAuth } from "@/lib/auth/AuthProvider"
+import { useSiteText } from "@/components/site-content-provider"
+import { textFallback } from "@/lib/cms/text-slots"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -57,6 +59,7 @@ export function Header() {
   const pathname = usePathname()
   const { config } = useLocale()
   const { isAuthenticated, user, signOut } = useAuth()
+  const quoteCta = useSiteText("header.cta", textFallback("header.cta"))
 
   useEffect(() => {
     const handleScroll = () => {
@@ -154,14 +157,14 @@ export function Header() {
             className="shimmer-cta relative flex items-center gap-2 bg-[#ef473f] text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#d93e36] transition-colors"
           >
             <ShoppingBag className="w-4 h-4 relative z-10" />
-            <span className="relative z-10">Get a Quote</span>
+            <span className="relative z-10">{quoteCta}</span>
           </Link>
         </div>
 
-        {/* Mobile menu button */}
+        {/* Mobile menu button — padded so the tap target clears 44px. */}
         <button
           type="button"
-          className="lg:hidden text-[#373a36]"
+          className="lg:hidden text-[#373a36] p-2.5 -mr-2.5 rounded-full hover:bg-[#f5f5f5] transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-menu"
@@ -213,7 +216,7 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <ShoppingBag className="w-4 h-4" />
-                Get a Quote
+                {quoteCta}
               </Link>
               {isAuthenticated ? (
                 <button

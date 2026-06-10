@@ -84,6 +84,26 @@ Conventions when extending this:
   including `/admin-dashboard`). Preserve this defensive shape in new getters.
 - A new editable image: insert a `site_images` row (`key`, `label`, `url`,
   `alt_text`), then render `<SiteImage imageId="your.key" defaultSrc="…">`.
+- **Editable text without a seeded row**: `lib/cms/text-slots.ts` registers
+  copy that previously shipped hard-coded (studio/quote headings, header CTA,
+  footer column headings…). The dashboard's Text tab merges these slots in as
+  empty editors; saving upserts a real `site_content` row, and blank falls
+  back to the compiled-in copy. Components read the same key with
+  `textFallback(key)` as the fallback so registry and renderer can't drift —
+  add new always-editable strings there, not as bare literals.
+- **Image display mode (cover/contain)**: `lib/image-fit.ts`. Placements with
+  a fixed-aspect frame (hero slides, `about.hero`, brand lifestyle backdrops)
+  read a `site_content` row keyed `image-fit.<slot>` (slot = `hero_slide.<id>`
+  or the `site_images` key) and map `contain` → `object-contain`, anything
+  else → `object-cover`. The dashboard's Images tab shows the selector only
+  for slots whose renderer consults it (`updateImageFit` server action);
+  values are sanitized on read because Table-Editor edits bypass validation.
+- **Squarespace resolution hints**: seeded product images carry
+  `?format=NNNNw` (the CDN's served width). `withMinImageWidth` in
+  `lib/image-resolution.ts` raises the hint per render context (cards 750w,
+  modal 1500w, lightbox 2500w) so low seeded hints don't upscale soft;
+  non-Squarespace URLs pass through untouched. It never lowers an explicit
+  higher hint and preserves the `?v=` cache-bust param.
 
 ### Team roster has two code paths
 

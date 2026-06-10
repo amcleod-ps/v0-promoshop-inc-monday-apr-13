@@ -6,6 +6,7 @@ import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
+import { imageFitKey } from "@/lib/image-fit"
 
 const BUCKET = "site-images"
 
@@ -762,6 +763,39 @@ export async function deleteSiteImage(key: string): Promise<SimpleResult> {
     .select("key")
   if (error) return { ok: false, error: `Could not delete site image: ${error.message}` }
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Sets how an image is displayed inside its frame: "cover" (default —
+ * crops to fill) or "contain" (whole image, letterboxed). Stored as a
+ * `site_content` row keyed `image-fit.<slot>` (see lib/image-fit.ts), so no
+ * schema migration is needed; the public renderers sanitize on read.
+ */
+export async function updateImageFit(
+  slot: string,
+  fit: string,
+): Promise<SimpleResult> {
+  if (!slot || !/^[a-z0-9._-]+$/i.test(slot)) {
+    return { ok: false, error: "Missing or invalid image slot." }
+  }
+  if (fit !== "cover" && fit !== "contain") {
+    return { ok: false, error: 'Display mode must be "cover" or "contain".' }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { error } = await supabase.from("site_content").upsert(
+    {
+      key: imageFitKey(slot),
+      label: `Image display mode: ${slot}`,
+      value: fit,
+    },
+    { onConflict: "key" },
+  )
+  if (error) return { ok: false, error: `Could not save display mode: ${error.message}` }
   bumpCaches()
   return { ok: true }
 }

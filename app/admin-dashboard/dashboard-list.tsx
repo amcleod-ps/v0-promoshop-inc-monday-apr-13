@@ -65,6 +65,9 @@ export interface SiteContentEntry {
   value: string
   group: string
   multiline: boolean
+  /** Editor hint — used for registry-backed slots to show the built-in
+   *  default copy a blank value falls back to. */
+  hint?: string
 }
 
 interface Props {
@@ -78,6 +81,9 @@ interface Props {
   theme: ThemeEntry[]
   teamTableMissing: boolean
   themeTableMissing: boolean
+  /** Current cover/contain choice per fit slot (see lib/image-fit.ts),
+   *  keyed by slot (`hero_slide.<id>`, `about.hero`, …). */
+  imageFits: Record<string, string>
 }
 
 type Tab = "images" | "text" | "products" | "team" | "theme"
@@ -93,6 +99,7 @@ export function DashboardList({
   theme,
   teamTableMissing,
   themeTableMissing,
+  imageFits,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -206,7 +213,6 @@ export function DashboardList({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             style={styles.search}
-            autoFocus
           />
           {q ? (
             <button type="button" onClick={() => setQ("")} style={styles.clearButton}>
@@ -233,6 +239,7 @@ export function DashboardList({
               <SiteImageRowWithDelete
                 key={row.key}
                 row={row}
+                imageFits={imageFits}
               />
             ))}
           </Section>
@@ -267,6 +274,8 @@ export function DashboardList({
                 id={row.id}
                 label={row.title}
                 currentUrl={row.image_url}
+                fitSlot={`hero_slide.${row.id}`}
+                currentFit={imageFits[`hero_slide.${row.id}`]}
               />
             ))}
           </Section>
@@ -327,6 +336,7 @@ export function DashboardList({
                   contentKey={entry.key}
                   contentLabel={entry.label}
                   label={entry.label}
+                  hint={entry.hint}
                   currentValue={entry.value}
                   multiline={entry.multiline}
                 />
@@ -680,7 +690,23 @@ function BrandFeaturedToggle({ slug, initial }: { slug: string; initial: boolean
   )
 }
 
-function SiteImageRowWithDelete({ row }: { row: SiteImageRow }) {
+// Only these site_images slots render inside a fixed frame whose code reads
+// the fit setting — offering the selector on other slots (e.g. site.logo)
+// would save a value nothing consults.
+function fitSlotForSiteImage(key: string): string | undefined {
+  if (key === "about.hero") return key
+  if (/^brand\..+\.lifestyle$/.test(key)) return key
+  return undefined
+}
+
+function SiteImageRowWithDelete({
+  row,
+  imageFits,
+}: {
+  row: SiteImageRow
+  imageFits: Record<string, string>
+}) {
+  const fitSlot = fitSlotForSiteImage(row.key)
   return (
     <div>
       <ImageRow
@@ -689,6 +715,8 @@ function SiteImageRowWithDelete({ row }: { row: SiteImageRow }) {
         label={row.label}
         currentUrl={row.url}
         hint={row.alt_text}
+        fitSlot={fitSlot}
+        currentFit={fitSlot ? imageFits[fitSlot] : undefined}
       />
       <div style={{ marginTop: 4, marginBottom: 4, marginLeft: 12 }}>
         <TextRow
@@ -755,6 +783,9 @@ function Section({
 const styles: Record<string, React.CSSProperties> = {
   tabs: {
     display: "flex",
+    // Five tabs don't fit a phone in one row — wrap instead of overflowing
+    // the page (which hid the Team/Theme tabs entirely on small screens).
+    flexWrap: "wrap",
     gap: 4,
     marginBottom: 16,
     borderBottom: "2px solid #e5e5e5",
@@ -815,7 +846,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 12px",
   },
   summary: { cursor: "pointer", padding: "4px 0", fontSize: 14 },
-  summaryAside: { color: "#999", fontFamily: "monospace", fontSize: 12 },
+  summaryAside: { color: "#999", fontFamily: "monospace", fontSize: 12, overflowWrap: "anywhere" },
   detailsBody: {
     marginTop: 10,
     display: "flex",

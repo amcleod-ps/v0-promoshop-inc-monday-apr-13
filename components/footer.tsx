@@ -6,6 +6,7 @@ import { useLocale } from "@/lib/locale-context"
 import { SiteImage } from "@/components/site-image"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { useSiteText } from "@/components/site-content-provider"
+import { textFallback } from "@/lib/cms/text-slots"
 
 export function Footer() {
   const { config } = useLocale()
@@ -21,6 +22,18 @@ export function Footer() {
   // Same CMS key as ContactSection so an admin email edit updates both
   // places instead of leaving the footer stale.
   const contactEmail = useSiteText("contact.section.email", "info@promoshopinc.com")
+  const quickLinksHeading = useSiteText(
+    "footer.quicklinks.heading",
+    textFallback("footer.quicklinks.heading"),
+  )
+  const collectionsHeading = useSiteText(
+    "footer.collections.heading",
+    textFallback("footer.collections.heading"),
+  )
+  const contactUsHeading = useSiteText(
+    "footer.contactus.heading",
+    textFallback("footer.contactus.heading"),
+  )
 
   // Social icons removed for launch: every profile URL was a dead "#"
   // placeholder. Restore the icon row (see git history) once the client
@@ -73,7 +86,7 @@ export function Footer() {
           {/* Quick Links */}
           <div>
             <h3 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-4">
-              Quick Links
+              {quickLinksHeading}
             </h3>
             <ul className="space-y-2">
               {["Home", "Studio", "Brands", "My Quote", "About"].map((item) => (
@@ -93,7 +106,7 @@ export function Footer() {
               catalog; each link pre-filters the studio grid. */}
           <div>
             <h3 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-4">
-              Collections
+              {collectionsHeading}
             </h3>
             <ul className="space-y-2">
               {["Drinkware", "Tops", "Jackets", "Tech"].map((item) => (
@@ -112,7 +125,7 @@ export function Footer() {
           {/* Contact (locale-aware) */}
           <div>
             <h3 className="text-xs font-bold tracking-wider uppercase text-[#373a36] mb-4">
-              Contact Us
+              {contactUsHeading}
             </h3>
             <ul className="space-y-3 font-visby">
               {config.allContacts.map((contact) => (

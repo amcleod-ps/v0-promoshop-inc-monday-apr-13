@@ -486,7 +486,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#fff",
     padding: 14,
   },
-  cardHeader: { display: "flex", gap: 18 },
+  // Wrap on narrow screens: the fixed photo column + 220px-min inputs
+  // overflowed the card (and pushed Save buttons out of reach) on phones.
+  cardHeader: { display: "flex", flexWrap: "wrap", gap: 18 },
   photoColumn: { flex: "0 0 160px" },
   photoLabel: {
     fontSize: 10,
@@ -516,9 +518,9 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     fontSize: 12,
   },
-  uploadForm: { display: "flex", gap: 6, alignItems: "center", marginTop: 8 },
-  fileInput: { fontSize: 12, maxWidth: 100 },
-  fieldsColumn: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 },
+  uploadForm: { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 },
+  fileInput: { fontSize: 12, maxWidth: 160 },
+  fieldsColumn: { flex: "1 1 240px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10 },
   fieldWrap: { display: "flex", flexDirection: "column", gap: 4 },
   fieldLabel: { fontSize: 12, color: "#444", fontWeight: 600 },
   editorRow: { display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap" },
@@ -569,6 +571,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "1px 6px",
     borderRadius: 3,
     fontSize: 12,
+    overflowWrap: "anywhere",
   },
   status: { fontSize: 13 },
   removedNote: { color: "#0a7f3f", fontWeight: 600 },

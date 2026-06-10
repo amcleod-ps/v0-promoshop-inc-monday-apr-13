@@ -8,6 +8,7 @@ import { HeroSlideshow } from "@/components/home/hero-slideshow"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { getHeroSlides, getSupabaseBrands } from "@/lib/supabase/data"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+import { imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 
 export default async function HomePage() {
   // Fetch hero slides, brands, and editable text content from Supabase
@@ -45,6 +46,10 @@ export default async function HomePage() {
             cta_text: slide.cta_text,
             cta_url: slide.cta_url,
             bg_color: slide.bg_color,
+            // Admin-chosen display mode (cover vs contain) per slide.
+            fit: normalizeImageFit(
+              resolveSiteText(content, imageFitKey(`hero_slide.${slide.id}`), "cover"),
+            ),
           }))
 
   // Transform Supabase brands for the logo scroll. `null` (unreachable) makes
