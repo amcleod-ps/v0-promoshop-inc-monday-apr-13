@@ -1,28 +1,32 @@
-import { defineConfig, globalIgnores } from "eslint/config"
+// eslint-config-next ships native flat configs as of Next 16.
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
 import nextTypescript from "eslint-config-next/typescript"
 
-// Flat config for `pnpm lint` (eslint .). The codebase was written against
-// next/core-web-vitals — its eslint-disable comments reference those rule
-// names — so that preset (plus the TypeScript variant) is the baseline.
-export default defineConfig([
+const eslintConfig = [
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      // Unused shadcn/ui scaffolding kept for future use — linting it adds
+      // noise without value, and it's slated for a post-launch prune.
+      // (use-toast.ts is the scaffolding's hook half.)
+      "components/ui/**",
+      "hooks/use-toast.ts",
+      "next-env.d.ts",
+    ],
+  },
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
     rules: {
-      // Deliberately off: the site's localStorage-backed state (locale,
-      // quote cart, customer "auth") hydrates inside useEffect after first
-      // render to keep SSR markup stable (documented in CLAUDE.md), and the
-      // dashboard's upload previews / prop re-sync effects use the same
-      // shape. Those setState-in-effect calls are the architecture, not an
-      // accident. Revisit if the project adopts the React Compiler.
+      // This codebase deliberately hydrates client state (locale, cart,
+      // auth) from localStorage inside mount effects to keep SSR markup
+      // stable — the pattern CLAUDE.md documents. The new strict rule
+      // flags every one of those reads; the cascading-render cost is one
+      // intentional post-hydration pass.
       "react-hooks/set-state-in-effect": "off",
     },
   },
-  globalIgnores([
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-])
+]
+
+export default eslintConfig

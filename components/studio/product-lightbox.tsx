@@ -1,8 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import Image from "next/image"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { SafeImage } from "@/components/safe-image"
+import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
 
 interface ProductLightboxProps {
   isOpen: boolean
@@ -23,32 +24,50 @@ export function ProductLightbox({
 }: ProductLightboxProps) {
   const [index, setIndex] = useState(initialIndex)
   const touchStartX = useRef<number | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (isOpen) setIndex(initialIndex)
   }, [initialIndex, isOpen])
 
-  const goPrev = useCallback(() => {
-    setIndex((i) => {
-      const next = (i - 1 + images.length) % images.length
+  // Dialog focus management: focus moves in on open, returns to the
+  // trigger (the modal's zoom button) on close.
+  useDialogFocus(isOpen, closeButtonRef)
+
+  // Navigation computes the next index OUTSIDE the state updater and
+  // notifies the parent from the event handler. Do not sync via an effect
+  // keyed on `index`: on open it re-broadcasts this component's stale
+  // retained index while the reset effect pulls in `initialIndex`, and when
+  // the two differ each commit swaps them — an infinite update loop.
+  const changeIndex = useCallback(
+    (next: number) => {
+      setIndex(next)
       onIndexChange(next)
-      return next
-    })
-  }, [images.length, onIndexChange])
+    },
+    [onIndexChange],
+  )
+
+  const goPrev = useCallback(() => {
+    changeIndex((index - 1 + images.length) % images.length)
+  }, [changeIndex, index, images.length])
 
   const goNext = useCallback(() => {
-    setIndex((i) => {
-      const next = (i + 1) % images.length
-      onIndexChange(next)
-      return next
-    })
-  }, [images.length, onIndexChange])
+    changeIndex((index + 1) % images.length)
+  }, [changeIndex, index, images.length])
 
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-      else if (e.key === "ArrowLeft") goPrev()
+      if (e.key === "Escape") {
+        onClose()
+        return
+      }
+      if (e.key === "Tab") {
+        trapDialogTab(e, rootRef.current)
+        return
+      }
+      if (e.key === "ArrowLeft") goPrev()
       else if (e.key === "ArrowRight") goNext()
     }
     window.addEventListener("keydown", handler)
@@ -73,6 +92,10 @@ export function ProductLightbox({
 
   return (
     <div
+      ref={rootRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${title} — full-screen image view`}
       className="fixed inset-0 z-[60] bg-black/95 flex flex-col"
       onClick={onClose}
       onTouchStart={handleTouchStart}
@@ -89,6 +112,7 @@ export function ProductLightbox({
             {index + 1} / {images.length}
           </span>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close full-screen view"
@@ -105,7 +129,7 @@ export function ProductLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full h-full max-w-5xl">
-          <Image
+          <SafeImage
             key={images[index]}
             src={images[index]}
             alt={`${title} (${index + 1}/${images.length})`}

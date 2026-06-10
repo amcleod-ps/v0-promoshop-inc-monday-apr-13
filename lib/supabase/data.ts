@@ -1,4 +1,6 @@
+import { cache } from "react"
 import { createClient } from "./server"
+import { withCacheBust } from "@/lib/cache-bust"
 
 export interface SupabaseBrand {
   id: string
@@ -31,7 +33,7 @@ export interface SupabaseHeroSlide {
 
 function bustedUrl(url: string | null | undefined, updatedAt: string): string | null {
   if (!url) return null
-  return `${url}?v=${encodeURIComponent(updatedAt)}`
+  return withCacheBust(url, updatedAt)
 }
 
 async function maybeClient() {
@@ -52,7 +54,7 @@ async function maybeClient() {
  * empty array means the admin deactivated every slide on purpose and the
  * caller should render nothing rather than resurrect the static defaults.
  */
-export async function getHeroSlides(): Promise<SupabaseHeroSlide[] | null> {
+export const getHeroSlides = cache(async (): Promise<SupabaseHeroSlide[] | null> => {
   const supabase = await maybeClient()
   if (!supabase) return null
   const { data, error } = await supabase
@@ -67,13 +69,13 @@ export async function getHeroSlides(): Promise<SupabaseHeroSlide[] | null> {
     ...row,
     image_url: bustedUrl(row.image_url, row.updated_at),
   }))
-}
+})
 
 /**
  * Returns the active brands, or `null` when Supabase is unreachable (use
  * the static seed). An empty array is a real "no active brands" state.
  */
-export async function getSupabaseBrands(): Promise<SupabaseBrand[] | null> {
+export const getSupabaseBrands = cache(async (): Promise<SupabaseBrand[] | null> => {
   const supabase = await maybeClient()
   if (!supabase) return null
   const { data, error } = await supabase
@@ -88,7 +90,7 @@ export async function getSupabaseBrands(): Promise<SupabaseBrand[] | null> {
     ...row,
     logo_url: bustedUrl(row.logo_url, row.updated_at),
   }))
-}
+})
 
 // Single-brand live lookup for /brands/[slug]. The two failure modes need
 // different handling, so they're kept distinct:
@@ -104,7 +106,7 @@ export type SupabaseBrandLookup =
   | { ok: true; brand: SupabaseBrand | null }
   | { ok: false }
 
-export async function getSupabaseBrandBySlug(slug: string): Promise<SupabaseBrandLookup> {
+export const getSupabaseBrandBySlug = cache(async (slug: string): Promise<SupabaseBrandLookup> => {
   const supabase = await maybeClient()
   if (!supabase) return { ok: false }
   const { data, error } = await supabase
@@ -123,4 +125,4 @@ export async function getSupabaseBrandBySlug(slug: string): Promise<SupabaseBran
       logo_url: bustedUrl(data.logo_url, data.updated_at),
     },
   }
-}
+})

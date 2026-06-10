@@ -3,7 +3,6 @@
 -- Apply this AFTER 0001_init.sql. Adds:
 --   * site_images       — generic keyed image registry (logos, hero, team,
 --                         brand lifestyle backdrops, marketing tiles, etc.)
---   * brand_assets      — optional per-brand hero / lifestyle imagery
 --   * products          — product catalog (name, sku, etc.)
 --   * product_colours   — colourways per product
 --   * product_images    — images per product / colour, with human-readable labels

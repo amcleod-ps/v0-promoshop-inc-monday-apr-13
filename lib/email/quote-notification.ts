@@ -24,9 +24,15 @@ interface QuoteNotificationFields {
   email: string
   phone?: string
   company?: string
-  brand_interest?: string
   quantity_range?: string
   message: string
+}
+
+// Zod only trims the ends of each field — embedded newlines survive, and a
+// newline in an email subject makes Resend reject the send (silently losing
+// the staff notification).
+function singleLine(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim()
 }
 
 export async function sendQuoteNotification(
@@ -42,13 +48,12 @@ export async function sendQuoteNotification(
   const from =
     process.env.QUOTE_NOTIFICATION_FROM?.trim() ||
     "PromoShop Website <onboarding@resend.dev>"
-  const name = `${quote.first_name} ${quote.last_name}`.trim()
+  const name = singleLine(`${quote.first_name} ${quote.last_name}`)
   const body = [
     `Name: ${name}`,
     `Email: ${quote.email}`,
     quote.phone ? `Phone: ${quote.phone}` : null,
     quote.company ? `Company: ${quote.company}` : null,
-    quote.brand_interest ? `Brand interest: ${quote.brand_interest}` : null,
     quote.quantity_range ? `Quantity range: ${quote.quantity_range}` : null,
     "",
     "Message:",
@@ -71,7 +76,7 @@ export async function sendQuoteNotification(
         from,
         to: recipients,
         reply_to: quote.email,
-        subject: `New quote request from ${name}${quote.company ? ` (${quote.company})` : ""}`,
+        subject: `New quote request from ${name}${quote.company ? ` (${singleLine(quote.company)})` : ""}`,
         text: body,
       }),
       signal: AbortSignal.timeout(10_000),

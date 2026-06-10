@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
@@ -6,6 +7,12 @@ import { getSupabaseBrands } from "@/lib/supabase/data"
 import { BRANDS } from "@/lib/brands"
 import { BrandsSearchClient } from "@/components/brands-search-client"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+
+export const metadata: Metadata = {
+  title: "Our Brands",
+  description:
+    "Explore the premium brands PromoShop partners with — Patagonia, Peter Millar, Helly Hansen, YETI and more — for quality promotional products.",
+}
 
 export default async function BrandsPage() {
   // Fetch brands and editable copy from Supabase
@@ -47,6 +54,7 @@ export default async function BrandsPage() {
     <div className="min-h-screen bg-white text-[#1a1a1a]">
       <Header />
 
+      <main id="main-content">
       {/* Hero Section */}
       <section className="py-12 lg:py-16 px-6 lg:px-8 bg-[#f9f9f9]">
         <div className="mx-auto max-w-7xl">
@@ -85,6 +93,7 @@ export default async function BrandsPage() {
           </Link>
         </div>
       </section>
+      </main>
 
       <Footer />
     </div>

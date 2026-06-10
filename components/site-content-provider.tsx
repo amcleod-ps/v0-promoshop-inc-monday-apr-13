@@ -2,24 +2,14 @@
 
 import { createContext, useContext, type ReactNode } from "react"
 import type { SiteContentMap } from "@/lib/supabase/content"
+import { resolveSiteText } from "@/lib/site-text"
 
 const SiteContentContext = createContext<SiteContentMap>({})
 
-/**
- * Resolves `key` against `map` exactly like `useSiteText`, but without
- * touching React internals — safe to call inside loops, hooks, or non-
- * component code. Returns the override value when set and non-empty,
- * else the fallback.
- */
-export function resolveSiteText(
-  map: SiteContentMap,
-  key: string,
-  fallback: string,
-): string {
-  const row = map[key]
-  if (row && row.value && row.value.length > 0) return row.value
-  return fallback
-}
+// Single shared resolver (the server path in lib/supabase/content.ts
+// re-exports the same definition) — safe to call inside loops, hooks, or
+// non-component code.
+export { resolveSiteText }
 
 export function useSiteContentMap(): SiteContentMap {
   return useContext(SiteContentContext)

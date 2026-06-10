@@ -26,6 +26,9 @@ export function useTeamMembers(): TeamMember[] {
 
   if (dbMembers !== null) {
     return dbMembers.map((m) => ({
+      // The row's slug column is authoritative — never re-derive it from
+      // the display name (renames would orphan the photo slot).
+      slug: m.slug,
       name: m.name,
       role: m.role,
       description: m.description ?? "",
@@ -41,9 +44,13 @@ export function useTeamMembers(): TeamMember[] {
   }
 
   return TEAM_MEMBERS.map((member) => {
+    // Derive the slug from the ORIGINAL static name, before any
+    // site_content name override is applied — otherwise renaming
+    // "Phil" to "Philip" would silently re-key his photo slot.
     const slug = slugFromImageId(teamImageId(member.name))
     return {
       ...member,
+      slug,
       name: resolveSiteText(content, `team.${slug}.name`, member.name),
       role: resolveSiteText(content, `team.${slug}.role`, member.role),
       description: resolveSiteText(

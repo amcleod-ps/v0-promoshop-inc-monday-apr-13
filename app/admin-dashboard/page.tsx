@@ -566,7 +566,7 @@ export default async function AdminDashboardPage() {
           <strong>No data in any image table yet.</strong>
           <p>
             Apply the SQL migrations in <code>supabase/migrations/</code> from
-            the Supabase SQL Editor, in order (0001 → 0007), and refresh.
+            the Supabase SQL Editor, in order (0001 → 0008), and refresh.
           </p>
         </div>
       ) : (

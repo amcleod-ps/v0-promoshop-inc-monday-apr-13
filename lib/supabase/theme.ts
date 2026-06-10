@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { createClient } from "./server"
 
 export interface SiteThemeRow {
@@ -41,7 +42,7 @@ export const DEFAULT_THEME: SiteThemeMap = {
   },
 }
 
-export async function getSiteThemeMap(): Promise<SiteThemeMap> {
+export const getSiteThemeMap = cache(async (): Promise<SiteThemeMap> => {
   let supabase
   try {
     supabase = await createClient()
@@ -64,7 +65,7 @@ export async function getSiteThemeMap(): Promise<SiteThemeMap> {
     }
   }
   return map
-}
+})
 
 // ---------------------------------------------------------------------------
 // CSS override generator
@@ -87,6 +88,52 @@ const ORIGINAL_HEX: Record<string, string> = {
   "brand.dark": "#111111",
   "brand.slate": "#373a36",
   "brand.accent": "#bde7ff",
+}
+
+/**
+ * Hard-coded companion shades used alongside a brand colour in source
+ * classes (e.g. the darker red used for CTA hover states and link text).
+ * When the parent colour is rebranded these classes are overridden with a
+ * `color-mix()` derivation so the shade tracks the new colour.
+ *
+ * `uses` lists the exact variant×property combos present in source (grep
+ * the hex when adding one) — emitting the full variant×prop×opacity matrix
+ * for a companion would roughly double the inlined override CSS on every
+ * response for rules that can never match.
+ */
+interface CompanionShade {
+  hex: string
+  derive: (next: string) => string
+  uses: Array<{ variant: string; prop: string }>
+}
+
+const COMPANION_SHADES: Record<string, CompanionShade[]> = {
+  "brand.primary": [
+    {
+      // #d93e36 — darkened brand red: CTA hover backgrounds + link text.
+      hex: "#d93e36",
+      derive: (next) => `color-mix(in srgb, ${next} 85%, black)`,
+      uses: [
+        { variant: "", prop: "text" },
+        { variant: "hover:", prop: "text" },
+        { variant: "hover:", prop: "bg" },
+      ],
+    },
+  ],
+}
+
+/**
+ * The admin theme editor validates colours before writing, but the
+ * documented Supabase Table Editor path does not. Values are injected
+ * into a <style> tag in the layout, so anything that is not a plain
+ * hex colour is discarded (CSS/HTML injection guard, not just hygiene).
+ */
+const SAFE_HEX = /^#[0-9a-fA-F]{3,8}$/
+
+function safeThemeValue(map: SiteThemeMap, key: string): string | null {
+  const value = map[key]?.value?.trim()
+  if (!value || !SAFE_HEX.test(value)) return null
+  return value
 }
 
 /**
@@ -114,15 +161,19 @@ const PROPS: Array<{ tw: string; css: string }> = [
 interface Variant {
   twPrefix: string
   buildSelector: (escapedClass: string) => string
+  /** Wrap the emitted rule in `@media (hover: hover)` like Tailwind v4 does. */
+  hoverGated?: boolean
 }
 
 const VARIANTS: Variant[] = [
   { twPrefix: "", buildSelector: (c) => `.${c}` },
-  { twPrefix: "hover:", buildSelector: (c) => `.${c}:hover` },
+  // Tailwind v4 wraps hover/group-hover rules in `@media (hover: hover)`;
+  // the overrides must match or touch devices get tap-sticky hover colours.
+  { twPrefix: "hover:", buildSelector: (c) => `.${c}:hover`, hoverGated: true },
   { twPrefix: "focus:", buildSelector: (c) => `.${c}:focus` },
   { twPrefix: "focus-visible:", buildSelector: (c) => `.${c}:focus-visible` },
   { twPrefix: "active:", buildSelector: (c) => `.${c}:active` },
-  { twPrefix: "group-hover:", buildSelector: (c) => `.group:hover .${c}` },
+  { twPrefix: "group-hover:", buildSelector: (c) => `.group:hover .${c}`, hoverGated: true },
   { twPrefix: "group-focus:", buildSelector: (c) => `.group:focus .${c}` },
 ]
 
@@ -147,11 +198,26 @@ function rootVars(map: SiteThemeMap): string {
   const vars = Object.keys(ORIGINAL_HEX)
     .map((key) => {
       const cssVar = `--${key.replace(/\./g, "-")}`
-      const value = map[key]?.value ?? ORIGINAL_HEX[key]
+      const value = safeThemeValue(map, key) ?? ORIGINAL_HEX[key]
       return `  ${cssVar}: ${value};`
     })
     .join("\n")
   return `:root {\n${vars}\n}`
+}
+
+/**
+ * The shadcn semantic tokens in globals.css (`--primary`, `--accent`,
+ * `--ring`) are hard-coded to the original brand red; `--ring` drives the
+ * global `outline-ring/50` focus style. Re-point them when the admin
+ * changes brand.primary so focus outlines (and any future primitive usage)
+ * follow the rebrand. `--destructive` is deliberately left alone — "error
+ * colour == brand colour" is only true of the default red, and a rebrand
+ * to e.g. blue must not turn error affordances blue.
+ */
+function semanticTokenOverride(map: SiteThemeMap): string | null {
+  const next = safeThemeValue(map, "brand.primary")
+  if (!next || next.toLowerCase() === ORIGINAL_HEX["brand.primary"]) return null
+  return `:root {\n  --primary: ${next};\n  --accent: ${next};\n  --ring: ${next};\n}`
 }
 
 /**
@@ -161,18 +227,27 @@ function rootVars(map: SiteThemeMap): string {
  */
 export function themeOverrideCss(map: SiteThemeMap): string {
   const lines: string[] = [rootVars(map)]
+  const semanticTokens = semanticTokenOverride(map)
+  if (semanticTokens) lines.push(semanticTokens)
 
   for (const [key, originalHex] of Object.entries(ORIGINAL_HEX)) {
-    const next = map[key]?.value
+    const next = safeThemeValue(map, key)
     if (!next || next.toLowerCase() === originalHex.toLowerCase()) continue
 
+    const emit = (variant: Variant, selector: string, declaration: string) => {
+      const rule = `${selector} { ${declaration} }`
+      lines.push(variant.hoverGated ? `@media (hover: hover) { ${rule} }` : rule)
+    }
+
+    // Full matrix for the brand colour itself — any variant/opacity combo
+    // in source must be covered.
     for (const variant of VARIANTS) {
       for (const { tw, css } of PROPS) {
         // Base utility — no opacity modifier.
         const baseClass = `${variant.twPrefix}${tw}-[${originalHex}]`
         const baseEscaped = escapeClassSelector(baseClass)
         const baseSelector = variant.buildSelector(baseEscaped)
-        lines.push(`${baseSelector} { ${css}: ${next} !important; }`)
+        emit(variant, baseSelector, `${css}: ${next} !important;`)
 
         // Opacity modifier variants — `bg-[#ef473f]/20`, etc.
         for (const op of OPACITIES) {
@@ -180,8 +255,21 @@ export function themeOverrideCss(map: SiteThemeMap): string {
           const opEscaped = escapeClassSelector(opClass)
           const opSelector = variant.buildSelector(opEscaped)
           const blended = `color-mix(in srgb, ${next} ${op}%, transparent)`
-          lines.push(`${opSelector} { ${css}: ${blended} !important; }`)
+          emit(variant, opSelector, `${css}: ${blended} !important;`)
         }
+      }
+    }
+
+    // Companion shades emit only the combos that actually exist in source.
+    for (const shade of COMPANION_SHADES[key] ?? []) {
+      const value = shade.derive(next)
+      for (const use of shade.uses) {
+        const variant = VARIANTS.find((v) => v.twPrefix === use.variant)
+        const prop = PROPS.find((p) => p.tw === use.prop)
+        if (!variant || !prop) continue
+        const cls = `${variant.twPrefix}${prop.tw}-[${shade.hex}]`
+        const selector = variant.buildSelector(escapeClassSelector(cls))
+        emit(variant, selector, `${prop.css}: ${value} !important;`)
       }
     }
   }

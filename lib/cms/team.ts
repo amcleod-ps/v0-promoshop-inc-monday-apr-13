@@ -2,6 +2,13 @@ export interface TeamMember {
   name: string
   role: string
   description: string
+  /**
+   * Stable registry slug for the `site_images['team.<slug>']` photo slot.
+   * Always set from the authoritative source (DB row's slug column or the
+   * original static name) — deriving it from the *display* name breaks the
+   * photo lookup the moment an admin renames someone.
+   */
+  slug?: string
   /** URL to profile picture. Leave empty to render initials fallback. */
   imagePath?: string
   /**
