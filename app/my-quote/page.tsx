@@ -33,6 +33,9 @@ export default function MyQuotePage() {
   const [selectedColour, setSelectedColour] = useState("")
   const [selectedSize, setSelectedSize] = useState("")
   const [quantity, setQuantity] = useState(1)
+  // Honeypot — deliberately NOT part of the localStorage-persisted contact
+  // info; bots that autofill it are silently discarded server-side.
+  const [website, setWebsite] = useState("")
 
   const handleAddProduct = () => {
     const product = PRODUCTS.find(p => p.sku === selectedProduct)
@@ -91,6 +94,7 @@ export default function MyQuotePage() {
         company: contactInfo.company || undefined,
         quantity_range: String(totalUnits),
         message,
+        website: website || undefined,
       })
 
       if (result.success) {
@@ -348,6 +352,20 @@ export default function MyQuotePage() {
           {/* Project Tab */}
           {activeTab === "project" && (
             <form onSubmit={handleSubmitQuote} className="bg-white border border-[#e5e5e5] rounded-lg p-6 lg:p-8 shadow-sm">
+              {/* Honeypot field: visually removed, skipped by keyboard and
+                  screen readers. Real visitors never fill it. */}
+              <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                <label htmlFor="quote-website">Website</label>
+                <input
+                  type="text"
+                  id="quote-website"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
+              </div>
               <h3 className="font-montserrat font-bold text-xl text-[#1a1a1a] mb-6">Project Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div><label className={labelClass}>Event / Project Name</label><input type="text" value={projectInfo.eventName} onChange={(e) => setProjectInfo({ eventName: e.target.value })} className={inputClass} placeholder="Annual Conference 2026" /></div>
@@ -387,7 +405,7 @@ export default function MyQuotePage() {
               )}
               <div className="flex gap-4">
                 <button type="button" onClick={() => setActiveTab("contact")} disabled={submitting} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors disabled:opacity-50">Back</button>
-                <button type="submit" disabled={submitting || items.length === 0 || !contactInfo.firstName || !contactInfo.email || !contactInfo.company} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" disabled={submitting || items.length === 0 || !contactInfo.firstName || !contactInfo.lastName || !contactInfo.email || !contactInfo.company} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                   {submitting ? "Submitting..." : <>Submit Quote Request <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>

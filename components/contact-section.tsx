@@ -19,7 +19,10 @@ export function ContactSection() {
     email: "",
     phone: "",
     company: "",
-    message: ""
+    message: "",
+    // Honeypot — hidden from real visitors; bots that autofill it are
+    // silently discarded server-side.
+    website: ""
   })
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -42,6 +45,7 @@ export function ContactSection() {
         phone: formData.phone || undefined,
         company: formData.company || undefined,
         message: formData.message,
+        website: formData.website || undefined,
       })
 
       if (result.success) {
@@ -52,7 +56,8 @@ export function ContactSection() {
           email: "",
           phone: "",
           company: "",
-          message: ""
+          message: "",
+          website: ""
         })
         setTimeout(() => setSubmitted(false), 5000)
       } else {
@@ -143,6 +148,20 @@ export function ContactSection() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Honeypot field: visually removed, skipped by keyboard and
+                    screen readers. Real visitors never fill it. */}
+                <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                  <label htmlFor="contact-website">Website</label>
+                  <input
+                    type="text"
+                    id="contact-website"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  />
+                </div>
                 {error && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                     {error}
