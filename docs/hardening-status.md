@@ -11,8 +11,8 @@ The big 2026-06-10 merge train landed: the admin-dashboard functionality/
 hardening pass (#31) plus its satellites (#23, #26, #27, #29, #30), the slimmed
 quote-flow hardening (#28), the dormant admin auth gate (#32), and three small
 follow-ups (#33, #34, #35). Stale PRs #2/#22/#25 are closed (superseded).
-Migrations 0001–0007 are all applied on the production Supabase
-(0007 applied 2026-06-10, owner-confirmed). The one outstanding config step
+Migrations 0001–0008 are all applied on the production Supabase
+(0007 and 0008 both applied 2026-06-10, owner-confirmed). The one outstanding config step
 is setting `ADMIN_DASHBOARD_PASSWORD` in Vercel to switch on the merged
 admin gate. Build/type-check gate is `pnpm build` (`pnpm lint` is still
 broken — see backlog).
@@ -77,7 +77,7 @@ shape-guarding.
 
 ## Production infrastructure
 - **Supabase:** project **`promoshopstudio`**, ref **`rfvnjxrhainbldxtzdfb`** — the **client's** account. (Note: the Supabase MCP in these sessions is connected to a *different* "Nest Digital" account holding unrelated `GMS`/`landalgorithm` projects — do not confuse them, and don't query them. Live re-verification of the client DB isn't available from that MCP.)
-- **Migrations `0001`–`0007` are all applied** (0007 applied 2026-06-10, owner-confirmed — note the sessions' Supabase MCP cannot see the client project, so this is recorded from the owner's confirmation, not a live query).
+- **Migrations `0001`–`0008` are all applied** (0007 and 0008 both applied 2026-06-10, owner-confirmed — note the sessions' Supabase MCP cannot see the client project, so this is recorded from the owner's confirmation, not a live query).
 - **Storage:** the `site-images` bucket exists, is public, has no size/MIME cap, accepts service-role uploads. Replaced uploads are now pruned by the dashboard; removals deliberately keep the file for recovery.
 - **Server Actions:** the 10 MB `serverActions.bodySizeLimit` is in `next.config.mjs`.
 - **Vercel:** the project builds under the **"Nest Digital Solutions Inc"** team. The client may also run their own Vercel/domain (`promoshopstudio.com`) — confirm which is production.

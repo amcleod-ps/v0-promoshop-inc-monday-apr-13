@@ -13,9 +13,9 @@
 
 ## 2. Database (Supabase project `promoshopstudio`, ref `rfvnjxrhainbldxtzdfb`)
 
-- [ ] Migrations **0001 → 0007 applied** (confirmed 2026-06-10).
-- [ ] Apply **0008** (`supabase/migrations/0008_quote_insert_hardening_and_copy_fix.sql`)
-      via SQL Editor after the fix PR merges.
+- [x] Migrations **0001 → 0007 applied** (confirmed 2026-06-10).
+- [x] **0008 applied** (`supabase/migrations/0008_quote_insert_hardening_and_copy_fix.sql`,
+      owner-confirmed 2026-06-10).
 - [ ] Never re-run 0003 against production; it is for fresh databases only.
 
 ## 2b. Security (pre-launch, long-standing open items)
