@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 
@@ -32,9 +33,16 @@ function bumpCaches() {
   revalidatePath("/admin-dashboard")
 }
 
-function adminOrError():
+async function adminOrError(): Promise<
   | { ok: true; supabase: ReturnType<typeof createAdminClient> }
-  | { ok: false; error: string } {
+  | { ok: false; error: string }
+> {
+  // Every create/update/delete in this file goes through here, so the
+  // ADMIN_DASHBOARD_PASSWORD gate (when enabled) covers them all. Server
+  // actions are invocable from any route via their Next-Action id, so the
+  // proxy.ts matcher alone cannot protect them.
+  const denied = await requireAdminAction()
+  if (denied) return denied
   try {
     return { ok: true, supabase: createAdminClient() }
   } catch (err) {
@@ -122,7 +130,7 @@ export async function createBrand(input: {
   const slug = (input.slug?.trim() || slugify(name)).slice(0, 80)
   if (!slug) return { ok: false, error: "Could not derive a slug from the name." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -152,7 +160,7 @@ export async function createBrand(input: {
  */
 export async function softDeleteBrand(slug: string): Promise<SimpleResult> {
   if (!slug) return { ok: false, error: "Missing brand slug." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -183,7 +191,7 @@ export async function updateBrandCategories(
     return { ok: false, error: "Each category must be 80 characters or fewer." }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -218,7 +226,7 @@ export async function createProduct(input: {
   if (!name) return { ok: false, error: "Product name is required." }
   if (!category) return { ok: false, error: "Category is required." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -248,7 +256,7 @@ export async function createProduct(input: {
 
 export async function softDeleteProduct(sku: string): Promise<SimpleResult> {
   if (!sku) return { ok: false, error: "Missing SKU." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -285,7 +293,7 @@ export async function updateProductText(
     return { ok: false, error: `${field === "name" ? "Name" : "Category"} cannot be empty.` }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -319,7 +327,7 @@ export async function createProductColour(input: {
     return { ok: false, error: "Hex must be in the form #rrggbb (e.g. #ef473f)." }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -361,7 +369,7 @@ export async function updateProductColour(input: {
   }
   if (Object.keys(update).length === 0) return { ok: true }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -377,7 +385,7 @@ export async function updateProductColour(input: {
 
 export async function deleteProductColour(id: string): Promise<SimpleResult> {
   if (!id) return { ok: false, error: "Missing colour id." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   // ON DELETE CASCADE from product_colours → product_images, so all
@@ -411,7 +419,7 @@ export async function createProductImage(
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -464,7 +472,7 @@ export async function createHeroSlide(input: {
     }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -489,7 +497,7 @@ export async function createHeroSlide(input: {
 
 export async function softDeleteHeroSlide(id: string): Promise<SimpleResult> {
   if (!id) return { ok: false, error: "Missing slide id." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -517,7 +525,7 @@ export async function updateHeroSlideBgColor(
     return { ok: false, error: "Background colour must be in the form #rrggbb, or empty to clear it." }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -569,7 +577,7 @@ export async function updateSortOrder(
     return { ok: false, error: "Display order must be a whole number between 0 and 100000." }
   }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -600,7 +608,7 @@ export async function createSiteImage(input: {
   }
   if (!label) return { ok: false, error: "Label is required." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -620,7 +628,7 @@ export async function createSiteImage(input: {
 
 export async function deleteSiteImage(key: string): Promise<SimpleResult> {
   if (!key) return { ok: false, error: "Missing key." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -646,7 +654,7 @@ export async function updateSiteImageAltText(
   if (typeof value !== "string") return { ok: false, error: "Value must be text." }
   if (value.length > 500) return { ok: false, error: "Alt text too long (500 char max)." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -677,7 +685,7 @@ export async function createTeamMember(input: {
   const slug = (input.slug?.trim() || slugify(name)).slice(0, 80)
   if (!slug) return { ok: false, error: "Could not derive a slug from the name." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -713,7 +721,7 @@ export async function updateTeamMemberText(
   if (typeof value !== "string") return { ok: false, error: "Value must be text." }
   if (value.length > 5000) return { ok: false, error: "Too long (5000 char max)." }
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -731,7 +739,7 @@ export async function updateTeamMemberText(
 
 export async function softDeleteTeamMember(slug: string): Promise<SimpleResult> {
   if (!slug) return { ok: false, error: "Missing slug." }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
   const { data, error } = await supabase
@@ -756,7 +764,7 @@ export async function replaceTeamMemberImage(
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
 
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
@@ -817,7 +825,7 @@ export async function updateThemeColor(
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
     return { ok: false, error: "Hex must be in the form #rrggbb." }
   }
-  const adminResult = adminOrError()
+  const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
 
