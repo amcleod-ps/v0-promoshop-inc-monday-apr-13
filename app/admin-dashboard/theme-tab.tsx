@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { updateThemeColor } from "./create-actions"
 
 export interface ThemeEntry {
@@ -38,6 +38,18 @@ function ThemeRow({ entry }: { entry: ThemeEntry }) {
 
   const dirty = value.toLowerCase() !== savedValue.toLowerCase()
 
+  // Re-sync from props when the parent refreshes (e.g. router.refresh()).
+  // The row keeps a stable key, so its state survives the refresh; mirror the
+  // new saved value, and adopt it as the displayed value too unless the user
+  // has an in-progress edit (so we don't clobber unsaved changes).
+  useEffect(() => {
+    setSavedValue(entry.value)
+    if (!dirty) setValue(entry.value)
+    // `dirty` is read intentionally and excluded from deps: this effect should
+    // only fire when the incoming `entry.value` changes, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.value])
+
   const handleSave = () => {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
@@ -68,6 +80,7 @@ function ThemeRow({ entry }: { entry: ThemeEntry }) {
         <div style={styles.controls}>
           <input
             type="color"
+            aria-label={`${entry.label} colour picker`}
             value={value}
             onChange={(e) => {
               setValue(e.target.value)
@@ -78,6 +91,7 @@ function ThemeRow({ entry }: { entry: ThemeEntry }) {
           />
           <input
             type="text"
+            aria-label={`${entry.label} hex value`}
             value={value}
             onChange={(e) => {
               setValue(e.target.value)
@@ -86,7 +100,7 @@ function ThemeRow({ entry }: { entry: ThemeEntry }) {
             disabled={isPending}
             style={styles.textInput}
             spellCheck={false}
-            maxLength={9}
+            maxLength={7}
           />
           <button
             type="button"
