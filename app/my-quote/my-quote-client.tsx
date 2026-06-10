@@ -8,6 +8,8 @@ import { Footer } from "@/components/footer"
 import { SafeImage } from "@/components/safe-image"
 import { useQuote, MAX_ITEM_QUANTITY, clampQuantity } from "@/lib/quote-context"
 import { useLocale } from "@/lib/locale-context"
+import { useSiteText } from "@/components/site-content-provider"
+import { textFallback } from "@/lib/cms/text-slots"
 import { submitQuoteRequest } from "@/app/actions/quotes"
 import { HoneypotField } from "@/components/honeypot-field"
 
@@ -42,7 +44,18 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
     isLoaded 
   } = useQuote()
   const { t } = useLocale()
-  
+  const pageEyebrow = useSiteText("quote.page.eyebrow", textFallback("quote.page.eyebrow"))
+  const pageHeading = useSiteText("quote.page.heading", textFallback("quote.page.heading"))
+  const pageSubheading = useSiteText(
+    "quote.page.subheading",
+    textFallback("quote.page.subheading"),
+  )
+  const successHeading = useSiteText(
+    "quote.success.heading",
+    textFallback("quote.success.heading"),
+  )
+  const successBody = useSiteText("quote.success.body", textFallback("quote.success.body"))
+
   const [activeTab, setActiveTab] = useState<"items" | "contact" | "project">("items")
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -194,9 +207,9 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="font-montserrat font-bold text-3xl text-[#1a1a1a] mb-4">Quote Submitted!</h1>
+            <h1 className="font-montserrat font-bold text-3xl text-[#1a1a1a] mb-4">{successHeading}</h1>
             <p className="text-[#666] mb-8 font-visby">
-              Thank you for your quote request. Our team will review your selections and get back to you within 24-48 hours.
+              {successBody}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -220,8 +233,10 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
     )
   }
 
-  const inputClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors"
-  const selectClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none"
+  // focus ring on top of the border-colour swap: a 1px border change alone
+  // is an invisible focus indicator on these light inputs.
+  const inputClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
+  const selectClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
   return (
@@ -233,18 +248,19 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
           {/* Page Header */}
           <div className="mb-10">
             <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-2">
-              Quote Builder
+              {pageEyebrow}
             </p>
             <h1 className="font-montserrat font-bold text-3xl lg:text-4xl text-[#1a1a1a]">
-              My Quote
+              {pageHeading}
             </h1>
             <p className="text-[#666] mt-2 font-visby">
-              Build your quote and submit it for pricing. We&apos;ll get back to you within 24-48 hours.
+              {pageSubheading}
             </p>
           </div>
 
-          {/* Tabs */}
-          <div role="tablist" aria-label="Quote builder steps" className="flex gap-2 mb-8 border-b border-[#e5e5e5]">
+          {/* Tabs — scrollable strip on phones: the three uppercase labels
+              total ~460px and forced page-level horizontal scroll. */}
+          <div role="tablist" aria-label="Quote builder steps" className="flex gap-1 sm:gap-2 mb-8 border-b border-[#e5e5e5] overflow-x-auto">
             {[
               { id: "items", label: "Products", count: items.length },
               { id: "contact", label: "Contact Info" },
@@ -257,7 +273,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 aria-selected={activeTab === tab.id}
                 aria-controls={`panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-colors relative ${
+                className={`px-3 sm:px-6 py-3 font-bold text-xs sm:text-sm uppercase tracking-wider transition-colors relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === tab.id 
                     ? "text-[#1a1a1a]" 
                     : "text-[#6b6b6b] hover:text-[#1a1a1a]"
@@ -299,32 +315,35 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 <>
                   <div className="space-y-4 mb-6">
                     {items.map((item) => (
-                      <div key={item.id} className="bg-white border border-[#e5e5e5] rounded-lg p-4 flex gap-4 shadow-sm">
+                      // flex-wrap: on narrow phones the qty/remove cluster
+                      // drops to its own right-aligned row instead of
+                      // crushing the product name to nothing.
+                      <div key={item.id} className="bg-white border border-[#e5e5e5] rounded-lg p-4 flex flex-wrap items-center gap-4 shadow-sm">
                         <div className="w-20 h-20 bg-[#f0f0f0] rounded overflow-hidden flex-shrink-0">
                           {item.image && (
                             <SafeImage src={item.image} alt="" width={80} height={80} className="w-full h-full object-cover" />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-sm uppercase tracking-wide mb-1 truncate text-[#1a1a1a]">{item.productName}</h3>
+                        <div className="flex-1 min-w-[10rem]">
+                          <h3 className="font-bold text-sm uppercase tracking-wide mb-1 text-[#1a1a1a]">{item.productName}</h3>
                           <p className="text-xs text-[#6b6b6b] mb-2 font-visby">SKU: {item.productSku}</p>
                           <div className="flex flex-wrap gap-2 text-xs">
                             <span className="bg-[#f0f0f0] text-[#666] px-2 py-1 rounded">{item.colour}</span>
                             <span className="bg-[#f0f0f0] text-[#666] px-2 py-1 rounded">{item.size}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity - 1) })} aria-label={`Decrease quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
+                        <div className="flex items-center gap-2 ml-auto">
+                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity - 1) })} aria-label={`Decrease quantity of ${item.productName}`} className="w-9 h-9 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
                             <Minus className="w-3 h-3" aria-hidden="true" />
                           </button>
                           <span className="w-12 text-center font-bold">{item.quantity}</span>
-                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity + 1) })} aria-label={`Increase quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
+                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity + 1) })} aria-label={`Increase quantity of ${item.productName}`} className="w-9 h-9 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
                             <Plus className="w-3 h-3" aria-hidden="true" />
                           </button>
+                          <button onClick={() => removeItem(item.id)} aria-label={`Remove ${item.productName} from quote`} className="p-2 text-[#8a8a8a] hover:text-[#ef473f] transition-colors">
+                            <Trash2 className="w-5 h-5" aria-hidden="true" />
+                          </button>
                         </div>
-                        <button onClick={() => removeItem(item.id)} aria-label={`Remove ${item.productName} from quote`} className="p-2 text-[#8a8a8a] hover:text-[#ef473f] transition-colors">
-                          <Trash2 className="w-5 h-5" aria-hidden="true" />
-                        </button>
                       </div>
                     ))}
                   </div>

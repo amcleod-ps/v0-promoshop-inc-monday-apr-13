@@ -966,19 +966,22 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 2,
     cursor: "pointer",
   },
-  imagesGrid: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 },
-  imageTile: { width: 100 },
+  imagesGrid: { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10 },
+  // 168px (not 100): the per-tile "Order" input + Save button are ~160px
+  // wide, so narrower tiles let neighbouring Save buttons overlap each
+  // other — the overlapping-Save-buttons bug reported from the client call.
+  imageTile: { width: 168 },
   imageThumb: {
-    width: 100,
-    height: 80,
+    width: "100%",
+    height: 110,
     objectFit: "contain",
     background: "#fff",
     border: "1px solid #eee",
     borderRadius: 4,
   },
   imageEmpty: {
-    width: 100,
-    height: 80,
+    width: "100%",
+    height: 110,
     background: "#fff",
     border: "1px dashed #ddd",
     borderRadius: 4,
@@ -1015,7 +1018,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px dashed #ddd",
     borderRadius: 4,
   },
-  fileInput: { fontSize: 12 },
+  fileInput: { fontSize: 12, maxWidth: "100%" },
   smallPreview: {
     width: 56,
     height: 44,
@@ -1084,6 +1087,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sortInlineCompact: {
     display: "flex",
+    flexWrap: "wrap",
     gap: 4,
     alignItems: "center",
     marginTop: 4,

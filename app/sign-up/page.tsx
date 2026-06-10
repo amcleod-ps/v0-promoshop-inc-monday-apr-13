@@ -71,7 +71,7 @@ function SignUpPageInner() {
   }
   const strength = passwordStrength()
 
-  const inputClass = "w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none transition-colors"
+  const inputClass = "w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
   return (

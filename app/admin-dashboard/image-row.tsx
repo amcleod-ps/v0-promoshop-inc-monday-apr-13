@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { removeImage, replaceImage, type ReplaceTarget } from "./actions"
+import { updateImageFit } from "./create-actions"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 interface ImageRowProps {
@@ -10,6 +11,11 @@ interface ImageRowProps {
   label: string
   currentUrl: string | null
   hint?: string | null
+  /** When set, offers the cover/contain display-mode selector for this
+   *  placement (only pass it for slots the renderers actually consult —
+   *  hero slides, about.hero, brand lifestyle backdrops). */
+  fitSlot?: string
+  currentFit?: string
 }
 
 function formatBytes(bytes: number): string {
@@ -25,7 +31,7 @@ function removeConfirmMessage(target: ReplaceTarget): string {
   return "Remove this image? The site will fall back to its default. You can upload a new image any time."
 }
 
-export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps) {
+export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, currentFit }: ImageRowProps) {
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [status, setStatus] = useState<{
@@ -239,6 +245,8 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
           ) : null}
         </form>
 
+        {fitSlot ? <ImageFitControl slot={fitSlot} initial={currentFit} /> : null}
+
         {previewUrl ? (
           <a
             href={previewUrl}
@@ -254,9 +262,77 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
   )
 }
 
+/**
+ * Cover/contain selector for placements that render inside a fixed frame.
+ * Saves on change (a select pick is a deliberate action, like the Featured
+ * toggle) and reverts the optimistic value if the server rejects it.
+ */
+function ImageFitControl({ slot, initial }: { slot: string; initial?: string }) {
+  const [fit, setFit] = useState(initial === "contain" ? "contain" : "cover")
+  const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
+    kind: "idle",
+    message: "",
+  })
+  const [isPending, startTransition] = useTransition()
+
+  const handleChange = (next: string) => {
+    const previous = fit
+    setFit(next)
+    setStatus({ kind: "idle", message: "Saving…" })
+    startTransition(async () => {
+      try {
+        const result = await updateImageFit(slot, next)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved. Live on the site." })
+        } else {
+          setFit(previous)
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setFit(previous)
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
+      }
+    })
+  }
+
+  return (
+    <div style={styles.fitRow}>
+      <label style={styles.fitLabel}>
+        Image display
+        <select
+          value={fit}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={isPending}
+          style={styles.fitSelect}
+        >
+          <option value="cover">Fill the frame (crops to fit)</option>
+          <option value="contain">Show the whole image (no cropping)</option>
+        </select>
+      </label>
+      {status.message ? (
+        <span
+          style={{
+            ...styles.status,
+            color:
+              status.kind === "err" ? "#b00020" : status.kind === "ok" ? "#0a7f3f" : "#444",
+          }}
+        >
+          {status.message}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
 const styles: Record<string, React.CSSProperties> = {
   row: {
     display: "flex",
+    // Wrap on narrow screens: with the fixed preview column(s) the controls
+    // used to overflow the card and overlap on phones.
+    flexWrap: "wrap",
     gap: 16,
     padding: 12,
     border: "1px solid #ddd",
@@ -293,7 +369,9 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     fontSize: 12,
   },
-  body: { flex: 1, minWidth: 0 },
+  // minWidth 220 (not 0) so the controls wrap below the thumbnails on
+  // phones instead of being squeezed into an unusable sliver next to them.
+  body: { flex: "1 1 220px", minWidth: 0 },
   label: { fontWeight: 700, marginBottom: 2, fontSize: 15 },
   meta: { fontSize: 12, color: "#666", marginBottom: 8 },
   id: {
@@ -301,6 +379,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#f5f5f5",
     padding: "1px 6px",
     borderRadius: 3,
+    // UUID-bearing keys have no break points — without this they widen the
+    // card past phone viewports.
+    overflowWrap: "anywhere",
   },
   hint: { color: "#888" },
   form: {
@@ -310,8 +391,37 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     marginBottom: 6,
   },
-  fileInput: { fontSize: 13 },
+  fileInput: { fontSize: 13, maxWidth: "100%" },
   fileMeta: { fontSize: 12, color: "#444" },
+  fitRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  fitLabel: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#444",
+    maxWidth: "100%",
+  },
+  fitSelect: {
+    padding: "5px 8px",
+    fontSize: 13,
+    border: "1px solid #ccc",
+    borderRadius: 4,
+    background: "#fff",
+    fontWeight: 400,
+    // Long option labels must clip, not push the card wider than a phone.
+    flex: "1 1 auto",
+    minWidth: 0,
+    maxWidth: "100%",
+  },
   button: {
     padding: "6px 14px",
     fontSize: 13,

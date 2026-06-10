@@ -2,6 +2,7 @@
 
 import type { Product } from "@/lib/products"
 import { SafeImage } from "@/components/safe-image"
+import { withMinImageWidth } from "@/lib/image-resolution"
 
 interface ProductCardProps {
   product: Product
@@ -10,7 +11,9 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onClick }: ProductCardProps) {
   const firstColour = product.colours[0]
-  const firstImage = firstColour?.images[0] || ""
+  // Cards render up to ~290px CSS in the 4-up grid; 750w covers 2x displays
+  // without forcing the low seeded `format=500w` hint to upscale soft.
+  const firstImage = withMinImageWidth(firstColour?.images[0] || "", 750)
   // aria-labelledby (not aria-label) so the swatch names and "+N more"
   // inside the card stay readable to assistive tech.
   const titleId = `product-title-${product.sku.replace(/\s+/g, "-")}`

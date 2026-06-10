@@ -8,6 +8,7 @@ import { useQuote } from "@/lib/quote-context"
 import { useLocale } from "@/lib/locale-context"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { SafeImage } from "@/components/safe-image"
+import { withMinImageWidth } from "@/lib/image-resolution"
 import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
 import { ProductLightbox } from "./product-lightbox"
 
@@ -194,7 +195,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
               ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close"
-              className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center z-20 hover:bg-[#ef473f] hover:text-white transition-colors"
+              className="absolute top-3.5 right-3.5 w-10 h-10 rounded-full bg-black/15 flex items-center justify-center z-20 hover:bg-[#ef473f] hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -207,11 +208,15 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                   aria-label="Open full-screen view"
                   className="absolute inset-0 cursor-zoom-in group"
                 >
+                  {/* object-contain (not cover): cover cropped the product
+                      and upscaled low-format sources to fill the frame —
+                      the whole shot letterboxed on the grey panel is both
+                      sharper and the standard product-viewer treatment. */}
                   <SafeImage
-                    src={images[displayIndex]}
+                    src={withMinImageWidth(images[displayIndex], 1500)}
                     alt={`${product.name} - ${previewColour?.name ?? ""} (${displayIndex + 1}/${images.length})`}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 768px) 100vw, 55vw"
                   />
                   <span className="absolute top-3.5 left-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">

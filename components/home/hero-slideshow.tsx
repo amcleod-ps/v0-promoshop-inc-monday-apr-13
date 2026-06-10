@@ -13,6 +13,10 @@ export interface HeroSlide {
   cta_text?: string | null
   cta_url?: string | null
   bg_color?: string | null
+  /** "cover" (default, crops to fill) or "contain" (whole image, letterboxed
+   *  over bg_color / the dark section background). Set per slide from the
+   *  dashboard via the `image-fit.hero_slide.<id>` site_content key. */
+  fit?: "cover" | "contain"
 }
 
 interface HeroSlideshowProps {
@@ -58,7 +62,7 @@ function Slide({
         <img
           src={src}
           alt={alt}
-          className="w-full h-full object-cover"
+          className={`w-full h-full ${slide.fit === "contain" ? "object-contain" : "object-cover"}`}
           fetchPriority={slideIndex === 1 ? "high" : undefined}
           loading={slideIndex === 1 ? undefined : "lazy"}
           decoding={slideIndex === 1 ? undefined : "async"}

@@ -6,6 +6,7 @@ import { ABOUT_CONTENT } from "@/lib/cms/about"
 import { SiteImage } from "@/components/site-image"
 import { TeamSection } from "@/components/team-section"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+import { imageFitClass, imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -20,6 +21,11 @@ export default async function AboutPage() {
   const heading = resolveSiteText(content, "about.hero.heading", ABOUT_CONTENT.hero.heading)
   const body = ABOUT_CONTENT.hero.body.map((paragraph, i) =>
     resolveSiteText(content, `about.hero.body.${i + 1}`, paragraph),
+  )
+  // Admin-chosen display mode for the hero image (cover crops; contain
+  // letterboxes the whole image over the dark panel).
+  const heroFit = normalizeImageFit(
+    resolveSiteText(content, imageFitKey("about.hero"), "cover"),
   )
 
   return (
@@ -40,7 +46,7 @@ export default async function AboutPage() {
                 defaultSrc={ABOUT_CONTENT.hero.image}
                 alt={ABOUT_CONTENT.hero.imageAlt}
                 fill
-                className="object-cover"
+                className={imageFitClass(heroFit)}
                 priority
               />
             </div>

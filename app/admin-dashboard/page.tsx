@@ -10,6 +10,8 @@ import type { ProductRow } from "./products-tab"
 import type { TeamMemberRow } from "./team-tab"
 import type { ThemeEntry } from "./theme-tab"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
+import { IMAGE_FIT_PREFIX } from "@/lib/image-fit"
+import { EXTRA_TEXT_SLOTS } from "@/lib/cms/text-slots"
 
 export const dynamic = "force-dynamic"
 
@@ -106,9 +108,13 @@ const CONTENT_KEY_RULES: Array<{
   group: string
   multiline?: boolean
 }> = [
+  { prefix: "header.", group: "Header & navigation" },
   { prefix: "home.hero.body", group: "Home page", multiline: true },
   { prefix: "home.hero.cta", group: "Home page" },
   { prefix: "home.", group: "Home page" },
+  { prefix: "studio.", group: "Studio page" },
+  { prefix: "quote.success.body", group: "Quote builder", multiline: true },
+  { prefix: "quote.", group: "Quote builder" },
   { prefix: "about.hero.eyebrow", group: "About page" },
   { prefix: "about.hero.heading", group: "About page" },
   { prefix: "about.hero.body", group: "About page", multiline: true },
@@ -135,7 +141,10 @@ function classifyContentKey(key: string): { group: string; multiline: boolean } 
 }
 
 const CONTENT_GROUP_ORDER = [
+  "Header & navigation",
   "Home page",
+  "Studio page",
+  "Quote builder",
   "About page",
   "Team section",
   "Team members",
@@ -334,11 +343,24 @@ export default async function AdminDashboardPage() {
     return true
   })
 
+  // image-fit.* rows are display-mode settings with a dedicated selector on
+  // the Images tab — listing them as raw text rows here would invite typos
+  // that the selector's validation exists to prevent.
+  const imageFits: Record<string, string> = {}
+  for (const row of siteContentRaw) {
+    if (row.key.startsWith(IMAGE_FIT_PREFIX)) {
+      imageFits[row.key.slice(IMAGE_FIT_PREFIX.length)] = row.value
+    }
+  }
+  const textContentRaw = siteContentRaw.filter(
+    (row) => !row.key.startsWith(IMAGE_FIT_PREFIX),
+  )
+
   const filteredSiteContentRaw = teamTableLive
-    ? siteContentRaw.filter(
+    ? textContentRaw.filter(
         (row) => !/^team\./.test(row.key) || row.key.startsWith("team.section."),
       )
-    : siteContentRaw
+    : textContentRaw
 
   // Soft-deleted products keep their product_images rows (so re-activating
   // from the Table Editor restores the gallery), but the dashboard must not
@@ -418,15 +440,37 @@ export default async function AdminDashboardPage() {
   })
 
   // ---- Site text rows for the existing Text content tab -------------------
-  const siteContent: SiteContentEntry[] = filteredSiteContentRaw
+  // DB rows first, then the compiled-in registry of editable slots that have
+  // no row yet (lib/cms/text-slots.ts) — copy that used to be hard-coded.
+  // Saving a registry slot upserts a real row; blank keeps the built-in text.
+  const registrySlotByKey = new Map(EXTRA_TEXT_SLOTS.map((s) => [s.key, s]))
+  const presentKeys = new Set(filteredSiteContentRaw.map((row) => row.key))
+  const slotHint = (key: string): string | undefined => {
+    const slot = registrySlotByKey.get(key)
+    if (!slot) return undefined
+    const preview =
+      slot.fallback.length > 90 ? `${slot.fallback.slice(0, 90)}…` : slot.fallback
+    return `Leave blank to keep the built-in text: “${preview}”`
+  }
+  const mergedContentRows = [
+    ...filteredSiteContentRaw,
+    ...EXTRA_TEXT_SLOTS.filter((slot) => !presentKeys.has(slot.key)).map((slot) => ({
+      key: slot.key,
+      label: slot.label,
+      value: "",
+    })),
+  ]
+  const siteContent: SiteContentEntry[] = mergedContentRows
     .map((row) => {
       const { group, multiline } = classifyContentKey(row.key)
+      const slot = registrySlotByKey.get(row.key)
       return {
         key: row.key,
         label: row.label,
         value: row.value ?? "",
         group,
-        multiline,
+        multiline: slot?.multiline ?? multiline,
+        hint: slotHint(row.key),
       }
     })
     .sort((a, b) => {
@@ -489,7 +533,36 @@ export default async function AdminDashboardPage() {
   if (teamMissing || themeMissing) missingMigrations.push("0005_team_and_theme.sql")
 
   return (
-    <main style={pageStyles.main}>
+    <main className="psadmin" style={pageStyles.main}>
+      {/* Dashboard-wide affordances that inline styles can't express:
+          disabled buttons must LOOK disabled (Save sits greyed until a field
+          is edited — admins read full-contrast disabled buttons as broken),
+          keyboard focus must be visible, and images may never overflow
+          their card on small screens. */}
+      <style>{`
+        .psadmin button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .psadmin button:focus-visible,
+        .psadmin input:focus-visible,
+        .psadmin select:focus-visible,
+        .psadmin textarea:focus-visible,
+        .psadmin summary:focus-visible,
+        .psadmin a:focus-visible {
+          outline: 2px solid #ef473f;
+          outline-offset: 2px;
+        }
+        .psadmin img {
+          max-width: 100%;
+        }
+        @media (max-width: 480px) {
+          .psadmin {
+            padding-left: 14px !important;
+            padding-right: 14px !important;
+          }
+        }
+      `}</style>
       <h1 style={pageStyles.h1}>Image &amp; Content Dashboard</h1>
 
       <details style={pageStyles.help}>
@@ -504,10 +577,21 @@ export default async function AdminDashboardPage() {
             brand, hero slide, image slot, SKU, or team member.
           </li>
           <li>
-            On any item: edit fields and click <strong>Save</strong>, replace an
-            image with <strong>Replace</strong>, or click <strong>Remove</strong> /
+            On any item: edit fields and click <strong>Save</strong> (it lights
+            up once you change something), replace an image with{" "}
+            <strong>Replace</strong>, or click <strong>Remove</strong> /
             <strong> Delete</strong> to hide it from the public site. Deletes are
             soft — items can be re-activated in Supabase Table Editor.
+          </li>
+          <li>
+            Hero slides, the About-page hero, and brand lifestyle backdrops
+            also offer an <strong>Image display</strong> choice: fill the frame
+            (crops to fit) or show the whole image (no cropping) — use the
+            second for logos and tall or wide artwork.
+          </li>
+          <li>
+            Text fields left blank fall back to the site&apos;s built-in copy,
+            shown in the field&apos;s hint.
           </li>
           <li>
             In the <strong>Theme</strong> tab, pick a new colour and click
@@ -581,6 +665,7 @@ export default async function AdminDashboardPage() {
           theme={theme}
           teamTableMissing={teamMissing}
           themeTableMissing={themeMissing}
+          imageFits={imageFits}
         />
       )}
     </main>
