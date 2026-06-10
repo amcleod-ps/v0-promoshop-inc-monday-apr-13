@@ -178,6 +178,7 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
   const nextName = member.name
   const nextRole = member.role
   const nextDescription = member.description ?? ""
+  const nextSortOrder = String(member.sort_order)
   const nextImageUrl = member.image_url
   useEffect(() => {
     setName((current) => (current === savedName ? nextName : current))
@@ -186,11 +187,13 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
     setSavedRole(nextRole)
     setDescription((current) => (current === savedDescription ? nextDescription : current))
     setSavedDescription(nextDescription)
+    setSortOrder((current) => (current === savedSortOrder ? nextSortOrder : current))
+    setSavedSortOrder(nextSortOrder)
     setImageUrl(nextImageUrl)
     // saved* baselines are read via functional updaters, so they don't belong
     // in the deps; re-sync only when the incoming prop values change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextName, nextRole, nextDescription, nextImageUrl])
+  }, [nextName, nextRole, nextDescription, nextSortOrder, nextImageUrl])
 
   if (removed) {
     return (
