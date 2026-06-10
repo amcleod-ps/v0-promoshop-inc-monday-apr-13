@@ -26,27 +26,39 @@ export default async function HomePage() {
   // Image URLs from Supabase already have ?v=<updated_at> cache-busting
   // appended by lib/supabase/data.ts so swapping a row instantly busts the
   // browser, CDN, and next/image caches.
-  const slides = heroSlides.length > 0
-    ? heroSlides.map((slide) => ({
-        src: slide.image_url || "",
-        alt: slide.title,
-        title: slide.title,
-        subtitle: slide.subtitle,
-        cta_text: slide.cta_text,
-        cta_url: slide.cta_url,
-        bg_color: slide.bg_color,
-      }))
-    : HOME_CONTENT.slideshow
+  //
+  // `null` = Supabase unreachable → static fallback. An empty list is a real
+  // answer (admin deactivated everything) and renders no slideshow. Slides
+  // with neither an image nor a background colour are skipped so a
+  // just-created slide doesn't rotate in as a blank frame before its image
+  // is uploaded.
+  const slides =
+    heroSlides === null
+      ? HOME_CONTENT.slideshow
+      : heroSlides
+          .filter((slide) => slide.image_url || slide.bg_color)
+          .map((slide) => ({
+            src: slide.image_url || "",
+            alt: slide.title,
+            title: slide.title,
+            subtitle: slide.subtitle,
+            cta_text: slide.cta_text,
+            cta_url: slide.cta_url,
+            bg_color: slide.bg_color,
+          }))
 
-  // Transform Supabase brands for the logo scroll
-  const brands = supabaseBrands.length > 0
-    ? supabaseBrands.map((brand) => ({
-        id: brand.id,
-        slug: brand.slug,
-        name: brand.name,
-        logoUrl: brand.logo_url,
-      }))
-    : null // Will use static BRANDS as fallback in component
+  // Transform Supabase brands for the logo scroll. `null` (unreachable) makes
+  // the component fall back to the static BRANDS; an empty list renders no
+  // scroll at all.
+  const brands =
+    supabaseBrands === null
+      ? null
+      : supabaseBrands.map((brand) => ({
+          id: brand.id,
+          slug: brand.slug,
+          name: brand.name,
+          logoUrl: brand.logo_url,
+        }))
 
   return (
     <div className="min-h-screen bg-[#111111] text-white">

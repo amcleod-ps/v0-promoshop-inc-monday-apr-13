@@ -46,16 +46,22 @@ async function maybeClient() {
   }
 }
 
-export async function getHeroSlides(): Promise<SupabaseHeroSlide[]> {
+/**
+ * Returns the active hero slides, or `null` when Supabase is unreachable /
+ * misconfigured. `null` means "fall back to the compiled-in slides"; an
+ * empty array means the admin deactivated every slide on purpose and the
+ * caller should render nothing rather than resurrect the static defaults.
+ */
+export async function getHeroSlides(): Promise<SupabaseHeroSlide[] | null> {
   const supabase = await maybeClient()
-  if (!supabase) return []
+  if (!supabase) return null
   const { data, error } = await supabase
     .from("hero_slides")
     .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
 
-  if (error || !data) return []
+  if (error || !data) return null
 
   return data.map((row) => ({
     ...row,
@@ -63,16 +69,20 @@ export async function getHeroSlides(): Promise<SupabaseHeroSlide[]> {
   }))
 }
 
-export async function getSupabaseBrands(): Promise<SupabaseBrand[]> {
+/**
+ * Returns the active brands, or `null` when Supabase is unreachable (use
+ * the static seed). An empty array is a real "no active brands" state.
+ */
+export async function getSupabaseBrands(): Promise<SupabaseBrand[] | null> {
   const supabase = await maybeClient()
-  if (!supabase) return []
+  if (!supabase) return null
   const { data, error } = await supabase
     .from("brands")
     .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
 
-  if (error || !data) return []
+  if (error || !data) return null
 
   return data.map((row) => ({
     ...row,
@@ -80,23 +90,37 @@ export async function getSupabaseBrands(): Promise<SupabaseBrand[]> {
   }))
 }
 
-// Single-brand live lookup for /brands/[slug]. Returns null (not a throw) when
-// env vars are missing, the query fails, or no active brand matches — callers
-// fall back to the static seed so a Supabase outage never 500s the route.
-export async function getSupabaseBrandBySlug(slug: string): Promise<SupabaseBrand | null> {
+// Single-brand live lookup for /brands/[slug]. The two failure modes need
+// different handling, so they're kept distinct:
+//   * { ok: false }            — Supabase unreachable / query error. Caller
+//                                may fall back to the compiled-in seed.
+//   * { ok: true, brand: null } — Supabase answered and no visible brand row
+//                                exists. Caller should 404, NOT resurrect a
+//                                seed brand the admin may have deleted.
+// Soft-deleted brands land in the second bucket: the anon-key RLS policy
+// ("brands_public_read_active") hides inactive rows, so a deactivated brand
+// reads back as "no row" and 404s instead of falling through to the seed.
+export type SupabaseBrandLookup =
+  | { ok: true; brand: SupabaseBrand | null }
+  | { ok: false }
+
+export async function getSupabaseBrandBySlug(slug: string): Promise<SupabaseBrandLookup> {
   const supabase = await maybeClient()
-  if (!supabase) return null
+  if (!supabase) return { ok: false }
   const { data, error } = await supabase
     .from("brands")
     .select("*")
     .eq("slug", slug)
-    .eq("is_active", true)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) return { ok: false }
+  if (!data) return { ok: true, brand: null }
 
   return {
-    ...data,
-    logo_url: bustedUrl(data.logo_url, data.updated_at),
+    ok: true,
+    brand: {
+      ...data,
+      logo_url: bustedUrl(data.logo_url, data.updated_at),
+    },
   }
 }

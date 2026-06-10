@@ -18,16 +18,18 @@ function bustedUrl(url: string | null | undefined, updatedAt: string): string | 
 
 /**
  * Fetches the active team roster from Supabase, ordered for display.
- * Returns [] when the table doesn't exist yet (migration 0005 not
- * applied) or env vars are missing — callers fall back to the static
- * lib/cms/team.ts roster in that case.
+ * Returns `null` when the table doesn't exist yet (migration 0005 not
+ * applied), env vars are missing, or the query fails — callers fall back
+ * to the static lib/cms/team.ts roster in that case. An empty array is a
+ * real answer ("the admin removed everyone") and renders an empty roster
+ * rather than resurrecting the static one.
  */
-export async function getTeamMembers(): Promise<SupabaseTeamMember[]> {
+export async function getTeamMembers(): Promise<SupabaseTeamMember[] | null> {
   let supabase
   try {
     supabase = await createClient()
   } catch {
-    return []
+    return null
   }
   const { data, error } = await supabase
     .from("team_members")
@@ -35,7 +37,7 @@ export async function getTeamMembers(): Promise<SupabaseTeamMember[]> {
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
 
-  if (error || !data) return []
+  if (error || !data) return null
 
   return data.map((row) => ({
     ...row,

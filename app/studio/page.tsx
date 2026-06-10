@@ -3,10 +3,12 @@ import { PRODUCTS } from "@/lib/products"
 import StudioClient from "./StudioClient"
 
 export default async function StudioPage() {
-  // Supabase is the live source; fall back to the compiled-in catalog when it
-  // is unreachable so /studio still renders products instead of an empty page.
+  // Supabase is the live source; fall back to the compiled-in catalog only
+  // when it is unreachable (null). An empty list is a deliberate state — the
+  // admin deactivated every product — and must not resurrect the static
+  // catalog.
   const live = await getAllProducts()
-  const products = live.length > 0 ? live : PRODUCTS
+  const products = live ?? PRODUCTS
 
   const categorySet = new Set<string>()
   const brandSet = new Set<string>()

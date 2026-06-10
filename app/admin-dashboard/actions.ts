@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { validateImageUpload } from "@/lib/image-upload"
+import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 
 const BUCKET = "site-images"
 
@@ -11,6 +12,13 @@ export type ReplaceTarget =
   | "brand"
   | "hero_slide"
   | "product_image"
+
+const REPLACE_TARGETS: ReplaceTarget[] = [
+  "site_images",
+  "brand",
+  "hero_slide",
+  "product_image",
+]
 
 interface SuccessResult {
   ok: true
@@ -27,11 +35,56 @@ interface SimpleSuccess {
 }
 export type SimpleResult = SimpleSuccess | ErrorResult
 
+// Shown when an update matched zero rows — e.g. a stale dashboard tab editing
+// a row that was deleted from another tab or the Supabase Table Editor.
+const STALE_ROW_ERROR =
+  "No changes applied — this row no longer exists. Refresh the dashboard."
+
 function bumpCaches() {
   // Tell Next.js to rebuild every cached page so changes are visible
   // immediately on the live site, not just the dashboard.
   revalidatePath("/", "layout")
   revalidatePath("/admin-dashboard")
+}
+
+/**
+ * Extracts the object path within our bucket from a public Storage URL.
+ * Returns null for external URLs (seed images, /images/* paths, other
+ * hosts) so we never try to prune files we don't own.
+ */
+function storagePathFromPublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  const marker = `/storage/v1/object/public/${BUCKET}/`
+  const i = url.indexOf(marker)
+  if (i === -1) return null
+  const path = url.slice(i + marker.length).split("?")[0]
+  return path ? decodeURIComponent(path) : null
+}
+
+/**
+ * Best-effort removal of replaced files so storage stays bounded. Failures
+ * are ignored: a stale file is preferable to failing the admin's save after
+ * the database already points at the new upload.
+ */
+async function pruneReplacedFiles(
+  supabase: ReturnType<typeof createAdminClient>,
+  oldUrls: Array<string | null | undefined>,
+  newUrl: string,
+) {
+  const newPath = storagePathFromPublicUrl(newUrl)
+  const paths = Array.from(
+    new Set(
+      oldUrls
+        .map((u) => storagePathFromPublicUrl(u))
+        .filter((p): p is string => !!p && p !== newPath),
+    ),
+  )
+  if (paths.length === 0) return
+  try {
+    await supabase.storage.from(BUCKET).remove(paths)
+  } catch {
+    // Ignore — pruning is opportunistic.
+  }
 }
 
 /**
@@ -41,6 +94,8 @@ function bumpCaches() {
  *      path that includes a timestamp.
  *   3. Update the database row that referenced the old URL. The new public
  *      URL is what the site renders on the next page load.
+ *   4. Delete the file the row previously pointed at (when it lives in our
+ *      bucket) so replaced uploads don't accumulate forever.
  *
  * Cache-busting is automatic because the file path is unique per upload
  * AND the row's `updated_at` changes, so the site's `?v=<updated_at>` query
@@ -51,9 +106,16 @@ export async function replaceImage(
   id: string,
   formData: FormData,
 ): Promise<ReplaceResult> {
+  // Validate the target BEFORE touching storage so a bad target can never
+  // leave an orphaned file under an unintended path.
+  if (!REPLACE_TARGETS.includes(target)) {
+    return { ok: false, error: `Unknown target: ${String(target)}` }
+  }
   if (!id || typeof id !== "string") {
     return { ok: false, error: "Missing row identifier." }
   }
+  const rate = checkUploadRateLimit()
+  if (!rate.ok) return rate
   // Sniff magic bytes and allowlist raster formats — never trust the
   // client-supplied MIME/filename. Blocks SVG/HTML stored-XSS payloads.
   const validation = await validateImageUpload(formData.get("file"))
@@ -70,6 +132,8 @@ export async function replaceImage(
     }
   }
 
+  const oldUrls = await readImageUrls(supabase, target, id)
+
   const safeId = id.replace(/[^a-z0-9._-]/gi, "_").slice(0, 80)
   const storagePath = `${target}/${safeId}-${Date.now()}.${ext}`
 
@@ -84,8 +148,10 @@ export async function replaceImage(
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(upload.data.path)
   const url = pub.publicUrl
 
-  const writeErr = await writeImageUrl(target, id, url)
+  const writeErr = await writeImageUrl(supabase, target, id, url)
   if (writeErr) return { ok: false, error: `Database update failed: ${writeErr}` }
+
+  await pruneReplacedFiles(supabase, oldUrls, url)
 
   bumpCaches()
   return { ok: true, url }
@@ -119,24 +185,33 @@ export async function removeImage(
   let dbError: string | null = null
   switch (target) {
     case "site_images": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("site_images")
         .update({ url: "" })
         .eq("key", id)
+        .select("key")
       if (error) dbError = error.message
+      else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
     case "brand": {
       // Mirror the replaceImage flow: clear both the canonical brand row
       // AND the legacy site_images override so neither shadows the other.
-      const { error: e1 } = await supabase
+      const { data, error: e1 } = await supabase
         .from("brands")
         .update({ logo_url: null })
         .eq("slug", id)
+        .select("slug")
       if (e1) {
         dbError = e1.message
         break
       }
+      if (!data || data.length === 0) {
+        dbError = STALE_ROW_ERROR
+        break
+      }
+      // The override row may legitimately not exist for dashboard-created
+      // brands, so zero rows here is not an error.
       const { error: e2 } = await supabase
         .from("site_images")
         .update({ url: "" })
@@ -145,19 +220,23 @@ export async function removeImage(
       break
     }
     case "hero_slide": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("hero_slides")
         .update({ image_url: null })
         .eq("id", id)
+        .select("id")
       if (error) dbError = error.message
+      else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
     case "product_image": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("product_images")
         .delete()
         .eq("id", id)
+        .select("id")
       if (error) dbError = error.message
+      else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
     default: {
@@ -171,19 +250,73 @@ export async function removeImage(
   return { ok: true }
 }
 
+/**
+ * Reads the URL(s) the target row currently points at, so replaceImage can
+ * prune the old file(s) after a successful swap. Read failures return []
+ * (we just skip pruning).
+ */
+async function readImageUrls(
+  supabase: ReturnType<typeof createAdminClient>,
+  target: ReplaceTarget,
+  id: string,
+): Promise<Array<string | null>> {
+  switch (target) {
+    case "site_images": {
+      const { data } = await supabase
+        .from("site_images")
+        .select("url")
+        .eq("key", id)
+        .maybeSingle()
+      return [data?.url ?? null]
+    }
+    case "brand": {
+      const [{ data: brand }, { data: override }] = await Promise.all([
+        supabase.from("brands").select("logo_url").eq("slug", id).maybeSingle(),
+        supabase
+          .from("site_images")
+          .select("url")
+          .eq("key", `brand.${id}.logo`)
+          .maybeSingle(),
+      ])
+      return [brand?.logo_url ?? null, override?.url ?? null]
+    }
+    case "hero_slide": {
+      const { data } = await supabase
+        .from("hero_slides")
+        .select("image_url")
+        .eq("id", id)
+        .maybeSingle()
+      return [data?.image_url ?? null]
+    }
+    case "product_image": {
+      const { data } = await supabase
+        .from("product_images")
+        .select("url")
+        .eq("id", id)
+        .maybeSingle()
+      return [data?.url ?? null]
+    }
+    default:
+      return []
+  }
+}
+
 async function writeImageUrl(
+  supabase: ReturnType<typeof createAdminClient>,
   target: ReplaceTarget,
   id: string,
   url: string,
 ): Promise<string | null> {
-  const supabase = createAdminClient()
   switch (target) {
     case "site_images": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("site_images")
         .update({ url })
         .eq("key", id)
-      return error?.message ?? null
+        .select("key")
+      if (error) return error.message
+      if (!data || data.length === 0) return STALE_ROW_ERROR
+      return null
     }
     case "brand": {
       // Brand logos are referenced from TWO places at render time:
@@ -192,14 +325,17 @@ async function writeImageUrl(
       //                                 still checks first via useImageSrc)
       // Both must point at the new file or the override shadows the
       // canonical column and the site keeps rendering the old logo.
-      const { error: e1 } = await supabase
+      const { data, error: e1 } = await supabase
         .from("brands")
         .update({ logo_url: url })
         .eq("slug", id)
+        .select("slug")
       if (e1) return e1.message
+      if (!data || data.length === 0) return STALE_ROW_ERROR
       // Capture the override write's error too — it was previously discarded,
       // so a failed write here returned success while the (non-empty) override
       // kept shadowing the canonical column and the site showed the old logo.
+      // Zero rows is fine: dashboard-created brands have no override slot.
       const { error: e2 } = await supabase
         .from("site_images")
         .update({ url })
@@ -207,18 +343,24 @@ async function writeImageUrl(
       return e2?.message ?? null
     }
     case "hero_slide": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("hero_slides")
         .update({ image_url: url })
         .eq("id", id)
-      return error?.message ?? null
+        .select("id")
+      if (error) return error.message
+      if (!data || data.length === 0) return STALE_ROW_ERROR
+      return null
     }
     case "product_image": {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("product_images")
         .update({ url })
         .eq("id", id)
-      return error?.message ?? null
+        .select("id")
+      if (error) return error.message
+      if (!data || data.length === 0) return STALE_ROW_ERROR
+      return null
     }
     default:
       return `Unknown target: ${String(target)}`
@@ -290,6 +432,21 @@ export async function updateHeroSlideText(
     return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
   }
 
+  // Empty strings on optional columns should become NULL so the renderer
+  // treats them as "unset" rather than rendering an empty button.
+  const stored = field === "title" ? value : value.length === 0 ? null : value
+
+  // Only relative paths and http(s) URLs make valid link targets; anything
+  // else (javascript:, mailto typos, bare words) would render a broken or
+  // dangerous CTA button.
+  if (field === "cta_url" && stored !== null && !/^(\/|https?:\/\/)/.test(stored)) {
+    return {
+      ok: false,
+      error:
+        "CTA URL must start with / (a page on this site) or http:// / https:// (an external link).",
+    }
+  }
+
   let supabase
   try {
     supabase = createAdminClient()
@@ -300,16 +457,14 @@ export async function updateHeroSlideText(
     }
   }
 
-  // Empty strings on optional columns should become NULL so the renderer
-  // treats them as "unset" rather than rendering an empty button.
-  const stored = field === "title" ? value : value.length === 0 ? null : value
-
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("hero_slides")
     .update({ [field]: stored })
     .eq("id", id)
+    .select("id")
 
   if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
 
   bumpCaches()
   return { ok: true }
@@ -347,12 +502,14 @@ export async function updateBrandText(
 
   const stored = field === "description" && value.length === 0 ? null : value
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("brands")
     .update({ [field]: stored })
     .eq("slug", slug)
+    .select("slug")
 
   if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
 
   bumpCaches()
   return { ok: true }

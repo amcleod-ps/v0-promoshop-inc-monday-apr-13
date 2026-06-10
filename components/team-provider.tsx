@@ -9,7 +9,10 @@ export function TeamMembersProvider({
   value,
   children,
 }: {
-  value: SupabaseTeamMember[]
+  // null = team_members unavailable (missing migration / env / outage), so
+  // consumers fall back to the static roster. An empty array is a genuine
+  // "no active members" answer and renders an empty roster.
+  value: SupabaseTeamMember[] | null
   children: ReactNode
 }) {
   return (
@@ -21,8 +24,8 @@ export function TeamMembersProvider({
 
 /**
  * Returns the Supabase-backed team roster, or `null` when the table is
- * empty / unavailable so the caller can fall back to the static roster
- * in lib/cms/team.ts.
+ * unavailable so the caller can fall back to the static roster in
+ * lib/cms/team.ts.
  */
 export function useDbTeamMembers(): SupabaseTeamMember[] | null {
   return useContext(TeamMembersContext)

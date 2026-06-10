@@ -113,7 +113,8 @@ match `hover:`/opacity variants and force elements into hover state at load.
 Despite README phrasing about "no admin UI", `app/admin-dashboard/` **is** a
 working CMS (image replace/remove, text editing, brand/hero/product/team create,
 theme editor). It is **intentionally unauthenticated** — the URL is the secret
-(robots-disallowed, unlinked). Its server actions live in `actions.ts` and
+(noindex-metadata'd, unlinked; deliberately NOT named in robots.txt, which would
+advertise the path). Its server actions live in `actions.ts` and
 `create-actions.ts`, use the admin (service-role) client, validate a 10 MB image
 cap, and call `revalidatePath("/", "layout")` to push changes live.
 
@@ -149,8 +150,10 @@ fails the submission; with the vars unset it silently no-ops).
 - `next/image` runs with `unoptimized: true` globally; new external image hosts
   must be added to `images.remotePatterns` in `next.config.mjs`.
 - Migrations in `supabase/migrations/` are applied **in order, by hand** via the
-  Supabase SQL Editor (0001 → 0005). There are five (README mentions three);
-  0004 adds `site_content`, 0005 adds `team_members` + `site_theme`.
+  Supabase SQL Editor (0001 → 0006). There are six (README mentions three);
+  0004 adds `site_content`, 0005 adds `team_members` + `site_theme`, 0006 adds
+  the `assign_sort_order` insert triggers the dashboard's create actions rely
+  on for race-free ordering (they fall back to read-max+1 without it).
 
 ## Environment
 

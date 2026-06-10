@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { removeImage, replaceImage, type ReplaceTarget } from "./actions"
+import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 interface ImageRowProps {
   target: ReplaceTarget
@@ -61,19 +62,38 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
+    // Pre-check the 10 MB cap client-side: a larger body is rejected by the
+    // Server Action transport itself, so our friendly server-side size
+    // message would never get a chance to run.
+    if (file.size > MAX_IMAGE_BYTES) {
+      setStatus({
+        kind: "error",
+        message: `File is too large (${formatBytes(file.size)}). Maximum is ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`,
+      })
+      return
+    }
     setStatus({ kind: "idle", message: "Uploading…" })
 
     const formData = new FormData()
     formData.append("file", file)
 
     startTransition(async () => {
-      const result = await replaceImage(target, id, formData)
-      if (result.ok) {
-        setStatus({ kind: "success", message: "Saved. Live on the site." })
-        setPreviewUrl(result.url)
-        setFile(null)
-      } else {
-        setStatus({ kind: "error", message: result.error })
+      // try/catch so a network failure or thrown server error shows a
+      // message and re-enables the buttons instead of leaving them stuck.
+      try {
+        const result = await replaceImage(target, id, formData)
+        if (result.ok) {
+          setStatus({ kind: "success", message: "Saved. Live on the site." })
+          setPreviewUrl(result.url)
+          setFile(null)
+        } else {
+          setStatus({ kind: "error", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "error",
+          message: "Upload failed. Check your connection and try again.",
+        })
       }
     })
   }
@@ -84,19 +104,26 @@ export function ImageRow({ target, id, label, currentUrl, hint }: ImageRowProps)
     }
     setStatus({ kind: "idle", message: "Removing…" })
     startTransition(async () => {
-      const result = await removeImage(target, id)
-      if (result.ok) {
-        setPreviewUrl(null)
-        setFile(null)
-        if (target === "product_image") {
-          // Row no longer exists in the database; collapse it out of the UI
-          // so the admin doesn't think the delete failed.
-          setHiddenAfterDelete(true)
-          return
+      try {
+        const result = await removeImage(target, id)
+        if (result.ok) {
+          setPreviewUrl(null)
+          setFile(null)
+          if (target === "product_image") {
+            // Row no longer exists in the database; collapse it out of the UI
+            // so the admin doesn't think the delete failed.
+            setHiddenAfterDelete(true)
+            return
+          }
+          setStatus({ kind: "success", message: "Removed. Default will show on the site." })
+        } else {
+          setStatus({ kind: "error", message: result.error })
         }
-        setStatus({ kind: "success", message: "Removed. Default will show on the site." })
-      } else {
-        setStatus({ kind: "error", message: result.error })
+      } catch {
+        setStatus({
+          kind: "error",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }

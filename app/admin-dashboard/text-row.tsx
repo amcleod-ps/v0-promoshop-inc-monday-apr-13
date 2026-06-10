@@ -34,7 +34,15 @@ interface BrandProps extends BaseProps {
   field: BrandField
 }
 
-export type TextRowProps = SiteContentProps | HeroSlideProps | BrandProps
+// Escape hatch for one-off fields (bg colour, sort order, alt text, …):
+// the parent supplies the server action to call and an id string to show.
+interface CustomProps extends BaseProps {
+  source: "custom"
+  idLabel: string
+  onSave: (value: string) => Promise<{ ok: true } | { ok: false; error: string }>
+}
+
+export type TextRowProps = SiteContentProps | HeroSlideProps | BrandProps | CustomProps
 
 export function TextRow(props: TextRowProps) {
   const [value, setValue] = useState(props.currentValue)
@@ -50,20 +58,31 @@ export function TextRow(props: TextRowProps) {
   const handleSave = () => {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
-      let result
-      if (props.source === "site_content") {
-        result = await updateSiteContent(props.contentKey, props.contentLabel, value)
-      } else if (props.source === "hero_slide") {
-        result = await updateHeroSlideText(props.slideId, props.field, value)
-      } else {
-        result = await updateBrandText(props.brandSlug, props.field, value)
-      }
+      // try/catch so a network failure or thrown server error shows a
+      // message and re-enables the button instead of leaving it stuck.
+      try {
+        let result
+        if (props.source === "site_content") {
+          result = await updateSiteContent(props.contentKey, props.contentLabel, value)
+        } else if (props.source === "hero_slide") {
+          result = await updateHeroSlideText(props.slideId, props.field, value)
+        } else if (props.source === "brand") {
+          result = await updateBrandText(props.brandSlug, props.field, value)
+        } else {
+          result = await props.onSave(value)
+        }
 
-      if (result.ok) {
-        setStatus({ kind: "success", message: "Saved. Live on the site." })
-        setSavedValue(value)
-      } else {
-        setStatus({ kind: "error", message: result.error })
+        if (result.ok) {
+          setStatus({ kind: "success", message: "Saved. Live on the site." })
+          setSavedValue(value)
+        } else {
+          setStatus({ kind: "error", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "error",
+          message: "Something went wrong saving. Check your connection and try again.",
+        })
       }
     })
   }
@@ -78,7 +97,9 @@ export function TextRow(props: TextRowProps) {
       ? props.contentKey
       : props.source === "hero_slide"
         ? `hero_slide:${props.slideId}:${props.field}`
-        : `brand:${props.brandSlug}:${props.field}`
+        : props.source === "brand"
+          ? `brand:${props.brandSlug}:${props.field}`
+          : props.idLabel
 
   return (
     <div style={styles.row}>

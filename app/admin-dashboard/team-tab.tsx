@@ -6,9 +6,11 @@ import {
   createTeamMember,
   replaceTeamMemberImage,
   softDeleteTeamMember,
+  updateSortOrder,
   updateTeamMemberText,
   type TeamMemberField,
 } from "./create-actions"
+import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 
 export interface TeamMemberRow {
   slug: string
@@ -16,6 +18,7 @@ export interface TeamMemberRow {
   role: string
   description: string | null
   image_url: string | null
+  sort_order: number
 }
 
 export function TeamTab({ members }: { members: TeamMemberRow[] }) {
@@ -53,19 +56,26 @@ function AddTeamMemberForm() {
     e.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Saving…" })
-      const result = await createTeamMember({
-        name: name.trim(),
-        role: role.trim(),
-        description: description.trim() || undefined,
-      })
-      if (result.ok) {
-        setStatus({ kind: "ok", message: `Created — "${name.trim()}" now appears in the list below.` })
-        router.refresh()
-        setName("")
-        setRole("")
-        setDescription("")
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await createTeamMember({
+          name: name.trim(),
+          role: role.trim(),
+          description: description.trim() || undefined,
+        })
+        if (result.ok) {
+          setStatus({ kind: "ok", message: `Created — "${name.trim()}" now appears in the list below.` })
+          router.refresh()
+          setName("")
+          setRole("")
+          setDescription("")
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -138,6 +148,8 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
   const [savedName, setSavedName] = useState(member.name)
   const [savedRole, setSavedRole] = useState(member.role)
   const [savedDescription, setSavedDescription] = useState(member.description ?? "")
+  const [sortOrder, setSortOrder] = useState(String(member.sort_order))
+  const [savedSortOrder, setSavedSortOrder] = useState(String(member.sort_order))
   const [imageUrl, setImageUrl] = useState(member.image_url)
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
@@ -194,12 +206,39 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
   const saveField = (field: TeamMemberField, value: string, after: () => void) => {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
-      const result = await updateTeamMemberText(member.slug, field, value)
-      if (result.ok) {
-        setStatus({ kind: "ok", message: "Saved." })
-        after()
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await updateTeamMemberText(member.slug, field, value)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved." })
+          after()
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
+      }
+    })
+  }
+
+  const saveSortOrder = (value: string, after: () => void) => {
+    setStatus({ kind: "idle", message: "Saving…" })
+    startTransition(async () => {
+      try {
+        const result = await updateSortOrder("team_member", member.slug, Number(value.trim()))
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved." })
+          after()
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -207,17 +246,33 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
   const handleUpload = (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
+    // Pre-check the 10 MB cap client-side: a larger body is rejected by the
+    // Server Action transport before our friendly server-side message runs.
+    if (file.size > MAX_IMAGE_BYTES) {
+      setStatus({
+        kind: "err",
+        message: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`,
+      })
+      return
+    }
     setStatus({ kind: "idle", message: "Uploading…" })
     const fd = new FormData()
     fd.append("file", file)
     startTransition(async () => {
-      const result = await replaceTeamMemberImage(member.slug, fd)
-      if (result.ok) {
-        setImageUrl(result.url)
-        setFile(null)
-        setStatus({ kind: "ok", message: "Photo saved." })
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await replaceTeamMemberImage(member.slug, fd)
+        if (result.ok) {
+          setImageUrl(result.url)
+          setFile(null)
+          setStatus({ kind: "ok", message: "Photo saved." })
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Upload failed. Check your connection and try again.",
+        })
       }
     })
   }
@@ -228,11 +283,18 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
     }
     setStatus({ kind: "idle", message: "Removing…" })
     startTransition(async () => {
-      const result = await softDeleteTeamMember(member.slug)
-      if (result.ok) {
-        setRemoved(true)
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await softDeleteTeamMember(member.slug)
+        if (result.ok) {
+          setRemoved(true)
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }
@@ -298,6 +360,15 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
               onSave={(v) => saveField("description", v, () => setSavedDescription(v))}
               disabled={isPending}
               multiline
+            />
+          </Field>
+          <Field label="Display order (lower shows first)">
+            <RowEditor
+              value={sortOrder}
+              setValue={setSortOrder}
+              savedValue={savedSortOrder}
+              onSave={(v) => saveSortOrder(v, () => setSavedSortOrder(v.trim()))}
+              disabled={isPending}
             />
           </Field>
           <div style={styles.cardActions}>

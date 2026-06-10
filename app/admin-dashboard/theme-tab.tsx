@@ -53,12 +53,19 @@ function ThemeRow({ entry }: { entry: ThemeEntry }) {
   const handleSave = () => {
     setStatus({ kind: "idle", message: "Saving…" })
     startTransition(async () => {
-      const result = await updateThemeColor(entry.key, value)
-      if (result.ok) {
-        setStatus({ kind: "ok", message: "Saved. Refresh the public site to see the change." })
-        setSavedValue(value)
-      } else {
-        setStatus({ kind: "err", message: result.error })
+      try {
+        const result = await updateThemeColor(entry.key, value)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved. Refresh the public site to see the change." })
+          setSavedValue(value)
+        } else {
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
       }
     })
   }

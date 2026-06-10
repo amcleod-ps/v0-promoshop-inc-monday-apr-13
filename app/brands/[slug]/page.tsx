@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { getBrandBySlug, type Brand } from "@/lib/brands"
+import { PRODUCTS } from "@/lib/products"
 import { getAllProducts } from "@/lib/supabase/products"
 import { getSupabaseBrandBySlug } from "@/lib/supabase/data"
 import { BrandHero } from "@/components/brand-hero"
@@ -16,36 +17,49 @@ interface BrandPageProps {
 export default async function BrandPage({ params }: BrandPageProps) {
   const { slug } = await params
 
-  // Resolve the brand from the live `brands` table first so dashboard-created
+  // Resolve the brand from the live `brands` table so dashboard-created
   // brands resolve here and edits (name/description/logo) show on the detail
-  // page — mirroring the /brands listing. Fall back to the compiled-in seed
-  // when Supabase is unreachable or the slug exists only in the seed.
-  const [liveBrand, products] = await Promise.all([
+  // page — mirroring the /brands listing. The compiled-in seed is only a
+  // fallback for an actual Supabase outage: when the database answers "no
+  // such brand" (including soft-deleted brands, which RLS hides from the
+  // anon key), this 404s instead of resurrecting the seed version.
+  const [lookup, products] = await Promise.all([
     getSupabaseBrandBySlug(slug),
     getAllProducts(),
   ])
 
-  const brand: Brand | undefined = liveBrand
-    ? {
-        id: liveBrand.id,
-        name: liveBrand.name,
-        slug: liveBrand.slug,
-        description: liveBrand.description ?? "",
-        categories: liveBrand.categories ?? [],
-        featured: liveBrand.featured,
-        logoUrl: liveBrand.logo_url,
-        website: liveBrand.website_url,
-      }
-    : getBrandBySlug(slug)
+  let resolved: Brand | undefined
+  if (lookup.ok) {
+    if (!lookup.brand || !lookup.brand.is_active) {
+      notFound()
+    }
+    resolved = {
+      id: lookup.brand.id,
+      name: lookup.brand.name,
+      slug: lookup.brand.slug,
+      description: lookup.brand.description ?? "",
+      categories: lookup.brand.categories ?? [],
+      featured: lookup.brand.featured,
+      logoUrl: lookup.brand.logo_url,
+      website: lookup.brand.website_url,
+    }
+  } else {
+    resolved = getBrandBySlug(slug)
+  }
 
-  if (!brand) {
+  if (!resolved) {
     notFound()
   }
+  const brand: Brand = resolved
 
   // Match on the stable brand slug, not the display name. Renaming a brand in
   // the admin dashboard changes a product's resolved brand *name* but not its
-  // slug, so name-matching would silently empty this grid.
-  const brandProducts = products.filter((p) => p.brandSlugs.includes(brand.slug))
+  // slug, so name-matching would silently empty this grid. The static catalog
+  // (outage fallback) predates slugs, so it matches on the seed brand name —
+  // both sides are compiled-in there, so the names always agree.
+  const brandProducts = products
+    ? products.filter((p) => p.brandSlugs.includes(brand.slug))
+    : PRODUCTS.filter((p) => p.brands.includes(brand.name))
 
   return (
     <div className="min-h-screen bg-[#ededed] text-[#111] font-montserrat">
