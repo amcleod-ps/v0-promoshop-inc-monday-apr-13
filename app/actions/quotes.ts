@@ -19,12 +19,15 @@ const quoteRequestSchema = z.object({
   phone: z.string().trim().max(50, "Phone number is too long.").optional(),
   company: z.string().trim().max(200, "Company name is too long.").optional(),
   quantity_range: z.string().trim().max(100, "Quantity is too long.").optional(),
-  message: z.string().trim().min(1, "Message is required").max(10_000, "Message is too long (10,000 character limit)."),
+  // 16k keeps headroom under the 20k DB CHECK (0007): /my-quote serializes
+  // the whole cart into this field, and large carts are machine-generated —
+  // a visitor can't "shorten" them on request.
+  message: z.string().trim().min(1, "Message is required").max(16_000, "Message is too long."),
   // Honeypot — a visually hidden field real visitors never fill. Renamed
   // from "website": browser address-autofill matches that name and was a
-  // silent-lead-loss risk for visitors with autofill profiles. Oversized
-  // values are truncated, not rejected — a tripped honeypot must never
-  // surface a visible validation error.
+  // silent-lead-loss risk for visitors with autofill profiles. Deliberately
+  // uncapped: any value here means the submission is discarded, and a
+  // length error would surface a visible failure bots could learn from.
   hp_check: z.string().optional(),
 })
 

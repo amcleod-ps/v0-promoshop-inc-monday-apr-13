@@ -19,13 +19,18 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   const now = Date.now()
   const cutoff = now - windowMs
 
+  const existed = WINDOWS.has(key)
   const hits = (WINDOWS.get(key) ?? []).filter((t) => t > cutoff)
+  // Delete-before-set keeps Map insertion order ≈ recency, so the eviction
+  // below removes the least-recently-ACTIVE buckets instead of long-lived
+  // (possibly currently-throttled) ones.
+  if (existed) WINDOWS.delete(key)
   if (hits.length >= max) {
     WINDOWS.set(key, hits)
     return false
   }
 
-  if (!WINDOWS.has(key) && WINDOWS.size >= MAX_TRACKED_KEYS) {
+  if (!existed && WINDOWS.size >= MAX_TRACKED_KEYS) {
     // Evict the oldest-inserted entries instead of clearing everything —
     // a full clear() would let a distributed attacker reset every active
     // bucket (including their own) just by burning through 5,000 keys.

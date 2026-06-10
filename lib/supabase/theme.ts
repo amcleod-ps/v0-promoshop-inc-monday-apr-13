@@ -92,14 +92,33 @@ const ORIGINAL_HEX: Record<string, string> = {
 
 /**
  * Hard-coded companion shades used alongside a brand colour in source
- * classes (e.g. the darker red used for CTA hover states). When the
- * parent colour is rebranded these classes are overridden with a
- * `color-mix()` derivation so hover feedback survives the retheme.
+ * classes (e.g. the darker red used for CTA hover states and link text).
+ * When the parent colour is rebranded these classes are overridden with a
+ * `color-mix()` derivation so the shade tracks the new colour.
+ *
+ * `uses` lists the exact variant×property combos present in source (grep
+ * the hex when adding one) — emitting the full variant×prop×opacity matrix
+ * for a companion would roughly double the inlined override CSS on every
+ * response for rules that can never match.
  */
-const COMPANION_SHADES: Record<string, Array<{ hex: string; mix: string }>> = {
+interface CompanionShade {
+  hex: string
+  derive: (next: string) => string
+  uses: Array<{ variant: string; prop: string }>
+}
+
+const COMPANION_SHADES: Record<string, CompanionShade[]> = {
   "brand.primary": [
-    // hover:bg-[#d93e36] — darkened CTA hover for the brand red.
-    { hex: "#d93e36", mix: "color-mix(in srgb, %NEXT% 85%, black)" },
+    {
+      // #d93e36 — darkened brand red: CTA hover backgrounds + link text.
+      hex: "#d93e36",
+      derive: (next) => `color-mix(in srgb, ${next} 85%, black)`,
+      uses: [
+        { variant: "", prop: "text" },
+        { variant: "hover:", prop: "text" },
+        { variant: "hover:", prop: "bg" },
+      ],
+    },
   ],
 }
 
@@ -188,15 +207,17 @@ function rootVars(map: SiteThemeMap): string {
 
 /**
  * The shadcn semantic tokens in globals.css (`--primary`, `--accent`,
- * `--destructive`, `--ring`) are hard-coded to the original brand red;
- * `--ring` drives the global `outline-ring/50` focus style. Re-point
- * them when the admin changes brand.primary so focus outlines (and any
- * future primitive usage) follow the rebrand.
+ * `--ring`) are hard-coded to the original brand red; `--ring` drives the
+ * global `outline-ring/50` focus style. Re-point them when the admin
+ * changes brand.primary so focus outlines (and any future primitive usage)
+ * follow the rebrand. `--destructive` is deliberately left alone — "error
+ * colour == brand colour" is only true of the default red, and a rebrand
+ * to e.g. blue must not turn error affordances blue.
  */
 function semanticTokenOverride(map: SiteThemeMap): string | null {
   const next = safeThemeValue(map, "brand.primary")
   if (!next || next.toLowerCase() === ORIGINAL_HEX["brand.primary"]) return null
-  return `:root {\n  --primary: ${next};\n  --accent: ${next};\n  --destructive: ${next};\n  --ring: ${next};\n}`
+  return `:root {\n  --primary: ${next};\n  --accent: ${next};\n  --ring: ${next};\n}`
 }
 
 /**
@@ -213,39 +234,42 @@ export function themeOverrideCss(map: SiteThemeMap): string {
     const next = safeThemeValue(map, key)
     if (!next || next.toLowerCase() === originalHex.toLowerCase()) continue
 
-    // The colour itself, plus any hard-coded companion shades derived
-    // from it in source classes (CTA hover states).
-    const targets: Array<{ hex: string; value: string }> = [
-      { hex: originalHex, value: next },
-      ...(COMPANION_SHADES[key] ?? []).map(({ hex, mix }) => ({
-        hex,
-        value: mix.replace("%NEXT%", next),
-      })),
-    ]
+    const emit = (variant: Variant, selector: string, declaration: string) => {
+      const rule = `${selector} { ${declaration} }`
+      lines.push(variant.hoverGated ? `@media (hover: hover) { ${rule} }` : rule)
+    }
 
-    for (const { hex, value } of targets) {
-      for (const variant of VARIANTS) {
-        const emit = (selector: string, declaration: string) => {
-          const rule = `${selector} { ${declaration} }`
-          lines.push(variant.hoverGated ? `@media (hover: hover) { ${rule} }` : rule)
+    // Full matrix for the brand colour itself — any variant/opacity combo
+    // in source must be covered.
+    for (const variant of VARIANTS) {
+      for (const { tw, css } of PROPS) {
+        // Base utility — no opacity modifier.
+        const baseClass = `${variant.twPrefix}${tw}-[${originalHex}]`
+        const baseEscaped = escapeClassSelector(baseClass)
+        const baseSelector = variant.buildSelector(baseEscaped)
+        emit(variant, baseSelector, `${css}: ${next} !important;`)
+
+        // Opacity modifier variants — `bg-[#ef473f]/20`, etc.
+        for (const op of OPACITIES) {
+          const opClass = `${variant.twPrefix}${tw}-[${originalHex}]/${op}`
+          const opEscaped = escapeClassSelector(opClass)
+          const opSelector = variant.buildSelector(opEscaped)
+          const blended = `color-mix(in srgb, ${next} ${op}%, transparent)`
+          emit(variant, opSelector, `${css}: ${blended} !important;`)
         }
+      }
+    }
 
-        for (const { tw, css } of PROPS) {
-          // Base utility — no opacity modifier.
-          const baseClass = `${variant.twPrefix}${tw}-[${hex}]`
-          const baseEscaped = escapeClassSelector(baseClass)
-          const baseSelector = variant.buildSelector(baseEscaped)
-          emit(baseSelector, `${css}: ${value} !important;`)
-
-          // Opacity modifier variants — `bg-[#ef473f]/20`, etc.
-          for (const op of OPACITIES) {
-            const opClass = `${variant.twPrefix}${tw}-[${hex}]/${op}`
-            const opEscaped = escapeClassSelector(opClass)
-            const opSelector = variant.buildSelector(opEscaped)
-            const blended = `color-mix(in srgb, ${value} ${op}%, transparent)`
-            emit(opSelector, `${css}: ${blended} !important;`)
-          }
-        }
+    // Companion shades emit only the combos that actually exist in source.
+    for (const shade of COMPANION_SHADES[key] ?? []) {
+      const value = shade.derive(next)
+      for (const use of shade.uses) {
+        const variant = VARIANTS.find((v) => v.twPrefix === use.variant)
+        const prop = PROPS.find((p) => p.tw === use.prop)
+        if (!variant || !prop) continue
+        const cls = `${variant.twPrefix}${prop.tw}-[${shade.hex}]`
+        const selector = variant.buildSelector(escapeClassSelector(cls))
+        emit(variant, selector, `${prop.css}: ${value} !important;`)
       }
     }
   }

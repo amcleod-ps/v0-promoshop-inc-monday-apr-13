@@ -27,8 +27,10 @@ export function BrandProductsGrid({ products, brandName }: Props) {
   }
 
   const closeModal = () => {
+    // The modal unmounts instantly when isOpen flips (it renders null), so
+    // there is no exit animation to wait for.
     setIsOpen(false)
-    setTimeout(() => setSelected(null), 300)
+    setSelected(null)
   }
 
   if (products.length === 0) {

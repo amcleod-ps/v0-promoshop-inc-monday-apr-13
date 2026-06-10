@@ -6,16 +6,29 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { SafeImage } from "@/components/safe-image"
-import { useQuote, MAX_ITEM_QUANTITY } from "@/lib/quote-context"
+import { useQuote, MAX_ITEM_QUANTITY, clampQuantity } from "@/lib/quote-context"
 import { useLocale } from "@/lib/locale-context"
-import type { Product } from "@/lib/products"
 import { submitQuoteRequest } from "@/app/actions/quotes"
+import { HoneypotField } from "@/components/honeypot-field"
+
+/**
+ * Slim projection of the catalog for the manual "Add Product" picker —
+ * the full Product shape (descriptions, deco methods, every image of every
+ * colour) would be serialized into the RSC payload of the hottest
+ * conversion page for a picker most visitors never open.
+ */
+export interface PickerProduct {
+  sku: string
+  name: string
+  sizes: string[]
+  colours: Array<{ name: string; image: string }>
+}
 
 // Rendered by the server page (app/my-quote/page.tsx), which passes the
 // LIVE product catalog — the manual "Add Product" picker previously offered
 // only the compiled-in seed list, hiding dashboard-created products and
 // still offering deactivated ones.
-export default function MyQuoteClient({ products }: { products: Product[] }) {
+export default function MyQuoteClient({ products }: { products: PickerProduct[] }) {
   const { 
     items, 
     contactInfo, 
@@ -54,7 +67,7 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
       colour: selectedColour || product.colours[0]?.name || "",
       size: selectedSize || product.sizes[0] || "One Size",
       quantity: quantity,
-      image: colour?.images[0] || product.colours[0]?.images[0] || "",
+      image: colour?.image || product.colours[0]?.image || "",
     })
     setSelectedProduct("")
     setSelectedColour("")
@@ -98,6 +111,17 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
       .filter(Boolean)
       .join("\n")
 
+    // The serialized cart is machine-generated — if it exceeds the action's
+    // cap, give an actionable instruction instead of letting the server
+    // bounce text the visitor never wrote. 16,000 matches the Zod cap.
+    if (message.length > 16_000) {
+      setSubmitError(
+        "This quote is too large to submit in one go — please split it into two submissions or trim the notes.",
+      )
+      setSubmitting(false)
+      return
+    }
+
     // try/catch/finally so a network failure or server error surfaces a
     // message and re-enables the button instead of leaving it stuck on
     // its pending label forever.
@@ -120,6 +144,9 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
         setSubmitError(
           result.error || "Something went wrong submitting your quote. Please try again.",
         )
+        // The server's Zod email check is stricter than the client
+        // pre-check; put the visitor on the tab that has the field.
+        if (result.error?.toLowerCase().includes("email")) setActiveTab("contact")
       }
     } catch {
       setSubmitError(
@@ -129,6 +156,10 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
       setSubmitting(false)
     }
   }
+
+  // Single lookup for the manual-add picker (used by the colour/size
+  // selects and the add handler).
+  const activeProduct = products.find(p => p.sku === selectedProduct)
 
   // Names the gaps instead of just greying the submit button out — the
   // required fields live on a different tab from the submit control.
@@ -155,7 +186,8 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
     return (
       <div className="min-h-screen bg-white text-[#1a1a1a]">
         <Header />
-        <main id="main-content" role="status" className="py-24 px-6 text-center">
+        <main id="main-content" className="py-24 px-6 text-center">
+          <div role="status">
           <div className="max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-[#6abf4b]/10 flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-[#6abf4b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,6 +212,7 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
                 Start New Quote
               </button>
             </div>
+          </div>
           </div>
         </main>
         <Footer />
@@ -281,11 +314,11 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })} aria-label={`Decrease quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
+                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity - 1) })} aria-label={`Decrease quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
                             <Minus className="w-3 h-3" aria-hidden="true" />
                           </button>
                           <span className="w-12 text-center font-bold">{item.quantity}</span>
-                          <button onClick={() => updateItem(item.id, { quantity: Math.min(MAX_ITEM_QUANTITY, item.quantity + 1) })} aria-label={`Increase quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
+                          <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity + 1) })} aria-label={`Increase quantity of ${item.productName}`} className="w-8 h-8 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
                             <Plus className="w-3 h-3" aria-hidden="true" />
                           </button>
                         </div>
@@ -303,29 +336,34 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
                         <div>
                           <label htmlFor="add-product" className={labelClass}>Product</label>
                           <select id="add-product" value={selectedProduct} onChange={(e) => { setSelectedProduct(e.target.value); setSelectedColour(""); setSelectedSize("") }} className={selectClass}>
-                            <option value="">Select a product</option>
+                            <option value="">{products.length === 0 ? "No products available yet" : "Select a product"}</option>
                             {products.map((p) => (<option key={p.sku} value={p.sku}>{p.name}</option>))}
                           </select>
+                          {products.length === 0 && (
+                            <p className="text-xs text-[#6b6b6b] mt-2 font-visby">
+                              The catalogue is being stocked — use the notes on the Project Details tab to describe what you need.
+                            </p>
+                          )}
                         </div>
-                        {selectedProduct && (
+                        {activeProduct && (
                           <>
                             <div>
                               <label htmlFor="add-colour" className={labelClass}>{t("Color")}</label>
                               <select id="add-colour" value={selectedColour} onChange={(e) => setSelectedColour(e.target.value)} className={selectClass}>
                                 <option value="">Select {t("color")}</option>
-                                {products.find(p => p.sku === selectedProduct)?.colours.map((c) => (<option key={c.name} value={c.name}>{c.name}</option>))}
+                                {activeProduct.colours.map((c) => (<option key={c.name} value={c.name}>{c.name}</option>))}
                               </select>
                             </div>
                             <div>
                               <label htmlFor="add-size" className={labelClass}>Size</label>
                               <select id="add-size" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className={selectClass}>
                                 <option value="">Select size</option>
-                                {products.find(p => p.sku === selectedProduct)?.sizes.map((s) => (<option key={s} value={s}>{s}</option>))}
+                                {activeProduct.sizes.map((s) => (<option key={s} value={s}>{s}</option>))}
                               </select>
                             </div>
                             <div>
                               <label htmlFor="add-quantity" className={labelClass}>Quantity</label>
-                              <input id="add-quantity" type="number" min="1" max={MAX_ITEM_QUANTITY} value={quantity} onChange={(e) => setQuantity(Math.min(MAX_ITEM_QUANTITY, Math.max(1, parseInt(e.target.value) || 1)))} className={inputClass} />
+                              <input id="add-quantity" type="number" min="1" max={MAX_ITEM_QUANTITY} value={quantity} onChange={(e) => setQuantity(clampQuantity(e.target.value))} className={inputClass} />
                             </div>
                           </>
                         )}
@@ -382,20 +420,7 @@ export default function MyQuoteClient({ products }: { products: Product[] }) {
           {/* Project Tab */}
           {activeTab === "project" && (
             <form role="tabpanel" id="panel-project" aria-labelledby="tab-project" onSubmit={handleSubmitQuote} className="bg-white border border-[#e5e5e5] rounded-lg p-6 lg:p-8 shadow-sm">
-              {/* Honeypot field: visually removed, skipped by keyboard and
-                  screen readers. Real visitors never fill it. */}
-              <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-                <label htmlFor="quote-hp-check">Leave this field empty</label>
-                <input
-                  type="text"
-                  id="quote-hp-check"
-                  name="hp_check"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  value={hpCheck}
-                  onChange={(e) => setHpCheck(e.target.value)}
-                />
-              </div>
+              <HoneypotField id="quote-hp-check" value={hpCheck} onChange={setHpCheck} />
               <h2 className="font-montserrat font-bold text-xl text-[#1a1a1a] mb-6">Project Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div><label htmlFor="project-event" className={labelClass}>Event / Project Name</label><input id="project-event" type="text" maxLength={200} value={projectInfo.eventName} onChange={(e) => setProjectInfo({ eventName: e.target.value })} className={inputClass} placeholder="Annual Conference 2026" /></div>

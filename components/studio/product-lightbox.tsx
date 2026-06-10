@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { SafeImage } from "@/components/safe-image"
+import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
 
 interface ProductLightboxProps {
   isOpen: boolean
@@ -32,27 +33,28 @@ export function ProductLightbox({
 
   // Dialog focus management: focus moves in on open, returns to the
   // trigger (the modal's zoom button) on close.
-  useEffect(() => {
-    if (!isOpen) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    closeButtonRef.current?.focus()
-    return () => previouslyFocused?.focus()
-  }, [isOpen])
+  useDialogFocus(isOpen, closeButtonRef)
+
+  // Navigation computes the next index OUTSIDE the state updater and
+  // notifies the parent from the event handler. Do not sync via an effect
+  // keyed on `index`: on open it re-broadcasts this component's stale
+  // retained index while the reset effect pulls in `initialIndex`, and when
+  // the two differ each commit swaps them — an infinite update loop.
+  const changeIndex = useCallback(
+    (next: number) => {
+      setIndex(next)
+      onIndexChange(next)
+    },
+    [onIndexChange],
+  )
 
   const goPrev = useCallback(() => {
-    setIndex((i) => (i - 1 + images.length) % images.length)
-  }, [images.length])
+    changeIndex((index - 1 + images.length) % images.length)
+  }, [changeIndex, index, images.length])
 
   const goNext = useCallback(() => {
-    setIndex((i) => (i + 1) % images.length)
-  }, [images.length])
-
-  // Keep the parent carousel in sync as a side effect of index changes
-  // (calling the parent setter inside our own state updater triggers
-  // setState-during-render warnings under StrictMode).
-  useEffect(() => {
-    if (isOpen) onIndexChange(index)
-  }, [index, isOpen, onIndexChange])
+    changeIndex((index + 1) % images.length)
+  }, [changeIndex, index, images.length])
 
   useEffect(() => {
     if (!isOpen) return
@@ -62,21 +64,7 @@ export function ProductLightbox({
         return
       }
       if (e.key === "Tab") {
-        // Trap focus inside the lightbox (its three buttons).
-        const root = rootRef.current
-        if (!root) return
-        const focusables = Array.from(root.querySelectorAll<HTMLElement>("button:not([disabled])"))
-        if (focusables.length === 0) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        const active = document.activeElement
-        if (e.shiftKey && (active === first || !root.contains(active))) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && (active === last || !root.contains(active))) {
-          e.preventDefault()
-          first.focus()
-        }
+        trapDialogTab(e, rootRef.current)
         return
       }
       if (e.key === "ArrowLeft") goPrev()

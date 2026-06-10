@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Search, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
@@ -24,6 +24,17 @@ export default function StudioClient({ products, categories, brands, initialCate
   const [activeCategory, setActiveCategory] = useState(
     initialCategory && categories.includes(initialCategory) ? initialCategory : "All",
   )
+
+  // Same-route navigations (the footer's Collections links render on
+  // /studio itself, and back/forward moves between ?category= URLs) re-render
+  // this mounted instance with a new prop — the useState initializer never
+  // re-runs, so the prop change must be synced into state explicitly.
+  useEffect(() => {
+    if (initialCategory && categories.includes(initialCategory)) {
+      setActiveCategory(initialCategory)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCategory])
   const [activeGender, setActiveGender] = useState("All")
   const [activeBrand, setActiveBrand] = useState("All")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -60,8 +71,10 @@ export default function StudioClient({ products, categories, brands, initialCate
   }
 
   const closeProductDetail = () => {
+    // The modal unmounts instantly when isOpen flips (it renders null), so
+    // there is no exit animation to wait for.
     setIsModalOpen(false)
-    setTimeout(() => setSelectedProduct(null), 300)
+    setSelectedProduct(null)
   }
 
   return (

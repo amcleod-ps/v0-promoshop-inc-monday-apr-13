@@ -8,6 +8,7 @@ import { useQuote } from "@/lib/quote-context"
 import { useLocale } from "@/lib/locale-context"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { SafeImage } from "@/components/safe-image"
+import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
 import { ProductLightbox } from "./product-lightbox"
 
 interface ProductDetailModalProps {
@@ -72,14 +73,9 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     }
   }, [isOpen])
 
-  // Dialog focus management: move focus into the dialog on open and give it
-  // back to whatever opened it (the product card) on close.
-  useEffect(() => {
-    if (!isOpen) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    closeButtonRef.current?.focus()
-    return () => previouslyFocused?.focus()
-  }, [isOpen])
+  // Dialog focus management: focus moves to the close button on open and
+  // returns to the trigger (the product card) on close.
+  useDialogFocus(isOpen, closeButtonRef)
 
   const images = previewColour?.images ?? product?.colours[0]?.images ?? []
 
@@ -104,24 +100,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
         return
       }
       if (e.key === "Tab") {
-        const root = dialogRef.current
-        if (!root) return
-        const focusables = Array.from(
-          root.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-          ),
-        )
-        if (focusables.length === 0) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        const active = document.activeElement
-        if (e.shiftKey && (active === first || !root.contains(active))) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && (active === last || !root.contains(active))) {
-          e.preventDefault()
-          first.focus()
-        }
+        trapDialogTab(e, dialogRef.current)
         return
       }
       // Don't hijack arrow keys while the user is in a form control.
@@ -198,7 +177,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
   return (
     <>
       <div
-        className={`fixed inset-0 bg-black/55 backdrop-blur-sm z-50 flex items-center justify-center p-5 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className="fixed inset-0 bg-black/55 backdrop-blur-sm z-50 flex items-center justify-center p-5"
         onClick={onClose}
       >
         <div
@@ -206,7 +185,7 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
           role="dialog"
           aria-modal="true"
           aria-labelledby="product-detail-title"
-          className={`bg-[#ededed] rounded-lg w-full max-w-[1060px] max-h-[94vh] overflow-y-auto grid grid-cols-1 md:grid-cols-[55fr_45fr] shadow-2xl transition-transform duration-300 ${isOpen ? "translate-y-0" : "translate-y-6"}`}
+          className="bg-[#ededed] rounded-lg w-full max-w-[1060px] max-h-[94vh] overflow-y-auto grid grid-cols-1 md:grid-cols-[55fr_45fr] shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left - Image carousel */}

@@ -62,17 +62,20 @@ const defaultProjectInfo: QuoteProjectInfo = {
 // the serialized submission.
 export const MAX_ITEM_QUANTITY = 100000
 
-function clampQuantity(value: unknown): number {
+export function clampQuantity(value: unknown): number {
   const n = Math.floor(Number(value))
   if (!Number.isFinite(n) || n < 1) return 1
   return Math.min(n, MAX_ITEM_QUANTITY)
 }
 
 // next/image throws on src values that are neither a path nor an absolute
-// URL, so only keep image strings that can actually render.
+// URL, so only keep image strings that can actually render. The single-slash
+// check deliberately excludes protocol-relative "//host/…" values — a
+// tampered localStorage entry must not make the page fetch from an
+// arbitrary host.
 function safeImagePath(value: unknown): string | null {
   if (typeof value !== "string") return null
-  return /^(\/|https?:\/\/)/.test(value) ? value : null
+  return /^(\/(?!\/)|https?:\/\/)/.test(value) ? value : null
 }
 
 // localStorage is user-writable and can hold stale data from an older schema.

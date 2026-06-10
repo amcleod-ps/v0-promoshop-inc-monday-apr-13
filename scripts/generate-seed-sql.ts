@@ -187,23 +187,27 @@ PRODUCTS.forEach((p, idx) => {
   // (colour_id, url) unique index created above.
   p.colours.forEach((c, colourIdx) => {
     const colourLabel = `colour_${slugify(c.name)}_${p.sku.replace(/\s+/g, "_")}`
-    lines.push(
-      `with seed_colour as (`,
-      `  insert into public.product_colours (product_sku, name, hex, sort_order)`,
-      `  values (${sqlString(p.sku)}, ${sqlString(c.name)}, ${sqlString(c.hex)}, ${colourIdx})`,
-      `  on conflict (product_sku, name) do update set`,
-      `    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated`,
-      `  returning id`,
-      `)`,
-    )
-
     const images = c.images.filter((u) => !!u)
+
     if (images.length === 0) {
+      // No dependent image insert — a plain keyed insert suffices (the CTE
+      // below exists only to feed the colour id into product_images).
       lines.push(
-        `select id from seed_colour;  -- ${colourLabel}: no images in seed`,
+        `insert into public.product_colours (product_sku, name, hex, sort_order)`,
+        `values (${sqlString(p.sku)}, ${sqlString(c.name)}, ${sqlString(c.hex)}, ${colourIdx})`,
+        `on conflict (product_sku, name) do nothing;  -- ${colourLabel}: no images in seed`,
         "",
       )
     } else {
+      lines.push(
+        `with seed_colour as (`,
+        `  insert into public.product_colours (product_sku, name, hex, sort_order)`,
+        `  values (${sqlString(p.sku)}, ${sqlString(c.name)}, ${sqlString(c.hex)}, ${colourIdx})`,
+        `  on conflict (product_sku, name) do update set`,
+        `    product_sku = excluded.product_sku  -- no-op: keeps RETURNING populated`,
+        `  returning id`,
+        `)`,
+      )
       const valueRows = images
         .map(
           (url, imgIdx) =>

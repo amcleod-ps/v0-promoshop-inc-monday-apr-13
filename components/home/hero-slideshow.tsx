@@ -103,6 +103,16 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
   const [userPaused, setUserPaused] = useState(false)
   const paused = hoverPaused || focusPaused || userPaused
 
+  // Reduced-motion users start paused: the CSS kill-switch flattens the
+  // crossfade, which would otherwise turn auto-advance into abrupt
+  // full-panel content jumps — worse than the motion they opted out of.
+  // The visible pause/play button still lets them resume deliberately.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setUserPaused(true)
+    }
+  }, [])
+
   useEffect(() => {
     if (paused || slides.length < 2) return
     const id = setInterval(() => {

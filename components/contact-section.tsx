@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { submitQuoteRequest } from "@/app/actions/quotes"
+import { HoneypotField } from "@/components/honeypot-field"
 
 export function ContactSection() {
   const heading = useSiteText("contact.section.heading", "Contact Us")
@@ -150,20 +151,11 @@ export function ContactSection() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Honeypot field: visually removed, skipped by keyboard and
-                    screen readers. Real visitors never fill it. */}
-                <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-                  <label htmlFor="contact-hp-check">Leave this field empty</label>
-                  <input
-                    type="text"
-                    id="contact-hp-check"
-                    name="hp_check"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    value={formData.hpCheck}
-                    onChange={(e) => setFormData({ ...formData, hpCheck: e.target.value })}
-                  />
-                </div>
+                <HoneypotField
+                  id="contact-hp-check"
+                  value={formData.hpCheck}
+                  onChange={(hpCheck) => setFormData({ ...formData, hpCheck })}
+                />
                 {error && (
                   <div role="alert" className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                     {error}

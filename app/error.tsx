@@ -18,7 +18,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] text-[#1a1a1a] flex items-center justify-center px-6 py-24">
+    <main id="main-content" className="min-h-screen bg-[#f9f9f9] text-[#1a1a1a] flex items-center justify-center px-6 py-24">
       <div className="max-w-md text-center">
         <p className="text-xs font-bold tracking-wider text-[#d93e36] uppercase mb-3">Something went wrong</p>
         <h1 className="font-montserrat font-bold text-3xl mb-4">We hit a snag loading this page</h1>
@@ -41,6 +41,6 @@ export default function Error({
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

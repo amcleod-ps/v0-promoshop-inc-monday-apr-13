@@ -18,6 +18,17 @@
       via SQL Editor after the fix PR merges.
 - [ ] Never re-run 0003 against production; it is for fresh databases only.
 
+## 2b. Security (pre-launch, long-standing open items)
+
+- [ ] **Rotate the Supabase API keys** (Supabase → Settings → API → regenerate
+      anon + service_role), then update the Vercel env vars and redeploy.
+      Precautionary hygiene tracked since Issue #16 / `docs/hardening-status.md`
+      — git history is confirmed clean, but the keys have travelled through
+      several hands during development.
+- [ ] **Run Supabase → Advisors (Security)** on the production project and
+      review every finding (not reachable from dev tooling; needs the
+      client's account).
+
 ## 3. Vercel environment variables (Production scope; redeploy after changes)
 
 | Variable | Required | Notes |
@@ -31,8 +42,13 @@
 | `QUOTE_NOTIFICATION_EMAIL` | for quote emails | comma-separated recipients |
 | `QUOTE_NOTIFICATION_FROM` | after Resend domain verify | sender identity |
 
-## 4. Domain
+## 4. Domain & Vercel project
 
+- [ ] **Confirm which Vercel project/team is production and consolidate.**
+      Deploys have run under three teams over the repo's life
+      (`vnesteanu-5735s-projects` incl. a `promoshop-inc-demo-access`
+      project, `promoshopinc`, `nest-digital-solutions-inc`). All env vars
+      above must live on the production project; disconnect the strays.
 - [ ] Add the confirmed domain in Vercel → Settings → Domains; set DNS at the
       registrar per Vercel's instructions; wait for **Valid Configuration**.
 - [ ] Set `NEXT_PUBLIC_SITE_URL` to the final `https://` address; redeploy.

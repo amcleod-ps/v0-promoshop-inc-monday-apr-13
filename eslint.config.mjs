@@ -9,7 +9,9 @@ const eslintConfig = [
       "node_modules/**",
       // Unused shadcn/ui scaffolding kept for future use — linting it adds
       // noise without value, and it's slated for a post-launch prune.
+      // (use-toast.ts is the scaffolding's hook half.)
       "components/ui/**",
+      "hooks/use-toast.ts",
       "next-env.d.ts",
     ],
   },

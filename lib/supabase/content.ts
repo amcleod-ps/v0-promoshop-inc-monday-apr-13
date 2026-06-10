@@ -50,16 +50,7 @@ export const getSiteContentMap = cache(async (): Promise<SiteContentMap> => {
   return map
 })
 
-/**
- * Server-side equivalent of `useSiteText`. Returns the override value when
- * it exists and is non-empty, otherwise the static fallback.
- */
-export function resolveSiteText(
-  map: SiteContentMap,
-  key: string,
-  fallback: string,
-): string {
-  const row = map[key]
-  if (row && row.value && row.value.length > 0) return row.value
-  return fallback
-}
+// Single shared resolver (also re-exported by the client provider) — two
+// drifting copies previously risked server- and client-rendered text
+// disagreeing on the same key.
+export { resolveSiteText } from "@/lib/site-text"
