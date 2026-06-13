@@ -163,15 +163,20 @@ committed secrets; Azure cruft fully removed.
 
 12. **Quote-form spam** — honeypot + per-IP in-memory rate limit blunt scripted
     spam but aren't a captcha; the direct-PostgREST insert path is unbounded by
-    *row count* (length-capped). *Decision:* add Turnstile/hCaptcha, or
-    accept-and-monitor `quote_requests` counts.
-13. **Engineering follow-ups (deliberately not done pre-launch — low value or
-    refactor risk):** genericize admin server-action error strings (currently
-    surface raw Postgres text to the gated admin); move the rate-limit key to a
-    platform-trusted IP / shared store (Vercel sets `x-forwarded-for`, so it's
-    fine today); mark dialog backgrounds `inert` for screen-reader browse mode;
-    nonce-based CSP to drop `'unsafe-inline'`; make `withCacheBust` idempotent;
-    remove the dead duplicate `use-toast`. Track post-launch.
+    *row count* (length-capped). *Decision (2026-06-13):* accept-and-monitor
+    `quote_requests` — the audience and traffic profile make scripted spam
+    unlikely; revisit with Turnstile/hCaptcha only if junk rows appear.
+13. **Engineering follow-ups.** *Done in the 2026-06-13 hygiene pass:* admin
+    server-action error strings genericized — raw Postgres/Storage text is now
+    logged server-side and never surfaced to the dashboard (`lib/admin-error.ts`,
+    `adminActionError`); the product modal + lightbox mark the rest of the page
+    `inert` while open (`useInertBackground` in `hooks/use-dialog-focus.ts`);
+    `withCacheBust` is idempotent (re-busting replaces the `v=` param instead of
+    duplicating it); the dead duplicate `components/ui/use-toast.ts` is removed.
+    *Deferred (owner decision):* moving the rate-limit key to a shared store
+    (12 above — fine on Vercel today via `x-forwarded-for`) and nonce-based CSP
+    to drop `'unsafe-inline'` (no compliance driver). Revisit post-launch only
+    if warranted.
 
 ## 6. Timeline to June 21
 

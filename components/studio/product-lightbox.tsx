@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
-import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
+import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-dialog-focus"
 
 interface ProductLightboxProps {
   isOpen: boolean
@@ -35,6 +35,9 @@ export function ProductLightbox({
   // Dialog focus management: focus moves in on open, returns to the
   // trigger (the modal's zoom button) on close.
   useDialogFocus(isOpen, closeButtonRef)
+  // Inert everything outside the lightbox — including the product modal behind
+  // it — so only the full-screen viewer is reachable while it is open.
+  useInertBackground(isOpen, rootRef)
 
   // Navigation computes the next index OUTSIDE the state updater and
   // notifies the parent from the event handler. Do not sync via an effect

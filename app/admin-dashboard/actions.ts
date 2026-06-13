@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
+import { adminActionError } from "@/lib/admin-error"
 
 const BUCKET = "site-images"
 
@@ -40,6 +41,15 @@ export type SimpleResult = SimpleSuccess | ErrorResult
 // a row that was deleted from another tab or the Supabase Table Editor.
 const STALE_ROW_ERROR =
   "No changes applied — this row no longer exists. Refresh the dashboard."
+
+// Image read/write failures can carry raw Postgres/Storage messages (table
+// and column names); log the detail server-side and return a clean line for
+// the dashboard. Shared by writeImageUrl/removeImage, which compose a string
+// rather than an ErrorResult.
+function imageWriteFailure(detail: string): string {
+  console.error("[admin-dashboard] image write failed:", detail)
+  return "Couldn't update the image. Please try again."
+}
 
 function bumpCaches() {
   // Tell Next.js to rebuild every cached page so changes are visible
@@ -132,10 +142,7 @@ export async function replaceImage(
   try {
     supabase = createAdminClient()
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 
   const oldUrls = await readImageUrls(supabase, target, id)
@@ -148,14 +155,16 @@ export async function replaceImage(
     upsert: false,
   })
   if (upload.error) {
-    return { ok: false, error: `Upload failed: ${upload.error.message}` }
+    return adminActionError("Image upload failed. Please try again.", upload.error.message)
   }
 
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(upload.data.path)
   const url = pub.publicUrl
 
+  // writeImageUrl already returns a dashboard-safe message (STALE_ROW_ERROR or
+  // imageWriteFailure), so surface it as-is rather than re-wrapping.
   const writeErr = await writeImageUrl(supabase, target, id, url)
-  if (writeErr) return { ok: false, error: `Database update failed: ${writeErr}` }
+  if (writeErr) return { ok: false, error: writeErr }
 
   await pruneReplacedFiles(supabase, oldUrls, url)
 
@@ -184,10 +193,7 @@ export async function removeImage(
   try {
     supabase = createAdminClient()
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 
   let dbError: string | null = null
@@ -198,7 +204,7 @@ export async function removeImage(
         .update({ url: "" })
         .eq("key", id)
         .select("key")
-      if (error) dbError = error.message
+      if (error) dbError = imageWriteFailure(error.message)
       else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
@@ -211,7 +217,7 @@ export async function removeImage(
         .eq("slug", id)
         .select("slug")
       if (e1) {
-        dbError = e1.message
+        dbError = imageWriteFailure(e1.message)
         break
       }
       if (!data || data.length === 0) {
@@ -224,7 +230,7 @@ export async function removeImage(
         .from("site_images")
         .update({ url: "" })
         .eq("key", `brand.${id}.logo`)
-      if (e2) dbError = e2.message
+      if (e2) dbError = imageWriteFailure(e2.message)
       break
     }
     case "hero_slide": {
@@ -233,7 +239,7 @@ export async function removeImage(
         .update({ image_url: null })
         .eq("id", id)
         .select("id")
-      if (error) dbError = error.message
+      if (error) dbError = imageWriteFailure(error.message)
       else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
@@ -243,7 +249,7 @@ export async function removeImage(
         .delete()
         .eq("id", id)
         .select("id")
-      if (error) dbError = error.message
+      if (error) dbError = imageWriteFailure(error.message)
       else if (!data || data.length === 0) dbError = STALE_ROW_ERROR
       break
     }
@@ -252,7 +258,7 @@ export async function removeImage(
     }
   }
 
-  if (dbError) return { ok: false, error: `Database update failed: ${dbError}` }
+  if (dbError) return { ok: false, error: dbError }
 
   bumpCaches()
   return { ok: true }
@@ -322,7 +328,7 @@ async function writeImageUrl(
         .update({ url })
         .eq("key", id)
         .select("key")
-      if (error) return error.message
+      if (error) return imageWriteFailure(error.message)
       if (!data || data.length === 0) return STALE_ROW_ERROR
       return null
     }
@@ -338,7 +344,7 @@ async function writeImageUrl(
         .update({ logo_url: url })
         .eq("slug", id)
         .select("slug")
-      if (e1) return e1.message
+      if (e1) return imageWriteFailure(e1.message)
       if (!data || data.length === 0) return STALE_ROW_ERROR
       // Capture the override write's error too — it was previously discarded,
       // so a failed write here returned success while the (non-empty) override
@@ -348,7 +354,7 @@ async function writeImageUrl(
         .from("site_images")
         .update({ url })
         .eq("key", `brand.${id}.logo`)
-      return e2?.message ?? null
+      return e2 ? imageWriteFailure(e2.message) : null
     }
     case "hero_slide": {
       const { data, error } = await supabase
@@ -356,7 +362,7 @@ async function writeImageUrl(
         .update({ image_url: url })
         .eq("id", id)
         .select("id")
-      if (error) return error.message
+      if (error) return imageWriteFailure(error.message)
       if (!data || data.length === 0) return STALE_ROW_ERROR
       return null
     }
@@ -366,7 +372,7 @@ async function writeImageUrl(
         .update({ url })
         .eq("id", id)
         .select("id")
-      if (error) return error.message
+      if (error) return imageWriteFailure(error.message)
       if (!data || data.length === 0) return STALE_ROW_ERROR
       return null
     }
@@ -404,17 +410,14 @@ export async function updateSiteContent(
   try {
     supabase = createAdminClient()
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 
   const { error } = await supabase
     .from("site_content")
     .upsert({ key, label, value }, { onConflict: "key" })
 
-  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
 
   bumpCaches()
   return { ok: true }
@@ -469,10 +472,7 @@ export async function updateHeroSlideText(
   try {
     supabase = createAdminClient()
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 
   const { data, error } = await supabase
@@ -481,7 +481,7 @@ export async function updateHeroSlideText(
     .eq("id", id)
     .select("id")
 
-  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
 
   bumpCaches()
@@ -514,10 +514,7 @@ export async function updateBrandText(
   try {
     supabase = createAdminClient()
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 
   const stored = field === "description" && value.length === 0 ? null : value
@@ -528,7 +525,7 @@ export async function updateBrandText(
     .eq("slug", slug)
     .select("slug")
 
-  if (error) return { ok: false, error: `Database update failed: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
 
   bumpCaches()

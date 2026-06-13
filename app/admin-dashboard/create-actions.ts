@@ -7,6 +7,7 @@ import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
+import { adminActionError } from "@/lib/admin-error"
 
 const BUCKET = "site-images"
 
@@ -48,10 +49,7 @@ async function adminOrError(): Promise<
   try {
     return { ok: true, supabase: createAdminClient() }
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Server is not configured.",
-    }
+    return adminActionError("Server is not configured.", err)
   }
 }
 
@@ -148,7 +146,7 @@ export async function createBrand(input: {
     if (isDuplicate(error)) {
       return { ok: false, error: `A brand with slug "${slug}" already exists.` }
     }
-    return { ok: false, error: `Could not create brand: ${error.message}` }
+    return adminActionError("Could not create the brand. Please try again.", error.message)
   }
 
   // Seeded brands each get a `brand.<slug>.lifestyle` site_images slot — the
@@ -187,7 +185,7 @@ export async function softDeleteBrand(slug: string): Promise<SimpleResult> {
     .update({ is_active: false })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not delete brand: ${error.message}` }
+  if (error) return adminActionError("Could not delete the brand. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -218,7 +216,7 @@ export async function updateBrandCategories(
     .update({ categories: cleaned })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not update categories: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -246,7 +244,7 @@ export async function updateBrandFeatured(
     .update({ featured })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not update featured flag: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -294,7 +292,7 @@ export async function createProduct(input: {
     if (isDuplicate(error)) {
       return { ok: false, error: `A product with SKU "${sku}" already exists.` }
     }
-    return { ok: false, error: `Could not create product: ${error.message}` }
+    return adminActionError("Could not create the product. Please try again.", error.message)
   }
 
   bumpCaches()
@@ -311,7 +309,7 @@ export async function softDeleteProduct(sku: string): Promise<SimpleResult> {
     .update({ is_active: false })
     .eq("sku", sku)
     .select("sku")
-  if (error) return { ok: false, error: `Could not delete product: ${error.message}` }
+  if (error) return adminActionError("Could not delete the product. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -350,7 +348,7 @@ export async function updateProductText(
     .update({ [field]: stored })
     .eq("sku", sku)
     .select("sku")
-  if (error) return { ok: false, error: `Could not update product: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -395,7 +393,7 @@ export async function updateProductList(
     .update({ [field]: cleaned })
     .eq("sku", sku)
     .select("sku")
-  if (error) return { ok: false, error: `Could not update ${field}: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -422,7 +420,7 @@ export async function updateProductMinQty(
     .update({ min_qty: value })
     .eq("sku", sku)
     .select("sku")
-  if (error) return { ok: false, error: `Could not update minimum quantity: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -460,7 +458,7 @@ export async function createProductColour(input: {
     if (isDuplicate(error)) {
       return { ok: false, error: `Colour "${name}" already exists for this product.` }
     }
-    return { ok: false, error: `Could not create colour: ${error?.message ?? "unknown"}` }
+    return adminActionError("Could not create the colour. Please try again.", error?.message)
   }
 
   bumpCaches()
@@ -496,7 +494,7 @@ export async function updateProductColour(input: {
     .update(update)
     .eq("id", input.id)
     .select("id")
-  if (error) return { ok: false, error: `Could not update colour: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -514,7 +512,7 @@ export async function deleteProductColour(id: string): Promise<SimpleResult> {
     .delete()
     .eq("id", id)
     .select("id")
-  if (error) return { ok: false, error: `Could not delete colour: ${error.message}` }
+  if (error) return adminActionError("Could not delete the colour. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -566,7 +564,7 @@ export async function createProductImage(
     contentType,
     upsert: false,
   })
-  if (upload.error) return { ok: false, error: `Upload failed: ${upload.error.message}` }
+  if (upload.error) return adminActionError("Image upload failed. Please try again.", upload.error.message)
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(upload.data.path)
   const url = pub.publicUrl
 
@@ -584,7 +582,7 @@ export async function createProductImage(
     },
     { scopeColumn: "colour_id" },
   )
-  if (error) return { ok: false, error: `Could not create image: ${error.message}` }
+  if (error) return adminActionError("Could not add the image. Please try again.", error.message)
 
   bumpCaches()
   return { ok: true, url }
@@ -630,7 +628,7 @@ export async function createHeroSlide(input: {
     },
     { returning: "id" },
   )
-  if (error || !data) return { ok: false, error: `Could not create slide: ${error?.message ?? "unknown"}` }
+  if (error || !data) return adminActionError("Could not create the slide. Please try again.", error?.message)
 
   bumpCaches()
   return { ok: true, id: data.id as string }
@@ -646,7 +644,7 @@ export async function softDeleteHeroSlide(id: string): Promise<SimpleResult> {
     .update({ is_active: false })
     .eq("id", id)
     .select("id")
-  if (error) return { ok: false, error: `Could not delete slide: ${error.message}` }
+  if (error) return adminActionError("Could not delete the slide. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -674,7 +672,7 @@ export async function updateHeroSlideBgColor(
     .update({ bg_color: hex || null })
     .eq("id", id)
     .select("id")
-  if (error) return { ok: false, error: `Could not update colour: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -726,7 +724,7 @@ export async function updateSortOrder(
     .update({ sort_order: sortOrder })
     .eq(config.pk, id)
     .select(config.pk)
-  if (error) return { ok: false, error: `Could not update order: ${error.message}` }
+  if (error) return adminActionError("Couldn't update the display order. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -761,7 +759,7 @@ export async function createSiteImage(input: {
     if (isDuplicate(error)) {
       return { ok: false, error: `Image slot with key "${key}" already exists.` }
     }
-    return { ok: false, error: `Could not create site image: ${error.message}` }
+    return adminActionError("Could not create the image slot. Please try again.", error.message)
   }
 
   bumpCaches()
@@ -778,7 +776,7 @@ export async function deleteSiteImage(key: string): Promise<SimpleResult> {
     .delete()
     .eq("key", key)
     .select("key")
-  if (error) return { ok: false, error: `Could not delete site image: ${error.message}` }
+  if (error) return adminActionError("Could not delete the image slot. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -812,7 +810,7 @@ export async function updateImageFit(
     },
     { onConflict: "key" },
   )
-  if (error) return { ok: false, error: `Could not save display mode: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   bumpCaches()
   return { ok: true }
 }
@@ -837,7 +835,7 @@ export async function updateSiteImageAltText(
     .update({ alt_text: value.trim() || null })
     .eq("key", key)
     .select("key")
-  if (error) return { ok: false, error: `Could not update alt text: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -876,7 +874,7 @@ export async function createTeamMember(input: {
     if (isDuplicate(error)) {
       return { ok: false, error: `A team member with slug "${slug}" already exists.` }
     }
-    return { ok: false, error: `Could not create team member: ${error.message}` }
+    return adminActionError("Could not create the team member. Please try again.", error.message)
   }
 
   bumpCaches()
@@ -906,7 +904,7 @@ export async function updateTeamMemberText(
     .update({ [field]: stored })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not update: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -922,7 +920,7 @@ export async function softDeleteTeamMember(slug: string): Promise<SimpleResult> 
     .update({ is_active: false })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not delete member: ${error.message}` }
+  if (error) return adminActionError("Could not delete the team member. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -959,7 +957,7 @@ export async function replaceTeamMemberImage(
     contentType,
     upsert: false,
   })
-  if (upload.error) return { ok: false, error: `Upload failed: ${upload.error.message}` }
+  if (upload.error) return adminActionError("Image upload failed. Please try again.", upload.error.message)
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(upload.data.path)
   const url = pub.publicUrl
 
@@ -968,7 +966,7 @@ export async function replaceTeamMemberImage(
     .update({ image_url: url })
     .eq("slug", slug)
     .select("slug")
-  if (error) return { ok: false, error: `Could not save team photo: ${error.message}` }
+  if (error) return adminActionError("Couldn't save the team photo. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
 
   const marker = `/storage/v1/object/public/${BUCKET}/`
@@ -1023,7 +1021,7 @@ export async function updateThemeColor(
   const { error } = await supabase
     .from("site_theme")
     .upsert({ key, label, value: hex }, { onConflict: "key" })
-  if (error) return { ok: false, error: `Could not save colour: ${error.message}` }
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
 
   bumpCaches()
   return { ok: true }

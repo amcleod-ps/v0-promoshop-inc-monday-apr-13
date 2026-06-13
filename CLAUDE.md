@@ -150,7 +150,11 @@ action (actions are invocable from any route by Next-Action id, so the proxy
 matcher alone can't protect them); unset preserves the open mode. Its server
 actions live in `actions.ts` and
 `create-actions.ts`, use the admin (service-role) client, validate a 10 MB image
-cap, and call `revalidatePath("/", "layout")` to push changes live.
+cap, and call `revalidatePath("/", "layout")` to push changes live. Return
+errors via `adminActionError` (`lib/admin-error.ts`): raw Postgres/Storage
+messages are logged server-side and never surfaced to the dashboard (those
+actions are reachable by Next-Action id even with the gate off), while
+validation/duplicate messages stay specific.
 
 **Gotcha — brand logos are written to two places.** A brand logo is read from
 both `brands.logo_url` (canonical) and `site_images['brand.<slug>.logo']`
