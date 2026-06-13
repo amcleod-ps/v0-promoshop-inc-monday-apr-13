@@ -69,6 +69,23 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Close the mobile menu on any navigation — including back/forward, which
+  // changes pathname without firing the per-link onClick that otherwise
+  // closes it (the menu would stay open over the new page).
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  // Escape closes the open mobile menu (expected for a disclosure control).
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [mobileMenuOpen])
+
   return (
     <header className={`bg-white ${scrolled ? "shadow-md" : ""} sticky top-0 z-50 transition-all duration-300`}>
       {/* Top utility bar */}

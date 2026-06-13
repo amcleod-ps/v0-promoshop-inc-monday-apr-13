@@ -89,13 +89,19 @@ export function Footer() {
               {quickLinksHeading}
             </h3>
             <ul className="space-y-2">
-              {["Home", "Studio", "Brands", "My Quote", "About"].map((item) => (
-                <li key={item}>
+              {[
+                { label: "Home", href: "/" },
+                { label: "Studio", href: "/studio" },
+                { label: "Brands", href: "/brands" },
+                { label: "My Quote", href: "/my-quote" },
+                { label: "About", href: "/about" },
+              ].map(({ label, href }) => (
+                <li key={href}>
                   <Link
-                    href={item === "Home" ? "/" : `/${item.toLowerCase().replace(" ", "-")}`}
+                    href={href}
                     className="text-sm font-visby text-[#555] hover:text-[#ef473f] transition-colors"
                   >
-                    {item}
+                    {label}
                   </Link>
                 </li>
               ))}

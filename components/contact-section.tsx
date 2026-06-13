@@ -1,7 +1,7 @@
 "use client"
 
 import { Mail, Phone, MapPin } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { submitQuoteRequest } from "@/app/actions/quotes"
@@ -31,6 +31,13 @@ export function ContactSection() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const { config } = useLocale()
+  // Holds the "reset the success message" timer so we can clear it on unmount
+  // (no setState on an unmounted component) and avoid stacking timers across
+  // repeat submissions.
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (successTimer.current) clearTimeout(successTimer.current)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,7 +69,8 @@ export function ContactSection() {
           message: "",
           hpCheck: ""
         })
-        setTimeout(() => setSubmitted(false), 5000)
+        if (successTimer.current) clearTimeout(successTimer.current)
+        successTimer.current = setTimeout(() => setSubmitted(false), 5000)
       } else {
         setError(result.error || "An error occurred. Please try again.")
       }

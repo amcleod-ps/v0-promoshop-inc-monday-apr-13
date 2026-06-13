@@ -31,7 +31,7 @@ export function TeamSection() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {members.map((member) => (
-            <div key={member.name} className="text-center group">
+            <div key={member.slug ?? member.name} className="text-center group">
               <div className="w-28 h-28 mx-auto mb-4 rounded-full bg-[#1a1a1a] flex items-center justify-center border-2 border-[#333] group-hover:border-[#ef473f] transition-colors overflow-hidden">
                 <TeamMemberAvatar member={member} size={112} />
               </div>
