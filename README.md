@@ -86,7 +86,7 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 
 ## Supabase setup
 
-Seven migrations live in `supabase/migrations/`. Run them in order from
+Eight migrations live in `supabase/migrations/`. Run them in order from
 the Supabase Dashboard → SQL Editor → New query:
 
 1. `0001_init.sql` — base tables: `brands`, `hero_slides`, `quote_requests`
@@ -107,8 +107,10 @@ the Supabase Dashboard → SQL Editor → New query:
    `sort_order` atomically for dashboard-created rows.
 7. `0007_quote_request_hardening.sql` — `CHECK` length constraints on
    `quote_requests` as a backstop for direct PostgREST inserts.
+8. `0008_quote_insert_hardening_and_copy_fix.sql` — forces server-side
+   timestamps on `quote_requests` inserts (plus a guarded seeded-copy fix).
 
-After running all seven, the dashboard's Table Editor shows:
+After running all eight, the dashboard's Table Editor shows:
 
 | Table | Rows | What it controls |
 | --- | --- | --- |

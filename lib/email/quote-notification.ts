@@ -48,13 +48,22 @@ export async function sendQuoteNotification(
   const from =
     process.env.QUOTE_NOTIFICATION_FROM?.trim() ||
     "PromoShop Website <onboarding@resend.dev>"
+  // Collapse newlines in every interpolated field. Zod only trims the ends,
+  // so an embedded newline in email/phone/company survives — and `email`
+  // becomes the `reply_to` header at Resend, where a stray newline is a
+  // header-injection foothold. `message` stays multi-line on purpose (it's
+  // the serialized cart, meant to be read as a block in the body).
   const name = singleLine(`${quote.first_name} ${quote.last_name}`)
+  const email = singleLine(quote.email)
+  const phone = quote.phone ? singleLine(quote.phone) : null
+  const company = quote.company ? singleLine(quote.company) : null
+  const quantity = quote.quantity_range ? singleLine(quote.quantity_range) : null
   const body = [
     `Name: ${name}`,
-    `Email: ${quote.email}`,
-    quote.phone ? `Phone: ${quote.phone}` : null,
-    quote.company ? `Company: ${quote.company}` : null,
-    quote.quantity_range ? `Quantity range: ${quote.quantity_range}` : null,
+    `Email: ${email}`,
+    phone ? `Phone: ${phone}` : null,
+    company ? `Company: ${company}` : null,
+    quantity ? `Quantity range: ${quantity}` : null,
     "",
     "Message:",
     quote.message,
@@ -75,8 +84,8 @@ export async function sendQuoteNotification(
       body: JSON.stringify({
         from,
         to: recipients,
-        reply_to: quote.email,
-        subject: `New quote request from ${name}${quote.company ? ` (${singleLine(quote.company)})` : ""}`,
+        reply_to: email,
+        subject: `New quote request from ${name}${company ? ` (${company})` : ""}`,
         text: body,
       }),
       signal: AbortSignal.timeout(10_000),

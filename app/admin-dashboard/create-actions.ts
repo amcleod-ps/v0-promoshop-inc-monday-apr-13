@@ -540,6 +540,22 @@ export async function createProductImage(
   const { supabase } = adminResult
   const rate = checkUploadRateLimit()
   if (!rate.ok) return rate
+
+  // Verify the colour actually belongs to this product before uploading.
+  // The two FKs are independent (image → colour, image → product), so
+  // without this a caller could attach a gallery image to a colour from a
+  // different SKU — and we'd leave an orphaned storage object behind.
+  const { data: colour, error: colourError } = await supabase
+    .from("product_colours")
+    .select("product_sku")
+    .eq("id", colourId)
+    .maybeSingle()
+  if (colourError) return { ok: false, error: "Could not verify colour." }
+  if (!colour) return { ok: false, error: STALE_ROW_ERROR }
+  if (colour.product_sku !== productSku) {
+    return { ok: false, error: "That colour belongs to a different product." }
+  }
+
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
@@ -732,6 +748,7 @@ export async function createSiteImage(input: {
     return { ok: false, error: "Key may only contain lowercase letters, digits, dots, hyphens, and underscores." }
   }
   if (!label) return { ok: false, error: "Label is required." }
+  if (label.length > 200) return { ok: false, error: "Label is too long (200 character limit)." }
 
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult

@@ -27,32 +27,39 @@ interface BrandLogoScrollProps {
 // the same component identity across renders instead of remounting every
 // tile. Each tile links to its brand page — the homepage previously passed
 // no link equity (or navigation path) to the brand details at all.
-function Tile({ brand, focusable }: { brand: BrandData; focusable: boolean }) {
+function Tile({ brand, decorative = false }: { brand: BrandData; decorative?: boolean }) {
   const id = brandLogoId(brand.slug)
   const src = useImageSrc(id, brand.logoUrl ?? "")
+  const logo = src ? (
+    <SiteImage
+      imageId={id}
+      defaultSrc={brand.logoUrl ?? ""}
+      alt={decorative ? "" : brand.name}
+      width={140}
+      height={70}
+      className="max-h-14 w-auto object-contain"
+      unoptimized
+    />
+  ) : (
+    <span className="font-bebas text-3xl tracking-[0.12em] uppercase text-[#1a1f2a] whitespace-nowrap">
+      {brand.name}
+    </span>
+  )
   return (
     <div className="flex-shrink-0 mx-10 flex items-center justify-center">
-      <Link
-        href={`/brands/${brand.slug}`}
-        tabIndex={focusable ? 0 : -1}
-        className="h-16 flex items-center justify-center px-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1f2a]"
-      >
-        {src ? (
-          <SiteImage
-            imageId={id}
-            defaultSrc={brand.logoUrl ?? ""}
-            alt={brand.name}
-            width={140}
-            height={70}
-            className="max-h-14 w-auto object-contain"
-            unoptimized
-          />
-        ) : (
-          <span className="font-bebas text-3xl tracking-[0.12em] uppercase text-[#1a1f2a] whitespace-nowrap">
-            {brand.name}
-          </span>
-        )}
-      </Link>
+      {decorative ? (
+        // The duplicate run exists purely to make the loop seamless. It lives
+        // inside an aria-hidden subtree, so it must NOT be a focusable/clickable
+        // link (avoids the aria-hidden-focus violation and stray click targets).
+        <div className="h-16 flex items-center justify-center px-3">{logo}</div>
+      ) : (
+        <Link
+          href={`/brands/${brand.slug}`}
+          className="h-16 flex items-center justify-center px-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1f2a]"
+        >
+          {logo}
+        </Link>
+      )}
     </div>
   )
 }
@@ -82,13 +89,13 @@ export function BrandLogoScroll({ brands: propBrands }: BrandLogoScrollProps) {
             the track, so without it the loop visibly snaps every cycle. */}
         <div className="flex w-max animate-scroll">
           {brands.map((brand, index) => (
-            <Tile key={`brand-1-${index}`} brand={brand} focusable />
+            <Tile key={`brand-1-${index}`} brand={brand} />
           ))}
           {/* Duplicate run exists only to make the loop seamless — hide it
-              from assistive tech and the tab order. */}
+              from assistive tech and render it non-interactive. */}
           <div className="contents" aria-hidden="true">
             {brands.map((brand, index) => (
-              <Tile key={`brand-2-${index}`} brand={brand} focusable={false} />
+              <Tile key={`brand-2-${index}`} brand={brand} decorative />
             ))}
           </div>
         </div>

@@ -394,6 +394,11 @@ export async function updateSiteContent(
   if (value.length > MAX_TEXT_LEN) {
     return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
   }
+  // `label` is an admin-supplied descriptor; cap it so the otherwise
+  // uncapped field can't be used to write oversized rows.
+  if (typeof label === "string" && label.length > 200) {
+    return { ok: false, error: "Label is too long (200 character limit)." }
+  }
 
   let supabase
   try {

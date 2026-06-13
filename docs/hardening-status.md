@@ -4,7 +4,7 @@
 > without the prior chat context. Pairs with `CLAUDE.md` (architecture) and
 > `docs/promoshop-research.md` (company + codebase dossier).
 >
-> Work lands on `main` via short single-purpose PRs. · Last updated 2026-06-10.
+> Work lands on `main` via short single-purpose PRs. · Last updated 2026-06-13.
 
 ## TL;DR for the next session
 The big 2026-06-10 merge train landed: the admin-dashboard functionality/
@@ -14,8 +14,25 @@ follow-ups (#33, #34, #35). Stale PRs #2/#22/#25 are closed (superseded).
 Migrations 0001–0008 are all applied on the production Supabase
 (0007 and 0008 both applied 2026-06-10, owner-confirmed). The one outstanding config step
 is setting `ADMIN_DASHBOARD_PASSWORD` in Vercel to switch on the merged
-admin gate. Build/type-check gate is `pnpm build` (`pnpm lint` is still
-broken — see backlog).
+admin gate. Build/type-check gate is `pnpm build`; **`pnpm lint` (ESLint 9
+flat config) is restored and passing** — run both before pushing.
+
+> **Update 2026-06-13 — launch-review pass (branch `claude/nifty-knuth-b7gtdr`).**
+> A fresh end-to-end review (security/backend, data/CMS, frontend/UX/a11y,
+> config/SEO/infra) ran on top of the post-2026-06-10 work (`pnpm lint`
+> restored, admin production pass, full-site UI/UX hardening). Build + lint +
+> a no-Supabase runtime smoke test of every route are green. Fixes landed in
+> this pass: theme rebrand now covers the `/35` opacity used by the contact
+> form's focus rings; quote-notification email normalizes all interpolated
+> fields (reply-to header-injection defense-in-depth); `createProductImage`
+> verifies the colour belongs to the product before uploading; `createSiteImage`
+> / `updateSiteContent` cap the `label` field; mobile menu closes on
+> route-change + Escape; ContactSection success-timer cleanup; explicit footer
+> Quick-Links hrefs; stable team-grid keys; focus-visible rings on studio
+> filters & quote tabs; non-interactive marquee duplicate run; global-error
+> "Back to Home" escape; default OG/Twitter card image. Full report:
+> `docs/launch-review-2026-06-13.md`. Remaining items are decision points
+> (see that report) — chiefly the admin-gate env var and the merge approval.
 
 ## ✅ Done & merged to `main`
 **PR #13** (merge `6096c18`):
@@ -95,7 +112,7 @@ shape-guarding.
 ### Low / robustness & polish
 - [ ] Client-side image `accept=` raster allowlist (inputs still say `image/*`; the 10 MB pre-check shipped in #31); brand-slug client normalization.
 - [ ] `updateTeamMemberText` allows empty name/role; hard deletes (product images, colours) orphan their storage objects; soft-delete has no in-UI reactivation.
-- [ ] **ESLint flat-config repair** — `pnpm lint` is broken repo-wide (no `eslint.config.js`; ESLint 9+ needs flat config; eslint isn't even in devDependencies). Rely on `pnpm build` for type-checking meanwhile.
+- [x] **ESLint flat-config repair** — DONE. `eslint@9` + `eslint-config-next` are in devDependencies and `eslint.config.mjs` (flat config) exists; `pnpm lint` passes clean. Both `pnpm build` and `pnpm lint` are correctness gates again (matches CLAUDE.md).
 - [ ] a11y: several inputs are labelled by a sibling `<div>` rather than a real `<label>` (`text-row.tsx`, `image-row.tsx`). (Note: `create-forms.tsx` & `team-tab.tsx` already use proper `<label>`.) A real dialog role + focus management for the studio product modal would also be a good a11y follow-up.
 - [ ] `docs/code-review-2026-06-10.md` findings not covered above (fonts, legal pages, SEO, newsletter, sign-out) — mostly client-decision or content items; triage with the client.
 

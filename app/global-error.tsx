@@ -20,13 +20,26 @@ export default function GlobalError({
             </p>
             <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginBottom: "1rem" }}>PromoShop hit a snag</h1>
             <p style={{ color: "#666", marginBottom: "2rem" }}>Please try again in a moment.</p>
-            <button
-              type="button"
-              onClick={() => reset()}
-              style={{ background: "#ef473f", color: "#fff", border: 0, borderRadius: "0.25rem", padding: "0.75rem 1.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.875rem", cursor: "pointer" }}
-            >
-              Try Again
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => reset()}
+                style={{ background: "#ef473f", color: "#fff", border: 0, borderRadius: "0.25rem", padding: "0.75rem 1.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.875rem", cursor: "pointer" }}
+              >
+                Try Again
+              </button>
+              {/* Plain anchor (full navigation): if the layout itself keeps
+                  throwing, reset() loops — this is the only way out. next/link
+                  relies on the router/providers that just failed, so a hard
+                  document navigation is deliberate here. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                href="/"
+                style={{ display: "inline-block", background: "#fff", color: "#1a1a1a", border: "1px solid #d0d0d0", borderRadius: "0.25rem", padding: "0.75rem 1.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.875rem", textDecoration: "none" }}
+              >
+                Back to Home
+              </a>
+            </div>
           </div>
         </div>
       </body>

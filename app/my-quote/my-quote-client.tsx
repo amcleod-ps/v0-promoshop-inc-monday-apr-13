@@ -273,8 +273,8 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 aria-selected={activeTab === tab.id}
                 aria-controls={`panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-3 sm:px-6 py-3 font-bold text-xs sm:text-sm uppercase tracking-wider transition-colors relative whitespace-nowrap flex-shrink-0 ${
-                  activeTab === tab.id 
+                className={`px-3 sm:px-6 py-3 font-bold text-xs sm:text-sm uppercase tracking-wider transition-colors relative whitespace-nowrap flex-shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
+                  activeTab === tab.id
                     ? "text-[#1a1a1a]" 
                     : "text-[#6b6b6b] hover:text-[#1a1a1a]"
                 }`}

@@ -177,7 +177,14 @@ const VARIANTS: Variant[] = [
   { twPrefix: "group-focus:", buildSelector: (c) => `.group:focus .${c}` },
 ]
 
-const OPACITIES = [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90]
+// The opacity modifiers actually used on brand-colour classes in source
+// (e.g. `bg-[#ef473f]/20`, `ring-[#ef473f]/35`). Keep this in sync with the
+// codebase: a modifier that's used but missing here means that variant keeps
+// the original colour after an admin rebrand (the contact form's `/35` focus
+// rings were silently doing exactly that), and a modifier listed but unused
+// just inflates the `!important` CSS inlined on every response.
+//   grep -roE '\[#[0-9a-fA-F]{3,8}\]/[0-9]+' app components lib
+const OPACITIES = [5, 10, 20, 25, 30, 35, 60]
 
 /**
  * Escapes characters that are syntactically significant in a CSS class
