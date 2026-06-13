@@ -9,7 +9,7 @@ import { useLocale } from "@/lib/locale-context"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
-import { useDialogFocus, trapDialogTab } from "@/hooks/use-dialog-focus"
+import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-dialog-focus"
 import { ProductLightbox } from "./product-lightbox"
 
 interface ProductDetailModalProps {
@@ -77,6 +77,10 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
   // Dialog focus management: focus moves to the close button on open and
   // returns to the trigger (the product card) on close.
   useDialogFocus(isOpen, closeButtonRef)
+  // Inert the rest of the page while the modal is the topmost dialog. When the
+  // lightbox opens on top, hand the background-hiding over to it (otherwise we
+  // would inert the lightbox itself, which sits in the same fragment).
+  useInertBackground(isOpen && !lightboxOpen, dialogRef)
 
   const images = previewColour?.images ?? product?.colours[0]?.images ?? []
 
