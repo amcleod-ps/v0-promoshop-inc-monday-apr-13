@@ -78,6 +78,7 @@ export function ProductsTab({
       <div style={styles.searchWrap}>
         <input
           type="text"
+          aria-label="Filter products"
           placeholder="Filter products by SKU, name, or category…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -543,7 +544,7 @@ function ColourEditor({
           onChange={(e) => setHex(e.target.value)}
           disabled={isPending}
           style={{ ...styles.input, maxWidth: 110, fontFamily: "monospace" }}
-          maxLength={9}
+          maxLength={7}
         />
         <button
           type="button"
@@ -750,7 +751,7 @@ function AddColourForm({ productSku }: { productSku: string }) {
         onChange={(e) => setHex(e.target.value)}
         disabled={isPending}
         style={{ ...styles.input, maxWidth: 110, fontFamily: "monospace" }}
-        maxLength={9}
+        maxLength={7}
       />
       <button
         type="submit"
@@ -844,6 +845,7 @@ function AddImageToColourForm({
       <input
         type="file"
         accept="image/*"
+        aria-label={`Add image to ${colourName}`}
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         disabled={isPending}
         style={styles.fileInput}

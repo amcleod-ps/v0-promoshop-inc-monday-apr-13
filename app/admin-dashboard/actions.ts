@@ -6,6 +6,7 @@ import { requireAdminAction } from "@/lib/admin-auth-action"
 import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { adminActionError } from "@/lib/admin-error"
+import { isSafeLinkTarget } from "@/lib/url-safety"
 
 const BUCKET = "site-images"
 
@@ -130,13 +131,15 @@ export async function replaceImage(
   if (!id || typeof id !== "string") {
     return { ok: false, error: "Missing row identifier." }
   }
-  const rate = checkUploadRateLimit()
-  if (!rate.ok) return rate
   // Sniff magic bytes and allowlist raster formats — never trust the
   // client-supplied MIME/filename. Blocks SVG/HTML stored-XSS payloads.
+  // Validate BEFORE consuming a rate-limit slot so a rejected (invalid or
+  // oversized) file doesn't burn the per-minute budget for real uploads.
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
+  const rate = checkUploadRateLimit()
+  if (!rate.ok) return rate
 
   let supabase
   try {
@@ -396,6 +399,16 @@ export async function updateSiteContent(
   const denied = await requireAdminAction()
   if (denied) return denied
   if (!key) return { ok: false, error: "Missing content key." }
+  // Validate the key format/length like createSiteImage/updateImageFit do — the
+  // key is the site_content PK and the action is reachable by Next-Action id, so
+  // an arbitrary or oversized key shouldn't be writable. All real content keys
+  // are lowercase dotted slugs (see lib/cms/text-slots.ts, page.tsx classifier).
+  if (!/^[a-z0-9._-]+$/.test(key)) {
+    return { ok: false, error: "Key may only contain lowercase letters, digits, dots, hyphens, and underscores." }
+  }
+  if (key.length > 200) {
+    return { ok: false, error: "Key is too long (200 character limit)." }
+  }
   if (typeof value !== "string") return { ok: false, error: "Value must be text." }
   if (value.length > MAX_TEXT_LEN) {
     return { ok: false, error: `Text too long. Limit is ${MAX_TEXT_LEN} characters.` }
@@ -458,9 +471,9 @@ export async function updateHeroSlideText(
 
   // Only relative paths and http(s) URLs make valid link targets; anything
   // else (javascript:, mailto typos, bare words) would render a broken or
-  // dangerous CTA button. `(?!\/)` rejects protocol-relative `//host` URLs,
-  // which browsers treat as an external link to that host.
-  if (field === "cta_url" && stored !== null && !/^(\/(?!\/)|https?:\/\/)/.test(stored)) {
+  // dangerous CTA button. Shared with the read-side guard in lib/supabase/data
+  // so the rule can't drift (see lib/url-safety.ts).
+  if (field === "cta_url" && stored !== null && !isSafeLinkTarget(stored)) {
     return {
       ok: false,
       error:

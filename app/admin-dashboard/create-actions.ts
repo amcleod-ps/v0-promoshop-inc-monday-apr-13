@@ -8,6 +8,7 @@ import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
 import { adminActionError } from "@/lib/admin-error"
+import { isSafeLinkTarget } from "@/lib/url-safety"
 
 const BUCKET = "site-images"
 
@@ -74,6 +75,69 @@ function isDuplicate(error: PgError | null | undefined): boolean {
   return error?.code === "23505"
 }
 
+// Matches the free-text cap the update actions enforce (updateProductText /
+// updateTeamMemberText at 5000, updateHeroSlideText / updateBrandText via
+// actions.ts MAX_TEXT_LEN). The create actions previously capped nothing, so a
+// row could be created longer than the editor would later let you save it to.
+const MAX_TEXT_LEN = 5000
+
+/**
+ * Returns an error result when a create-action text field exceeds MAX_TEXT_LEN,
+ * else null. Server actions are invocable by Next-Action id (not only through
+ * the trimming client form), so the cap belongs here, not just in the UI.
+ */
+function textTooLongError(field: string, value: string): ErrorResult | null {
+  if (value.length > MAX_TEXT_LEN) {
+    return { ok: false, error: `${field} is too long (${MAX_TEXT_LEN} character limit).` }
+  }
+  return null
+}
+
+/**
+ * Trims, drops blanks, per-element length-caps, and count-bounds a free-text
+ * list field (categories, genders, sizes, brand_slugs). The matching update
+ * actions (updateBrandCategories, updateProductList) already clean their input
+ * this way; the create paths did not, so the same column could be written
+ * un-cleaned depending on entry point. Sharing the rule keeps them from
+ * drifting. (An empty result is allowed — e.g. a product with no sizes is
+ * intentionally sold as "One Size" by the renderers.)
+ */
+function cleanStringList(values: unknown, maxLen = 80, maxCount = 200): string[] {
+  if (!Array.isArray(values)) return []
+  return values
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+    .filter((v) => v.length <= maxLen)
+    .slice(0, maxCount)
+}
+
+/**
+ * Builds the duplicate-key error for a soft-deletable entity. Soft delete keeps
+ * the row (is_active=false) with its unique key, and the dashboard only lists
+ * active rows with no reactivate UI — so recreating a previously-deleted
+ * brand/product/team member trips the unique constraint while the conflicting
+ * row is invisible. A bare "already exists" then looks wrong to the admin, so
+ * when the conflict is a hidden inactive row we point them at reactivation.
+ */
+async function duplicateMessage(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: string,
+  pkColumn: string,
+  pkValue: string,
+  noun: string,
+  identifier: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from(table)
+    .select("is_active")
+    .eq(pkColumn, pkValue)
+    .maybeSingle()
+  if (data && data.is_active === false) {
+    return `A ${noun} with ${identifier} was previously deleted and is hidden. Reactivate it from the Supabase Table Editor (set is_active = true) rather than recreating it.`
+  }
+  return `A ${noun} with ${identifier} already exists.`
+}
+
 /**
  * Inserts a row whose sort_order is assigned atomically by the
  * `assign_sort_order` trigger from migration 0006 (inserting NULL lets the
@@ -127,8 +191,13 @@ export async function createBrand(input: {
 }): Promise<CreateResult> {
   const name = (input.name ?? "").trim()
   if (!name) return { ok: false, error: "Brand name is required." }
+  const nameLen = textTooLongError("Brand name", name)
+  if (nameLen) return nameLen
   const slug = (input.slug?.trim() || slugify(name)).slice(0, 80)
   if (!slug) return { ok: false, error: "Could not derive a slug from the name." }
+  const description = input.description?.trim() || ""
+  const descLen = textTooLongError("Description", description)
+  if (descLen) return descLen
 
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
@@ -137,14 +206,14 @@ export async function createBrand(input: {
   const { error } = await insertWithAtomicSortOrder(supabase, "brands", {
     slug,
     name,
-    description: input.description?.trim() || null,
-    categories: input.categories ?? [],
+    description: description || null,
+    categories: cleanStringList(input.categories),
     featured: input.featured ?? false,
     is_active: true,
   })
   if (error) {
     if (isDuplicate(error)) {
-      return { ok: false, error: `A brand with slug "${slug}" already exists.` }
+      return { ok: false, error: await duplicateMessage(supabase, "brands", "slug", slug, "brand", `slug "${slug}"`) }
     }
     return adminActionError("Could not create the brand. Please try again.", error.message)
   }
@@ -270,6 +339,16 @@ export async function createProduct(input: {
   if (!sku) return { ok: false, error: "SKU is required." }
   if (!name) return { ok: false, error: "Product name is required." }
   if (!category) return { ok: false, error: "Category is required." }
+  const description = input.description?.trim() || ""
+  for (const [label, value] of [
+    ["SKU", sku],
+    ["Product name", name],
+    ["Category", category],
+    ["Description", description],
+  ] as const) {
+    const err = textTooLongError(label, value)
+    if (err) return err
+  }
 
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
@@ -279,10 +358,10 @@ export async function createProduct(input: {
     sku,
     name,
     category,
-    description: input.description?.trim() || null,
-    brand_slugs: input.brandSlugs ?? [],
-    genders: input.genders ?? [],
-    sizes: input.sizes ?? [],
+    description: description || null,
+    brand_slugs: cleanStringList(input.brandSlugs),
+    genders: cleanStringList(input.genders),
+    sizes: cleanStringList(input.sizes),
     min_qty: Math.max(1, Math.floor(input.minQty ?? 1)),
     deco_locations: [],
     deco_methods: [],
@@ -290,7 +369,7 @@ export async function createProduct(input: {
   })
   if (error) {
     if (isDuplicate(error)) {
-      return { ok: false, error: `A product with SKU "${sku}" already exists.` }
+      return { ok: false, error: await duplicateMessage(supabase, "products", "sku", sku, "product", `SKU "${sku}"`) }
     }
     return adminActionError("Could not create the product. Please try again.", error.message)
   }
@@ -484,17 +563,34 @@ export async function updateProductColour(input: {
     }
     update.hex = h
   }
-  if (Object.keys(update).length === 0) return { ok: true }
-
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
+  // Authorize BEFORE the empty-update early return (every other action in this
+  // file authorizes before any result), and treat a no-field update as an
+  // explicit validation error rather than a hollow ok:true.
+  if (Object.keys(update).length === 0) {
+    return { ok: false, error: "Nothing to update." }
+  }
   const { supabase } = adminResult
   const { data, error } = await supabase
     .from("product_colours")
     .update(update)
     .eq("id", input.id)
     .select("id")
-  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  if (error) {
+    // unique (product_sku, name) — surface the specific conflict like
+    // createProductColour does, instead of the masked generic message (a true
+    // duplicate never succeeds on retry).
+    if (isDuplicate(error)) {
+      return {
+        ok: false,
+        error: update.name
+          ? `Another colour on this product is already named "${update.name}".`
+          : "That colour name is already in use for this product.",
+      }
+    }
+    return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  }
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
@@ -530,14 +626,9 @@ export async function createProductImage(
 ): Promise<UploadResult> {
   if (!productSku) return { ok: false, error: "SKU is required." }
   if (!colourId) return { ok: false, error: "Colour is required." }
-  // Authorize BEFORE consuming the shared rate-limit budget: with the
-  // password gate enabled, unauthorized requests must not be able to
-  // exhaust the per-minute upload allowance for the real admin.
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
-  const rate = checkUploadRateLimit()
-  if (!rate.ok) return rate
 
   // Verify the colour actually belongs to this product before uploading.
   // The two FKs are independent (image → colour, image → product), so
@@ -557,6 +648,12 @@ export async function createProductImage(
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
+
+  // Consume a rate-limit slot only after auth + validation pass (auth still
+  // precedes it, so an unauthorized caller can't exhaust the allowance), so a
+  // rejected file doesn't burn the per-minute budget.
+  const rate = checkUploadRateLimit()
+  if (!rate.ok) return rate
 
   const safeSku = productSku.replace(/[^a-z0-9._-]/gi, "_").slice(0, 60)
   const storagePath = `product_image/${safeSku}-${Date.now()}.${ext}`
@@ -600,10 +697,21 @@ export async function createHeroSlide(input: {
 }): Promise<CreateResult> {
   const title = (input.title ?? "").trim()
   if (!title) return { ok: false, error: "Slide title is required." }
+  const subtitle = input.subtitle?.trim() || ""
+  const ctaText = input.ctaText?.trim() || ""
   const ctaUrl = input.ctaUrl?.trim() || null
-  // `(?!\/)` rejects protocol-relative `//host` URLs, which browsers treat
-  // as an external link to that host rather than a page on this site.
-  if (ctaUrl !== null && !/^(\/(?!\/)|https?:\/\/)/.test(ctaUrl)) {
+  for (const [label, value] of [
+    ["Slide title", title],
+    ["Subtitle", subtitle],
+    ["CTA button text", ctaText],
+    ["CTA URL", ctaUrl ?? ""],
+  ] as const) {
+    const err = textTooLongError(label, value)
+    if (err) return err
+  }
+  // Shared with the read-side guard in lib/supabase/data so the rule can't
+  // drift; rejects javascript:/protocol-relative //host (see lib/url-safety.ts).
+  if (ctaUrl !== null && !isSafeLinkTarget(ctaUrl)) {
     return {
       ok: false,
       error:
@@ -620,8 +728,8 @@ export async function createHeroSlide(input: {
     "hero_slides",
     {
       title,
-      subtitle: input.subtitle?.trim() || null,
-      cta_text: input.ctaText?.trim() || null,
+      subtitle: subtitle || null,
+      cta_text: ctaText || null,
       cta_url: ctaUrl,
       image_url: null,
       is_active: true,
@@ -745,6 +853,11 @@ export async function createSiteImage(input: {
   if (!/^[a-z0-9._-]+$/.test(key)) {
     return { ok: false, error: "Key may only contain lowercase letters, digits, dots, hyphens, and underscores." }
   }
+  // Cap the key length to match the slug convention (slugify().slice(0, 80))
+  // used by createBrand/createTeamMember; the key is the site_images PK.
+  if (key.length > 80) {
+    return { ok: false, error: "Key is too long (80 character limit)." }
+  }
   if (!label) return { ok: false, error: "Label is required." }
   if (label.length > 200) return { ok: false, error: "Label is too long (200 character limit)." }
 
@@ -855,6 +968,15 @@ export async function createTeamMember(input: {
   const role = (input.role ?? "").trim()
   if (!name) return { ok: false, error: "Name is required." }
   if (!role) return { ok: false, error: "Role is required." }
+  const description = input.description?.trim() || ""
+  for (const [label, value] of [
+    ["Name", name],
+    ["Role", role],
+    ["Description", description],
+  ] as const) {
+    const err = textTooLongError(label, value)
+    if (err) return err
+  }
   const slug = (input.slug?.trim() || slugify(name)).slice(0, 80)
   if (!slug) return { ok: false, error: "Could not derive a slug from the name." }
 
@@ -866,13 +988,13 @@ export async function createTeamMember(input: {
     slug,
     name,
     role,
-    description: input.description?.trim() || null,
+    description: description || null,
     image_url: null,
     is_active: true,
   })
   if (error) {
     if (isDuplicate(error)) {
-      return { ok: false, error: `A team member with slug "${slug}" already exists.` }
+      return { ok: false, error: await duplicateMessage(supabase, "team_members", "slug", slug, "team member", `slug "${slug}"`) }
     }
     return adminActionError("Could not create the team member. Please try again.", error.message)
   }
@@ -931,16 +1053,16 @@ export async function replaceTeamMemberImage(
   formData: FormData,
 ): Promise<UploadResult> {
   if (!slug) return { ok: false, error: "Missing slug." }
-  // Authorize BEFORE consuming the shared rate-limit budget (see
-  // createProductImage).
   const adminResult = await adminOrError()
   if (!adminResult.ok) return adminResult
   const { supabase } = adminResult
-  const rate = checkUploadRateLimit()
-  if (!rate.ok) return rate
   const validation = await validateImageUpload(formData.get("file"))
   if (!validation.ok) return { ok: false, error: validation.error }
   const { buffer, contentType, ext } = validation
+  // Consume a rate-limit slot only after auth + validation pass (auth still
+  // precedes it), so a rejected file doesn't burn the per-minute budget.
+  const rate = checkUploadRateLimit()
+  if (!rate.ok) return rate
 
   // Remember the old photo so it can be pruned once the row points at the
   // new one — replaced uploads shouldn't accumulate in storage forever.

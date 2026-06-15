@@ -316,6 +316,14 @@ export default async function AdminDashboardPage() {
     themeMissing ? null : themeRes.error,
   ].filter(Boolean) as Array<{ message: string }>
 
+  // Raw PostgREST/Postgres messages name tables, columns, and schema-cache
+  // internals; log them server-side (Vercel function logs) and show the admin a
+  // generic banner instead — the same masking adminActionError applies to the
+  // write paths.
+  if (errors.length > 0) {
+    for (const e of errors) console.error("[admin-dashboard] data load error:", e.message)
+  }
+
   const allSiteImages = (siteImagesRes.data as SiteImageRowRaw[] | null) ?? []
   const brands = (brandsRes.data as BrandRowRaw[] | null) ?? []
   const heroSlides = (heroSlidesRes.data as HeroSlideRowRaw[] | null) ?? []
@@ -326,19 +334,29 @@ export default async function AdminDashboardPage() {
   const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
   const themeRaw = (themeRes.data as SiteThemeRowRaw[] | null) ?? []
 
-  // Once team_members has rows (migration 0005), the public site reads the
-  // roster exclusively from that table: the site_images `team.<slug>` slots
-  // and the site_content `team.<slug>.*` overrides are dead inputs. Hide
-  // them so admins aren't offered editors that save successfully but change
-  // nothing — the Team tab is the live editor.
-  const teamTableLive = !teamMissing && teamRaw.length > 0
+  // Once migration 0005 is applied, the public site reads the roster
+  // exclusively from team_members — an empty table means "no team", NOT "fall
+  // back to the static roster" (see use-team-members.ts) — so the site_images
+  // `team.<slug>` slots and site_content `team.<slug>.*` overrides are dead
+  // inputs. Gate on the table EXISTING, not on it currently having active rows:
+  // if the admin soft-deletes every member, teamRaw is empty but the table is
+  // still the live source, and re-exposing those legacy editors would offer
+  // saves that change nothing. The Team tab is the live editor.
+  const teamTableLive = !teamMissing
 
   // Brand logos must always be edited through the Brand logos section
   // (target="brand"), which writes BOTH brands.logo_url and the legacy
   // site_images override. Listing the raw `brand.<slug>.logo` rows here too
   // let admins update only the override, silently desyncing the two stores.
+  const activeBrandSlugs = new Set(brands.map((b) => b.slug))
   const siteImages = allSiteImages.filter((row) => {
     if (/^brand\..+\.logo$/.test(row.key)) return false
+    // Drop the lifestyle backdrop slot of a soft-deleted brand: createBrand
+    // provisions `brand.<slug>.lifestyle` for every brand, softDeleteBrand
+    // leaves it behind, and /brands/<slug> 404s for inactive brands — so the
+    // slot would be an editable no-op. Mirrors the activeSkus product filter.
+    const lifestyle = /^brand\.(.+)\.lifestyle$/.exec(row.key)
+    if (lifestyle && !activeBrandSlugs.has(lifestyle[1])) return false
     if (teamTableLive && /^team\./.test(row.key)) return false
     return true
   })
@@ -636,12 +654,13 @@ export default async function AdminDashboardPage() {
 
       {errors.length > 0 ? (
         <div style={pageStyles.error}>
-          <strong>Some queries failed:</strong>
-          <ul>
-            {errors.map((e, i) => (
-              <li key={i}>{e.message}</li>
-            ))}
-          </ul>
+          <strong>Some data failed to load.</strong>
+          <p>
+            {errors.length === 1 ? "A query" : `${errors.length} queries`} returned
+            an error. The details were logged to the server (Vercel function
+            logs). Refresh to retry; if it persists, check the Supabase project
+            status and that the environment variables are set.
+          </p>
         </div>
       ) : null}
 

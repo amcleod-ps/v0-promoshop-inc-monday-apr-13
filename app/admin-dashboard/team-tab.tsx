@@ -325,6 +325,7 @@ function TeamMemberCard({ member }: { member: TeamMemberRow }) {
             <input
               type="file"
               accept="image/*"
+              aria-label={`Upload photo for ${savedName}`}
               disabled={isPending}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               style={styles.fileInput}

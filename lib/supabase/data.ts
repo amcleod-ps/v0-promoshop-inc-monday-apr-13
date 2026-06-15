@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { createClient } from "./server"
 import { withCacheBust } from "@/lib/cache-bust"
+import { isSafeLinkTarget } from "@/lib/url-safety"
 
 export interface SupabaseBrand {
   id: string
@@ -68,6 +69,12 @@ export const getHeroSlides = cache(async (): Promise<SupabaseHeroSlide[] | null>
   return data.map((row) => ({
     ...row,
     image_url: bustedUrl(row.image_url, row.updated_at),
+    // Re-validate the link target on read: the Supabase Table Editor bypasses
+    // the dashboard's write-side validation, and the homepage renders this
+    // value as an <a href>, so a stored `javascript:` URL would be clickable
+    // stored XSS. Drop anything that isn't a same-site path or http(s) URL —
+    // the slideshow already hides the CTA when cta_url is null.
+    cta_url: isSafeLinkTarget(row.cta_url) ? row.cta_url : null,
   }))
 })
 

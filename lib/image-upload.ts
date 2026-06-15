@@ -64,10 +64,25 @@ function sniffRasterType(buffer: ArrayBuffer): RasterType | null {
     return "image/webp"
   }
 
-  // AVIF: ISO-BMFF "ftyp" box at offset 4 with an "avif"/"avis" major brand.
+  // AVIF: ISO-BMFF "ftyp" box at offset 4 with an "avif"/"avis" brand in
+  // major_brand (bytes 8-11) OR the compatible_brands list (bytes 16+). Many
+  // real-world AVIFs carry major_brand "mif1"/"msf1" and list "avif" only as a
+  // compatible brand, so checking the major brand alone rejects valid files.
+  // The ftyp box-type guard is unchanged, so non-AVIF containers (mp4/mov with
+  // isom/mp42) still won't match.
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const brand = String.fromCharCode(b[8], b[9], b[10], b[11])
-    if (brand === "avif" || brand === "avis") return "image/avif"
+    const isAvifBrand = (off: number) => {
+      const brand = String.fromCharCode(b[off], b[off + 1], b[off + 2], b[off + 3])
+      return brand === "avif" || brand === "avis"
+    }
+    if (isAvifBrand(8)) return "image/avif" // major_brand
+    // Box size is bytes 0-3 big-endian; bound the compatible_brands scan by it
+    // (and by the buffer length) so we never read past the ftyp box.
+    const boxSize = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0
+    const end = Math.min(boxSize > 0 ? boxSize : b.length, b.length)
+    for (let off = 16; off + 4 <= end; off += 4) {
+      if (isAvifBrand(off)) return "image/avif" // compatible_brands
+    }
   }
 
   return null
