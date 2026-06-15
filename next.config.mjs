@@ -22,7 +22,17 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-].join('; ')
+  // No <object>/<embed>/<applet> plugins anywhere on the site — blocking them
+  // closes a legacy script-execution vector that default-src doesn't fully
+  // cover in older engines.
+  "object-src 'none'",
+  // Auto-upgrade any stray http:// subresource (e.g. an admin-pasted image
+  // URL) to https:// instead of failing it as mixed content. img-src already
+  // forbids plain http:, so this only ever helps. Production-only: in local
+  // dev the site is served over http://localhost and upgrading same-origin
+  // subresources to https would break the dev server.
+  process.env.NODE_ENV === 'production' ? "upgrade-insecure-requests" : '',
+].filter(Boolean).join('; ')
 
 const nextConfig = {
   // Server Actions cap inbound request bodies at 1 MB by default. The
@@ -51,6 +61,24 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Force HTTPS for two years (incl. subdomains). Vercel always serves
+          // the site over TLS, so this only hardens against SSL-strip / downgrade
+          // and accidental http:// links — it never locks out a reachable host.
+          // Add `; preload` and submit to hstspreload.org once the custom domain
+          // is final if you want it baked into browsers.
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          // Deny powerful browser APIs the site never uses, so injected/3rd-party
+          // code can't silently reach them.
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()',
+          },
+          // Isolate our top-level browsing context from cross-origin openers
+          // (XS-Leaks / tab-nabbing hardening). `-allow-popups` keeps any future
+          // popup-based flow working.
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          // No Flash/Acrobat cross-domain policy files are served; say so explicitly.
+          { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
         ],
       },
     ]

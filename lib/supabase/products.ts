@@ -61,6 +61,16 @@ function prettifySlug(slug: string): string {
     .join(" ")
 }
 
+// Sanitize-on-read for a colour swatch hex before it reaches the inline
+// `style={{ backgroundColor }}` sink. The dashboard validates #rrggbb on
+// write, but the Supabase Table Editor bypasses that, so re-check here and
+// fall back to a neutral grey for anything that isn't a CSS hex colour.
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/
+function safeHex(value: string | null | undefined): string {
+  const v = value?.trim()
+  return v && HEX_COLOR.test(v) ? v : "#cccccc"
+}
+
 /**
  * Fetches the active product catalog from Supabase, including colour
  * variants and their associated images. Each image URL is cache-busted
@@ -118,7 +128,7 @@ export const getAllProducts = cache(async (): Promise<Product[] | null> => {
           .filter((img) => img.colour_id === c.id)
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((img) => withCacheBust(img.url, img.updated_at))
-        return { name: c.name, hex: c.hex, images }
+        return { name: c.name, hex: safeHex(c.hex), images }
       })
 
     return {

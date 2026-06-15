@@ -34,6 +34,20 @@ flat config) is restored and passing** — run both before pushing.
 > `docs/launch-review-2026-06-13.md`. Remaining items are decision points
 > (see that report) — chiefly the admin-gate env var and the merge approval.
 
+> **Update 2026-06-15 — intensive security review (branch `security-review-jun15`).**
+> Full-surface pass (scope excluded login/OAuth/DB/password setup per request).
+> App code held up: no XSS/SQLi/IDOR/RLS/secret findings. Fixed in-branch
+> (defense-in-depth + headers): sanitize-on-read for `brands.website_url` (latent
+> open-redirect) and `hero_slides.bg_color` / `product_colours.hex` (CSS sinks);
+> guarded the admin `image-row.tsx` "open in new tab" href; added HSTS,
+> Permissions-Policy, COOP, X-Permitted-Cross-Domain-Policies, and CSP
+> `object-src 'none'` + prod-only `upgrade-insecure-requests`.
+> **ONE maintainer action outstanding (🔴 HIGH):** `next@16.2.0` matches **14
+> OSV advisories** (incl. HIGH middleware/proxy-bypass that touches the admin
+> gate, + SSRF/DoS). Couldn't auto-bump (no Node/pnpm in that session). Run
+> `pnpm up next@16.2.9 && pnpm build && pnpm lint` — 16.2.9 is clean. Full
+> report: `docs/security-review-2026-06-15.md`.
+
 ## ✅ Done & merged to `main`
 **PR #13** (merge `6096c18`):
 - **`CLAUDE.md`** — architecture & conventions; **`docs/promoshop-research.md`** — deep-research dossier.
