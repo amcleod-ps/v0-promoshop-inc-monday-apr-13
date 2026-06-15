@@ -37,6 +37,15 @@ function bustedUrl(url: string | null | undefined, updatedAt: string): string | 
   return withCacheBust(url, updatedAt)
 }
 
+// Sanitize-on-read for a stored colour value before it reaches a CSS sink.
+// The Supabase Table Editor bypasses the dashboard's #rrggbb validation, so a
+// crafted bg_color must be re-checked here (mirrors safeThemeValue in theme.ts).
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/
+function safeHexColor(value: string | null | undefined): string | null {
+  const v = value?.trim()
+  return v && HEX_COLOR.test(v) ? v : null
+}
+
 async function maybeClient() {
   try {
     return await createClient()
@@ -75,6 +84,9 @@ export const getHeroSlides = cache(async (): Promise<SupabaseHeroSlide[] | null>
     // stored XSS. Drop anything that isn't a same-site path or http(s) URL —
     // the slideshow already hides the CTA when cta_url is null.
     cta_url: isSafeLinkTarget(row.cta_url) ? row.cta_url : null,
+    // Same rationale for the slide background: drop any non-hex value so a
+    // Table-Editor-set bg_color can't push junk into the inline `style`.
+    bg_color: safeHexColor(row.bg_color),
   }))
 })
 
@@ -96,6 +108,11 @@ export const getSupabaseBrands = cache(async (): Promise<SupabaseBrand[] | null>
   return data.map((row) => ({
     ...row,
     logo_url: bustedUrl(row.logo_url, row.updated_at),
+    // website_url is the last stored *_url that isn't yet rendered into an
+    // href, but the moment a "Visit site" link is wired up a Table-Editor-set
+    // `javascript:`/`//evil.com` value becomes clickable XSS / open redirect.
+    // Sanitize on read now so that future renderer can't reintroduce the hole.
+    website_url: isSafeLinkTarget(row.website_url) ? row.website_url : null,
   }))
 })
 
@@ -130,6 +147,8 @@ export const getSupabaseBrandBySlug = cache(async (slug: string): Promise<Supaba
     brand: {
       ...data,
       logo_url: bustedUrl(data.logo_url, data.updated_at),
+      // Same sanitize-on-read guard as getSupabaseBrands (see note there).
+      website_url: isSafeLinkTarget(data.website_url) ? data.website_url : null,
     },
   }
 })

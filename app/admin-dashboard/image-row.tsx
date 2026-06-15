@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react"
 import { removeImage, replaceImage, type ReplaceTarget } from "./actions"
 import { updateImageFit } from "./create-actions"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
+import { isSafeLinkTarget } from "@/lib/url-safety"
 
 interface ImageRowProps {
   target: ReplaceTarget
@@ -248,11 +249,16 @@ export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, current
 
         {fitSlot ? <ImageFitControl slot={fitSlot} initial={currentFit} /> : null}
 
-        {previewUrl ? (
+        {previewUrl && isSafeLinkTarget(previewUrl) ? (
+          // Guard the href: site_images.url can be set via the Supabase Table
+          // Editor (bypassing upload validation), so a stored `javascript:` /
+          // `data:text/html` value would otherwise be a clickable link right
+          // here in the dashboard. Only render the link for http(s)/relative
+          // targets; the <img> preview above is inert for those schemes anyway.
           <a
             href={previewUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             style={styles.link}
           >
             Open this image in a new tab
