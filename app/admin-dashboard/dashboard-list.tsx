@@ -178,7 +178,14 @@ export function DashboardList({
     [heroSlides, match],
   )
   const filteredBrandsText = useMemo(
-    () => brands.filter((b) => match(b.name) || match(b.slug) || match(b.description)),
+    () =>
+      brands.filter(
+        (b) =>
+          match(b.name) ||
+          match(b.slug) ||
+          match(b.description) ||
+          match((b.categories ?? []).join(" ")),
+      ),
     [brands, match],
   )
 
@@ -193,18 +200,19 @@ export function DashboardList({
 
   return (
     <>
-      <div style={styles.tabs}>
-        <TabButton label="Images" active={tab === "images"} onClick={() => setTab("images")} />
-        <TabButton label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
-        <TabButton label="Products" active={tab === "products"} onClick={() => setTab("products")} />
-        <TabButton label="Team" active={tab === "team"} onClick={() => setTab("team")} />
-        <TabButton label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
+      <div style={styles.tabs} role="tablist" aria-label="Dashboard sections">
+        <TabButton tabKey="images" label="Images" active={tab === "images"} onClick={() => setTab("images")} />
+        <TabButton tabKey="text" label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
+        <TabButton tabKey="products" label="Products" active={tab === "products"} onClick={() => setTab("products")} />
+        <TabButton tabKey="team" label="Team" active={tab === "team"} onClick={() => setTab("team")} />
+        <TabButton tabKey="theme" label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
       </div>
 
       {showSearch ? (
         <div style={styles.searchWrap}>
           <input
             type="text"
+            aria-label={tab === "images" ? "Search images" : "Search text content"}
             placeholder={
               tab === "images"
                 ? "Search images by name, SKU, or label…"
@@ -228,7 +236,7 @@ export function DashboardList({
       ) : null}
 
       {tab === "images" ? (
-        <>
+        <div role="tabpanel" id="panel-images" aria-labelledby="tab-images">
           <Section
             title={`Site images${needle ? ` (${filteredSiteImages.length})` : ` (${siteImages.length})`}`}
             description="Site logo, About-page hero, and brand lifestyle backdrops. Brand logos live in the next section (so both stores stay in sync) and team photos are edited on the Team tab."
@@ -317,11 +325,11 @@ export function DashboardList({
               or click <em>Clear</em> to show everything.
             </p>
           ) : null}
-        </>
+        </div>
       ) : null}
 
       {tab === "text" ? (
-        <>
+        <div role="tabpanel" id="panel-text" aria-labelledby="tab-text">
           {Array.from(contentByGroup.entries()).map(([group, entries]) => (
             <Section
               key={group}
@@ -471,7 +479,7 @@ export function DashboardList({
                   />
                   <DeleteEntityButton
                     label={`Remove brand "${brand.name}" from the public site`}
-                    confirmMessage={`Remove brand "${brand.name}"? It will disappear from the brands listing and logo scroll. Products still tagged with this brand are not affected.`}
+                    confirmMessage={`Remove brand "${brand.name}"? It will disappear from the brands listing and logo scroll. Products tagged with this brand stay in the catalog, but will show a derived brand label until you reassign or rename them.`}
                     onDelete={() => softDeleteBrand(brand.slug)}
                   />
                 </div>
@@ -485,40 +493,48 @@ export function DashboardList({
               or click <em>Clear</em> to show everything.
             </p>
           ) : null}
-        </>
+        </div>
       ) : null}
 
       {tab === "products" ? (
-        <ProductsTab
-          products={productRows}
-          brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
-        />
+        <div role="tabpanel" id="panel-products" aria-labelledby="tab-products">
+          <ProductsTab
+            products={productRows}
+            brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
+          />
+        </div>
       ) : null}
 
       {tab === "team" ? (
-        teamTableMissing ? (
-          <MigrationGuard migration="0005_team_and_theme.sql" feature="Team editor" />
-        ) : (
-          <TeamTab members={team} />
-        )
+        <div role="tabpanel" id="panel-team" aria-labelledby="tab-team">
+          {teamTableMissing ? (
+            <MigrationGuard migration="0005_team_and_theme.sql" feature="Team editor" />
+          ) : (
+            <TeamTab members={team} />
+          )}
+        </div>
       ) : null}
 
       {tab === "theme" ? (
-        themeTableMissing ? (
-          <MigrationGuard migration="0005_team_and_theme.sql" feature="Theme editor" />
-        ) : (
-          <ThemeTab entries={theme} />
-        )
+        <div role="tabpanel" id="panel-theme" aria-labelledby="tab-theme">
+          {themeTableMissing ? (
+            <MigrationGuard migration="0005_team_and_theme.sql" feature="Theme editor" />
+          ) : (
+            <ThemeTab entries={theme} />
+          )}
+        </div>
       ) : null}
     </>
   )
 }
 
 function TabButton({
+  tabKey,
   label,
   active,
   onClick,
 }: {
+  tabKey: string
   label: string
   active: boolean
   onClick: () => void
@@ -526,6 +542,10 @@ function TabButton({
   return (
     <button
       type="button"
+      role="tab"
+      id={`tab-${tabKey}`}
+      aria-selected={active}
+      aria-controls={`panel-${tabKey}`}
       onClick={onClick}
       style={{
         ...styles.tabButton,

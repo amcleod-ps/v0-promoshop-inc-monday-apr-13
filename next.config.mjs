@@ -26,13 +26,20 @@ const contentSecurityPolicy = [
 
 const nextConfig = {
   // Server Actions cap inbound request bodies at 1 MB by default. The
-  // /admin-dashboard image uploader documents and validates a 10 MB
+  // /admin-dashboard image uploader documents and validates a 10 MB content
   // limit; without this override Next.js silently rejects anything over
   // 1 MB and the user sees a generic "This page couldn't load" screen
   // instead of the friendly error from our action.
+  //
+  // The limit is 11 MB, deliberately ABOVE MAX_IMAGE_BYTES (10 MB): a Server
+  // Action ships the file as multipart/form-data, so the encoded body is the
+  // raw bytes PLUS boundary/header framing. At an exactly-10 MB limit a file at
+  // the cap passes our size checks but its envelope tips the body over the
+  // transport limit, falling through to the generic transport error our
+  // validation exists to avoid. The 1 MB of headroom absorbs the envelope.
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb',
+      bodySizeLimit: '11mb',
     },
   },
   async headers() {

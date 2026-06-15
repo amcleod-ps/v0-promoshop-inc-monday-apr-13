@@ -191,6 +191,7 @@ export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, current
           <input
             type="file"
             accept="image/*"
+            aria-label={`Replace image for ${label}`}
             disabled={isPending}
             onChange={handleFile}
             style={styles.fileInput}
