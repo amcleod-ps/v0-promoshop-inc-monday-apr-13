@@ -46,6 +46,10 @@ export default async function AboutPage() {
                 defaultSrc={ABOUT_CONTENT.hero.image}
                 alt={ABOUT_CONTENT.hero.imageAlt}
                 fill
+                // Half-column hero; 1500w covers it at 2x without over-fetching
+                // on this priority/LCP image. Raises a low-`format=` Squarespace
+                // override so it isn't served small and upscaled soft.
+                minSrcWidth={1500}
                 className={imageFitClass(heroFit)}
                 priority
               />

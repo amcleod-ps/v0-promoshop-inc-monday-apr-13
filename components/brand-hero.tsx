@@ -35,6 +35,10 @@ export function BrandHero({ brand }: Props) {
           aria-hidden="true"
           width={1600}
           height={600}
+          // Full-bleed backdrop spanning the page container — request
+          // Squarespace's largest cached size so an admin-set low-`format=`
+          // URL renders sharp on a high-DPI screen instead of upscaled soft.
+          minSrcWidth={2500}
           className={`absolute inset-0 w-full h-full ${imageFitClass(lifestyleFit)}`}
           unoptimized
         />
