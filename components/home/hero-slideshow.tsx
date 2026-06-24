@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
 import { useImageSrc } from "@/hooks/use-image-src"
 import { useSiteImageAlt } from "@/components/site-images-provider"
+import { withMinImageWidth } from "@/lib/image-resolution"
 
 export interface HeroSlide {
   src: string
@@ -43,7 +44,11 @@ function Slide({
   // When the override swaps the image, the original slide's alt text would
   // describe the wrong picture — prefer the override row's alt_text.
   const overrideAlt = useSiteImageAlt(`home.slideshow.${slideIndex}`)
-  const src = overrideSrc || slide.src
+  // Raise the Squarespace resolution hint for this large hero so a low
+  // `format=` slide image (seeded or admin-set) isn't served small and
+  // upscaled soft. No-ops on the seeded local PNGs and Storage uploads, and
+  // preserves the empty-string sentinel that hides an image-less slide below.
+  const src = withMinImageWidth(overrideSrc || slide.src, 1500)
   const alt = overrideSrc ? (overrideAlt ?? slide.alt) : slide.alt
   const showCta = !!(slide.cta_text && slide.cta_url)
 
