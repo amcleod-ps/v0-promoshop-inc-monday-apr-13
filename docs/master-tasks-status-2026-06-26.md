@@ -112,13 +112,17 @@ Plus the **Priority 2 grounded leads** and **Priority 5 accessibility** items �
 
 ## 4. Still open — NET-NEW FEATURE BUILDS (the client priorities)
 
-- **Priority 2 — mostly DONE.** Product **edit** UI exists (name/category/
-  description/sizes/genders/min-qty/order + per-colour editor), M2 "no sizes"
-  fixed, L4 empty-fallback documented & surfaced, **Save-button overlap fixed**
-  (`products-tab.tsx:971-975`). **Remaining:** (a) **rich-text formatting**
-  controls for copy — not built; needs the agreed control set (bold/italic/
-  headings/links/lists) then build; (b) **image *size* control** — today only
-  cover/contain fit + swap exist, not dimension control.
+- **Priority 2 — DONE** (as of the `claude/new-session-9ur47b` work). Product
+  **edit** UI exists (name/category/description/sizes/genders/min-qty/order +
+  per-colour editor), M2 "no sizes" fixed, L4 empty-fallback documented &
+  surfaced, **Save-button overlap fixed** (`products-tab.tsx:971-975`). Newly
+  built: (a) **image size control** — `lib/image-size.ts` adds a per-slot
+  Smaller/Default/Larger control (logo today), mirroring image-fit; (b)
+  **text formatting** — `lib/rich-text.tsx` renders a safe `**bold**` /
+  `*italic*` / `[link](url)` subset, adopted on the About body + footer
+  tagline/ADA notice. **Open decision for Victor:** confirm the formatting
+  control set (block controls like headings/lists deliberately withheld to
+  protect the a11y heading order).
 - **Priority 3 — partly scaffolded, mostly new.** The US/CA **LocaleToggle is
   now live** in the header (desktop + mobile, `aria-pressed`) and `t()` has real
   call sites — so the "switched-off mechanism" is already reused and on, and the

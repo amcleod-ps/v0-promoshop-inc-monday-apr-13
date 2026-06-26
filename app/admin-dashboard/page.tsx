@@ -613,11 +613,21 @@ export default async function AdminDashboardPage() {
             Hero slides, the About-page hero, and brand lifestyle backdrops
             also offer an <strong>Image display</strong> choice: fill the frame
             (crops to fit) or show the whole image (no cropping) — use the
-            second for logos and tall or wide artwork.
+            second for logos and tall or wide artwork. The <strong>Site logo</strong>{" "}
+            adds a <strong>Display size</strong> choice (Smaller / Default /
+            Larger) that scales it in both the header and footer.
           </li>
           <li>
             Text fields left blank fall back to the site&apos;s built-in copy,
             shown in the field&apos;s hint.
+          </li>
+          <li>
+            A few long-form fields — the <strong>About</strong> story
+            paragraphs, the footer <strong>tagline</strong>, and the{" "}
+            <strong>accessibility notice</strong> — support light formatting:
+            type <code>**bold**</code>, <code>*italic*</code>, or{" "}
+            <code>[link text](https://example.com)</code>. Other fields show
+            those characters as-is.
           </li>
           <li>
             In the <strong>Theme</strong> tab, pick a new colour and click

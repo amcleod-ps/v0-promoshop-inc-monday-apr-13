@@ -8,6 +8,7 @@ import { HOME_CONTENT } from "@/lib/cms/home"
 import { useSiteText, useSiteContentMap } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
 import { imageSizeKey, normalizeImageSize, pickBySize } from "@/lib/image-size"
+import { renderInlineMarkdown } from "@/lib/rich-text"
 
 export function Footer() {
   const { config } = useLocale()
@@ -71,7 +72,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-sm font-visby text-[#555] leading-relaxed mb-6">
-              {tagline}
+              {renderInlineMarkdown(tagline)}
             </p>
 
             {/* Newsletter: the previous inline form was never wired to a
@@ -163,7 +164,7 @@ export function Footer() {
         {/* ADA Compliance */}
         <div className="mt-8 p-4 bg-[#f3fafd] border border-[#bde7ff] rounded-lg">
           <p className="text-xs text-[#555] font-visby leading-relaxed">
-            <strong className="text-[#222]">ADA Compliance:</strong> {adaNotice}
+            <strong className="text-[#222]">ADA Compliance:</strong> {renderInlineMarkdown(adaNotice)}
           </p>
         </div>
 

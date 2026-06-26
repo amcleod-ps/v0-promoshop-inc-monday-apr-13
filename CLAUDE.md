@@ -91,6 +91,17 @@ Conventions when extending this:
   back to the compiled-in copy. Components read the same key with
   `textFallback(key)` as the fallback so registry and renderer can't drift —
   add new always-editable strings there, not as bare literals.
+- **Inline copy formatting**: `lib/rich-text.tsx` renders a SMALL, XSS-safe
+  subset of Markdown — `**bold**`, `*italic*`/`_italic_`, `[text](url)` — to
+  React nodes (never `dangerouslySetInnerHTML`; link targets gated through
+  `isSafeLinkTarget`, so a Table-Editor value can't inject markup). It is
+  *opt-in per slot*: a renderer calls `renderInlineMarkdown(value)` (inline,
+  caller owns the `<p>`) or `<RichText value>` (multi-line). Adopted so far on
+  the About body paragraphs (`app/about/page.tsx`) and the footer tagline + ADA
+  notice; other slots stay literal until their renderer opts in (so `**` in a
+  CTA label shows as asterisks). Block controls (headings/lists) are
+  deliberately withheld — admin headings would break the a11y heading order.
+  This default control set is pending Victor's confirmation.
 - **Image display mode (cover/contain)**: `lib/image-fit.ts`. Placements with
   a fixed-aspect frame (hero slides, `about.hero`, brand lifestyle backdrops)
   read a `site_content` row keyed `image-fit.<slot>` (slot = `hero_slide.<id>`

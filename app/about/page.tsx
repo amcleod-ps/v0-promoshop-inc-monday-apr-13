@@ -7,6 +7,7 @@ import { SiteImage } from "@/components/site-image"
 import { TeamSection } from "@/components/team-section"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 import { imageFitClass, imageFitKey, normalizeImageFit } from "@/lib/image-fit"
+import { renderInlineMarkdown } from "@/lib/rich-text"
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -66,7 +67,7 @@ export default async function AboutPage() {
               <div className="space-y-4">
                 {body.map((paragraph, i) => (
                   <p key={i} className="text-lg text-[#aaa] leading-relaxed font-visby">
-                    {paragraph}
+                    {renderInlineMarkdown(paragraph)}
                   </p>
                 ))}
               </div>
