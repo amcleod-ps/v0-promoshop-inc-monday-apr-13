@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import {
   addCollectionProduct,
   createCollection,
+  exportCollectionData,
   removeCollectionProduct,
   softDeleteCollection,
   updateCollectionFilter,
@@ -14,6 +15,7 @@ import {
 import { TextRow } from "./text-row"
 import { parseRequiredNumber } from "./parse-required-number"
 import { parseTagInput } from "@/lib/tags"
+import { downloadCollection, EXPORT_FORMATS, type ExportFormat } from "@/lib/collection-export"
 
 export interface ProductOption {
   sku: string
@@ -178,9 +180,12 @@ function CollectionCard({
     <div style={styles.card}>
       <div style={styles.cardHead}>
         <strong style={styles.cardTitle}>{collection.name}</strong>
-        <a href={`/collections/${collection.slug}`} target="_blank" rel="noopener noreferrer" style={styles.link}>
-          View public page ↗
-        </a>
+        <div style={styles.cardHeadActions}>
+          <a href={`/collections/${collection.slug}`} target="_blank" rel="noopener noreferrer" style={styles.link}>
+            View public page ↗
+          </a>
+          <ExportMenu slug={collection.slug} />
+        </div>
       </div>
 
       <TextRow source="custom" idLabel={`collection:${collection.id}:name`} label="Name" currentValue={collection.name} onSave={(v) => updateCollectionText(collection.id, "name", v)} />
@@ -215,6 +220,57 @@ function CollectionCard({
         </button>
         {status ? <span style={styles.status}>{status}</span> : null}
       </div>
+    </div>
+  )
+}
+
+function ExportMenu({ slug }: { slug: string }) {
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState("")
+
+  const choose = (format: ExportFormat) => {
+    setOpen(false)
+    setError("")
+    startTransition(async () => {
+      try {
+        const r = await exportCollectionData(slug)
+        if (r.ok) {
+          downloadCollection(r.payload, format)
+        } else {
+          setError(r.error)
+        }
+      } catch {
+        setError("Export failed. Check your connection and try again.")
+      }
+    })
+  }
+
+  return (
+    <div style={styles.exportWrap}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Export collection"
+        disabled={isPending}
+        style={styles.dotsBtn}
+        title="Export collection"
+      >
+        {isPending ? "…" : "⋯"}
+      </button>
+      {open ? (
+        <div role="menu" style={styles.menu}>
+          <div style={styles.menuHead}>Export for Mailchimp</div>
+          {EXPORT_FORMATS.map(({ format, label }) => (
+            <button key={format} role="menuitem" type="button" onClick={() => choose(format)} style={styles.menuItem}>
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {error ? <span style={{ ...styles.status, color: "#b00020" }}>{error}</span> : null}
     </div>
   )
 }
@@ -320,7 +376,13 @@ const styles: Record<string, React.CSSProperties> = {
   status: { fontSize: 13, marginLeft: 8 },
   card: { border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "#fff", display: "flex", flexDirection: "column", gap: 10 },
   cardHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" },
+  cardHeadActions: { display: "flex", alignItems: "center", gap: 12 },
   cardTitle: { fontSize: 16 },
+  exportWrap: { position: "relative", display: "inline-flex", alignItems: "center", gap: 6 },
+  dotsBtn: { width: 30, height: 30, lineHeight: "28px", padding: 0, border: "1px solid #ddd", borderRadius: 6, background: "#fff", color: "#333", fontSize: 18, cursor: "pointer" },
+  menu: { position: "absolute", top: 34, right: 0, zIndex: 10, minWidth: 180, background: "#fff", border: "1px solid #ddd", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 6, display: "flex", flexDirection: "column", gap: 2 },
+  menuHead: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#888", padding: "4px 8px" },
+  menuItem: { textAlign: "left", padding: "7px 8px", border: "none", borderRadius: 6, background: "transparent", color: "#1a1a1a", fontSize: 13, cursor: "pointer" },
   cardFoot: { display: "flex", alignItems: "center", gap: 8, marginTop: 4, paddingTop: 10, borderTop: "1px solid #eee" },
   section: { border: "1px solid #eee", borderRadius: 6, padding: 12, display: "flex", flexDirection: "column", gap: 8, background: "#fafafa" },
   sectionLabel: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#666" },

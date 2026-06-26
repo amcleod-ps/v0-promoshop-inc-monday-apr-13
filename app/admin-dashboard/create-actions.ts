@@ -9,6 +9,9 @@ import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
 import { imageSizeKey } from "@/lib/image-size"
 import { normalizeTagList } from "@/lib/tags"
+import { getCollectionWithProducts } from "@/lib/supabase/collections"
+import { SITE_URL } from "@/lib/site-url"
+import type { ExportPayload, ExportRow } from "@/lib/collection-export"
 import { adminActionError } from "@/lib/admin-error"
 import { isSafeLinkTarget } from "@/lib/url-safety"
 
@@ -1008,6 +1011,43 @@ export async function removeCollectionProduct(collectionId: string, sku: string)
   if (error) return adminActionError("Could not remove the product. Please try again.", error.message)
   bumpCaches()
   return { ok: true }
+}
+
+/**
+ * Resolves a collection to a flat ExportPayload (one row per product, absolute
+ * links, real brand names + image URLs) for the dashboard's export menu. Reads
+ * only public collection/product data via the shared public resolver, so it's
+ * not admin-gated — it returns exactly what the public /collections page shows.
+ */
+export async function exportCollectionData(
+  slug: string,
+): Promise<{ ok: true; payload: ExportPayload } | ErrorResult> {
+  if (!slug) return { ok: false, error: "Missing collection." }
+  const data = await getCollectionWithProducts(slug)
+  if (!data) return { ok: false, error: "Collection not found (or not yet migrated)." }
+  const { collection, products } = data
+  const link = `${SITE_URL}/collections/${collection.slug}`
+  const rows: ExportRow[] = products.map((p) => ({
+    name: p.name,
+    sku: p.sku,
+    brand: p.brands.join(", "),
+    category: p.category,
+    description: p.description ?? "",
+    minQty: p.minQty,
+    sizes: p.sizes.join(", "),
+    colours: p.colours.map((c) => c.name).join(", "),
+    imageUrl: p.colours[0]?.images[0] ?? "",
+    link,
+  }))
+  return {
+    ok: true,
+    payload: {
+      name: collection.name,
+      slug: collection.slug,
+      description: collection.description ?? "",
+      rows,
+    },
+  }
 }
 
 // ===========================================================================

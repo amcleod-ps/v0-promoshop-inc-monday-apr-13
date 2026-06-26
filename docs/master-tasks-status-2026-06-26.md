@@ -137,11 +137,21 @@ Plus the **Priority 2 grounded leads** and **Priority 5 accessibility** items �
   with Victor):** soft-prioritize (not hard-filter); a product is "marked"
   US/CA by tagging it `canada`/`usa`. **Still minor:** route the last hard-coded
   spellings (`StudioClient.tsx`, `my-quote-client.tsx`) through `t()`.
-- **Priority 4 — NEW BUILD, not started.** Footer "Collections" is no longer
-  fake (M21 FIXED: real category deep-links), but the actual feature — public
-  Collections page, dashboard collection builder, and the three-dots **Export**
-  (PDF/XLSX/CSV/TXT/MD) for Mailchimp — does not exist yet. Depends on the
-  Part B Mailchimp research.
+- **Priority 4 — BUILT** on `claude/new-session-9ur47b`. Migration `0010` adds
+  `collections` + `collection_products`. Public: a "Collection" nav link, an
+  editorial `/collections` index and `/collections/[slug]` detail (reusing the
+  Studio card + modal), in the sitemap. Dashboard: a Collections tab to create/
+  edit collections, hand-pick products AND set a saved filter (tags/category) —
+  the "both" model. Export: a three-dots menu per collection offering CSV, Excel
+  (.xls SpreadsheetML, dep-free), Markdown, plain text, HTML, and PDF (via the
+  browser's print-to-PDF) — built from one canonical row shape resolved server-
+  side. **Part B research done** (`docs/mailchimp-export-findings.md`): Mailchimp
+  has no file→campaign import, so the export is a flexible brief; **HTML added**
+  beyond the five named formats as the closest path to pasteable campaign
+  content. **Decisions for Victor:** collection = both hand-picked + saved
+  filter; nav label is "Collection"; XLSX ships as Excel-XML (.xls) and PDF via
+  print to avoid heavy admin-bundle deps — a true binary .xlsx/.pdf can be added
+  with a library if required.
 - **Priority 5 — accessibility largely DONE.** B5 (real dialogs), M13–M20
   (keyboard, labels, live regions, autocomplete, headings, CMS logo) all FIXED;
   the selected-filter left-bar is now consistent. **Remaining:** CTA contrast
