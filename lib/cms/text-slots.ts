@@ -125,6 +125,24 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
     label: "Footer 'Contact Us' column heading",
     fallback: "Contact Us",
   },
+
+  // --- Collections page ---------------------------------------------------
+  {
+    key: "collections.page.eyebrow",
+    label: "Collections page eyebrow (small line above the heading)",
+    fallback: "Curated by PromoShop",
+  },
+  {
+    key: "collections.page.heading",
+    label: "Collections page heading",
+    fallback: "Collections",
+  },
+  {
+    key: "collections.page.body",
+    label: "Collections page intro paragraph",
+    fallback: "Thoughtfully grouped merchandise — ready to brief, gift, or build a campaign around.",
+    multiline: true,
+  },
 ]
 
 const SLOTS_BY_KEY = new Map(EXTRA_TEXT_SLOTS.map((slot) => [slot.key, slot]))

@@ -212,14 +212,17 @@ fails the submission; with the vars unset it silently no-ops).
 - `next/image` runs with `unoptimized: true` globally; new external image hosts
   must be added to `images.remotePatterns` in `next.config.mjs`.
 - Migrations in `supabase/migrations/` are applied **in order, by hand** via the
-  Supabase SQL Editor (0001 → 0009). There are nine; 0004 adds `site_content`,
+  Supabase SQL Editor (0001 → 0010). There are ten; 0004 adds `site_content`,
   0005 adds `team_members` + `site_theme`, 0006 adds the `assign_sort_order`
   insert triggers the dashboard's create actions rely on for race-free
   ordering (they fall back to read-max+1 without it), 0007 adds
   `quote_requests` CHECK length constraints backstopping direct PostgREST
   inserts, 0008 forces server-side timestamps on `quote_requests` inserts
-  (plus a guarded seeded-copy fix), and 0009 adds the `products.tags` column
-  (US/Canada toggle + forgiving filter tags, Priority 3). 0003 is reseed-safe:
+  (plus a guarded seeded-copy fix), 0009 adds the `products.tags` column
+  (US/Canada toggle + forgiving filter tags, Priority 3), and 0010 adds
+  `collections` + `collection_products` (Priority 4 Collections; reads in
+  `lib/supabase/collections.ts` are defensive so the site is unaffected until
+  it's applied). 0003 is reseed-safe:
   conflicts are DO NOTHING / no-op, so re-running never overwrites admin edits.
   **Resilience contract:** code that reads a column added by a not-yet-applied
   migration must do so in a SEPARATE query that fails soft (see

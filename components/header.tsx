@@ -18,6 +18,7 @@ const navigation = [
   { name: "Brands", href: "/brands" },
   { name: "START MY QUOTE", href: "/my-quote" },
   { name: "About", href: "/about" },
+  { name: "Collection", href: "/collections" },
 ]
 
 // Module-level (not defined inside Header's render) so React keeps a stable
