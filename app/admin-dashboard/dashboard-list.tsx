@@ -10,6 +10,7 @@ import {
 } from "./create-forms"
 import { ProductsTab, type ProductRow } from "./products-tab"
 import { TeamTab, type TeamMemberRow } from "./team-tab"
+import { CollectionsTab, type CollectionAdminRow, type ProductOption } from "./collections-tab"
 import { ThemeTab, type ThemeEntry } from "./theme-tab"
 import {
   softDeleteBrand,
@@ -87,9 +88,12 @@ interface Props {
   /** Current sm/md/lg display-size choice per size slot (see
    *  lib/image-size.ts), keyed by slot (`site.logo`). */
   imageSizes: Record<string, string>
+  collections: CollectionAdminRow[]
+  collectionsTableMissing: boolean
+  allProductOptions: ProductOption[]
 }
 
-type Tab = "images" | "text" | "products" | "team" | "theme"
+type Tab = "images" | "text" | "products" | "collections" | "team" | "theme"
 
 export function DashboardList({
   siteImages,
@@ -104,6 +108,9 @@ export function DashboardList({
   themeTableMissing,
   imageFits,
   imageSizes,
+  collections,
+  collectionsTableMissing,
+  allProductOptions,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -208,6 +215,7 @@ export function DashboardList({
         <TabButton tabKey="images" label="Images" active={tab === "images"} onClick={() => setTab("images")} />
         <TabButton tabKey="text" label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
         <TabButton tabKey="products" label="Products" active={tab === "products"} onClick={() => setTab("products")} />
+        <TabButton tabKey="collections" label="Collections" active={tab === "collections"} onClick={() => setTab("collections")} />
         <TabButton tabKey="team" label="Team" active={tab === "team"} onClick={() => setTab("team")} />
         <TabButton tabKey="theme" label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
       </div>
@@ -507,6 +515,16 @@ export function DashboardList({
             products={productRows}
             brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
           />
+        </div>
+      ) : null}
+
+      {tab === "collections" ? (
+        <div role="tabpanel" id="panel-collections" aria-labelledby="tab-collections">
+          {collectionsTableMissing ? (
+            <MigrationGuard migration="0010_collections.sql" feature="Collections editor" />
+          ) : (
+            <CollectionsTab collections={collections} allProducts={allProductOptions} />
+          )}
         </div>
       ) : null}
 

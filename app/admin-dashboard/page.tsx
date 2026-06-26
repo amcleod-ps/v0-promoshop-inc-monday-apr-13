@@ -345,6 +345,30 @@ export default async function AdminDashboardPage() {
           normalizeTagList(r.tags ?? []),
         ]),
   )
+
+  // Collections + their hand-picked products (migration 0010). Read separately
+  // and tolerant of the tables being absent so the dashboard works before 0010
+  // is applied — the Collections tab then shows a MigrationGuard.
+  const collectionsRes = await fetchAll((from, to) =>
+    supabase
+      .from("collections")
+      .select("id, slug, name, description, filter_tags, filter_category, sort_order, is_active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true })
+      .range(from, to),
+  )
+  const collectionsTableMissing = missingTableError(collectionsRes.error)
+  const collectionProductsRes = collectionsTableMissing
+    ? { data: [] as Array<{ collection_id: string; product_sku: string }>, error: null }
+    : await fetchAll<{ collection_id: string; product_sku: string; sort_order: number }>((from, to) =>
+        supabase
+          .from("collection_products")
+          .select("collection_id, product_sku, sort_order")
+          .order("collection_id", { ascending: true })
+          .order("sort_order", { ascending: true })
+          .range(from, to),
+      )
   const productColours = (productColoursRes.data as ProductColourRow[] | null) ?? []
   const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
   const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
@@ -480,6 +504,37 @@ export default async function AdminDashboardPage() {
       colours,
     }
   })
+
+  // Collections for the dashboard tab: resolve each collection's hand-picked
+  // SKUs to product names, and offer the full active catalog as the picker.
+  const skuToName = new Map(productRowsRaw.map((p) => [p.sku, p.name]))
+  const pickedByCollection = new Map<string, Array<{ sku: string; name: string }>>()
+  for (const cp of (collectionProductsRes.data as Array<{ collection_id: string; product_sku: string }> | null) ?? []) {
+    const arr = pickedByCollection.get(cp.collection_id) ?? []
+    arr.push({ sku: cp.product_sku, name: skuToName.get(cp.product_sku) ?? cp.product_sku })
+    pickedByCollection.set(cp.collection_id, arr)
+  }
+  const collectionsForTab = (
+    (collectionsRes.data as Array<{
+      id: string
+      slug: string
+      name: string
+      description: string | null
+      filter_tags: string[] | null
+      filter_category: string | null
+      sort_order: number
+    }> | null) ?? []
+  ).map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    filter_tags: c.filter_tags ?? [],
+    filter_category: c.filter_category,
+    sort_order: c.sort_order,
+    picked: pickedByCollection.get(c.id) ?? [],
+  }))
+  const allProductOptions = productRowsRaw.map((p) => ({ sku: p.sku, name: p.name }))
 
   // ---- Site text rows for the existing Text content tab -------------------
   // DB rows first, then the compiled-in registry of editable slots that have
@@ -720,6 +775,9 @@ export default async function AdminDashboardPage() {
           themeTableMissing={themeMissing}
           imageFits={imageFits}
           imageSizes={imageSizes}
+          collections={collectionsForTab}
+          collectionsTableMissing={collectionsTableMissing}
+          allProductOptions={allProductOptions}
         />
       )}
     </main>
