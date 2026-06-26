@@ -12,6 +12,7 @@ import type { ThemeEntry } from "./theme-tab"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { IMAGE_FIT_PREFIX } from "@/lib/image-fit"
 import { IMAGE_SIZE_PREFIX } from "@/lib/image-size"
+import { normalizeTagList } from "@/lib/tags"
 import { EXTRA_TEXT_SLOTS } from "@/lib/cms/text-slots"
 
 export const dynamic = "force-dynamic"
@@ -330,6 +331,20 @@ export default async function AdminDashboardPage() {
   const heroSlides = (heroSlidesRes.data as HeroSlideRowRaw[] | null) ?? []
   const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
   const productRowsRaw = (productsRes.data as ProductFullRow[] | null) ?? []
+  // Product tags (migration 0009) read in a SEPARATE query whose error is
+  // ignored, so a DB without 0009 applied shows the product list untagged
+  // rather than erroring the whole tab (resilience contract, see CLAUDE.md).
+  const productTagsRes = await fetchAll((from, to) =>
+    supabase.from("products").select("sku, tags").eq("is_active", true).range(from, to),
+  )
+  const productTagsBySku = new Map<string, string[]>(
+    productTagsRes.error || !productTagsRes.data
+      ? []
+      : (productTagsRes.data as Array<{ sku: string; tags: string[] | null }>).map((r) => [
+          r.sku,
+          normalizeTagList(r.tags ?? []),
+        ]),
+  )
   const productColours = (productColoursRes.data as ProductColourRow[] | null) ?? []
   const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
   const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
@@ -461,6 +476,7 @@ export default async function AdminDashboardPage() {
       sizes: p.sizes ?? [],
       min_qty: p.min_qty,
       sort_order: p.sort_order,
+      tags: productTagsBySku.get(p.sku) ?? [],
       colours,
     }
   })

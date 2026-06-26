@@ -279,7 +279,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
             // The catalog itself is empty (fresh database / outage) — telling
             // the visitor to "try different filters" would be misleading.
             <div className="text-center py-16 text-[#6b6b6b]">
-              <p className="font-extrabold text-2xl tracking-wider uppercase text-black mb-2">Catalogue Coming Soon</p>
+              <p className="font-extrabold text-2xl tracking-wider uppercase text-black mb-2">{t("Catalog")} Coming Soon</p>
               <p className="text-sm">
                 We&apos;re stocking the studio. In the meantime,{" "}
                 <Link href="/#contact" className="underline hover:text-black">contact us</Link> for product availability.

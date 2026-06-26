@@ -360,7 +360,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                           </select>
                           {products.length === 0 && (
                             <p className="text-xs text-[#6b6b6b] mt-2 font-visby">
-                              The catalogue is being stocked — use the notes on the Project Details tab to describe what you need.
+                              The {t("catalog")} is being stocked — use the notes on the Project Details tab to describe what you need.
                             </p>
                           )}
                         </div>

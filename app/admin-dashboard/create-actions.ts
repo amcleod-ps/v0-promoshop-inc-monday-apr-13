@@ -8,6 +8,7 @@ import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
 import { imageSizeKey } from "@/lib/image-size"
+import { normalizeTagList } from "@/lib/tags"
 import { adminActionError } from "@/lib/admin-error"
 import { isSafeLinkTarget } from "@/lib/url-safety"
 
@@ -474,6 +475,36 @@ export async function updateProductList(
     .eq("sku", sku)
     .select("sku")
   if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Replaces a product's filter tags. Tags are canonicalized (lowercase, trimmed,
+ * single-spaced) and de-duped via normalizeTagList, so the team can't create
+ * messy duplicates through casing/spacing — the "forgiving" requirement. The
+ * Studio tag filter and the US/Canada toggle key off this same canonical form
+ * (region tags: "canada" / "usa"). Writes the products.tags column (migration
+ * 0009); a pre-0009 DB returns a generic save error.
+ */
+export async function updateProductTags(
+  sku: string,
+  rawTags: string[],
+): Promise<SimpleResult> {
+  if (!sku) return { ok: false, error: "Missing SKU." }
+  if (!Array.isArray(rawTags)) return { ok: false, error: "Value must be a list." }
+  const tags = normalizeTagList(rawTags)
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("products")
+    .update({ tags })
+    .eq("sku", sku)
+    .select("sku")
+  if (error) return adminActionError("Couldn't save your tags. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }

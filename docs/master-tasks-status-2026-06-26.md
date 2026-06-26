@@ -127,10 +127,16 @@ Plus the **Priority 2 grounded leads** and **Priority 5 accessibility** items �
   now live** in the header (desktop + mobile, `aria-pressed`) and `t()` has real
   call sites — so the "switched-off mechanism" is already reused and on, and the
   CAN dictionary spelling is correct (not British). M27 (inactive-brand labels)
-  and M24 (no-results copy) are FIXED. **Remaining (the actual Priority 3):**
-  region-aware product **prioritization**, **dashboard-managed forgiving filter
-  tags** (typo/case/space tolerant), and routing the last few hard-coded
-  spellings (`StudioClient.tsx:232`, `my-quote-client.tsx:363`) through `t()`.
+  and M24 (no-results copy) are FIXED. **BUILT** on `claude/new-session-9ur47b`:
+  migration `0009` adds `products.tags`; `lib/tags.ts` gives forgiving canonical
+  normalization (case/space/unicode dedupe, not fuzzy spell-fix); the US/Canada
+  toggle now **soft-prioritizes** region-tagged products (everything stays
+  visible — the documented default decision, vs hard filtering); the Studio has
+  a **Tags** filter; and the dashboard Products tab edits each product's tags.
+  Reads are resilient to the by-hand 0009 window. **Decisions taken (confirm
+  with Victor):** soft-prioritize (not hard-filter); a product is "marked"
+  US/CA by tagging it `canada`/`usa`. **Still minor:** route the last hard-coded
+  spellings (`StudioClient.tsx`, `my-quote-client.tsx`) through `t()`.
 - **Priority 4 — NEW BUILD, not started.** Footer "Collections" is no longer
   fake (M21 FIXED: real category deep-links), but the actual feature — public
   Collections page, dashboard collection builder, and the three-dots **Export**
