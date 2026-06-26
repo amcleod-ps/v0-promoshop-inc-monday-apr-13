@@ -84,6 +84,9 @@ interface Props {
   /** Current cover/contain choice per fit slot (see lib/image-fit.ts),
    *  keyed by slot (`hero_slide.<id>`, `about.hero`, …). */
   imageFits: Record<string, string>
+  /** Current sm/md/lg display-size choice per size slot (see
+   *  lib/image-size.ts), keyed by slot (`site.logo`). */
+  imageSizes: Record<string, string>
 }
 
 type Tab = "images" | "text" | "products" | "team" | "theme"
@@ -100,6 +103,7 @@ export function DashboardList({
   teamTableMissing,
   themeTableMissing,
   imageFits,
+  imageSizes,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -248,6 +252,7 @@ export function DashboardList({
                 key={row.key}
                 row={row}
                 imageFits={imageFits}
+                imageSizes={imageSizes}
               />
             ))}
           </Section>
@@ -719,14 +724,24 @@ function fitSlotForSiteImage(key: string): string | undefined {
   return undefined
 }
 
+// Only the logo currently has a renderer (header + footer) that reads the
+// display-size setting — offering it elsewhere would save a value nothing
+// consults, exactly like the fit selector above.
+function sizeSlotForSiteImage(key: string): string | undefined {
+  return key === "site.logo" ? key : undefined
+}
+
 function SiteImageRowWithDelete({
   row,
   imageFits,
+  imageSizes,
 }: {
   row: SiteImageRow
   imageFits: Record<string, string>
+  imageSizes: Record<string, string>
 }) {
   const fitSlot = fitSlotForSiteImage(row.key)
+  const sizeSlot = sizeSlotForSiteImage(row.key)
   return (
     <div>
       <ImageRow
@@ -737,6 +752,8 @@ function SiteImageRowWithDelete({
         hint={row.alt_text}
         fitSlot={fitSlot}
         currentFit={fitSlot ? imageFits[fitSlot] : undefined}
+        sizeSlot={sizeSlot}
+        currentSize={sizeSlot ? imageSizes[sizeSlot] : undefined}
       />
       <div style={{ marginTop: 4, marginBottom: 4, marginLeft: 12 }}>
         <TextRow

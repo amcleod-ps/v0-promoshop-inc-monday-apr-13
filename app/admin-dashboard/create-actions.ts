@@ -7,6 +7,7 @@ import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
+import { imageSizeKey } from "@/lib/image-size"
 import { adminActionError } from "@/lib/admin-error"
 import { isSafeLinkTarget } from "@/lib/url-safety"
 
@@ -920,6 +921,40 @@ export async function updateImageFit(
       key: imageFitKey(slot),
       label: `Image display mode: ${slot}`,
       value: fit,
+    },
+    { onConflict: "key" },
+  )
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Sets the display size of a free-standing image (today: the site logo) —
+ * "sm" (smaller), "md" (default), or "lg" (larger). Stored as a `site_content`
+ * row keyed `image-size.<slot>` (see lib/image-size.ts), so no schema change is
+ * needed; the public renderers sanitize on read and map the choice to a
+ * placement-appropriate height class.
+ */
+export async function updateImageSize(
+  slot: string,
+  size: string,
+): Promise<SimpleResult> {
+  if (!slot || !/^[a-z0-9._-]+$/i.test(slot)) {
+    return { ok: false, error: "Missing or invalid image slot." }
+  }
+  if (size !== "sm" && size !== "md" && size !== "lg") {
+    return { ok: false, error: 'Display size must be "sm", "md", or "lg".' }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { error } = await supabase.from("site_content").upsert(
+    {
+      key: imageSizeKey(slot),
+      label: `Image display size: ${slot}`,
+      value: size,
     },
     { onConflict: "key" },
   )

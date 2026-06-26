@@ -98,6 +98,17 @@ Conventions when extending this:
   else → `object-cover`. The dashboard's Images tab shows the selector only
   for slots whose renderer consults it (`updateImageFit` server action);
   values are sanitized on read because Table-Editor edits bypass validation.
+- **Image display size (sm/md/lg)**: `lib/image-size.ts`, the companion to
+  image-fit for *free-standing* images (where fit controls cropping, size
+  scales the whole image). Reads a `site_content` row keyed `image-size.<slot>`
+  and maps `sm`/`lg` to a placement-specific height class, anything else → the
+  default `md`. Today it drives `site.logo` (the header reads it in
+  `components/header.tsx`, the footer in `components/footer.tsx`, each scaling
+  from its own base via `pickBySize`); the dashboard Images tab shows the
+  selector only for `site.logo` (`updateImageSize` server action,
+  `sizeSlotForSiteImage`). Same sanitize-on-read contract as image-fit; add a
+  slot by giving its renderer a `pickBySize` height map and extending
+  `sizeSlotForSiteImage`.
 - **Squarespace resolution hints**: seeded product images carry
   `?format=NNNNw` (the CDN's served width). `withMinImageWidth` in
   `lib/image-resolution.ts` raises the hint per render context (cards 750w,

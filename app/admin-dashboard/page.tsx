@@ -11,6 +11,7 @@ import type { TeamMemberRow } from "./team-tab"
 import type { ThemeEntry } from "./theme-tab"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { IMAGE_FIT_PREFIX } from "@/lib/image-fit"
+import { IMAGE_SIZE_PREFIX } from "@/lib/image-size"
 import { EXTRA_TEXT_SLOTS } from "@/lib/cms/text-slots"
 
 export const dynamic = "force-dynamic"
@@ -365,13 +366,20 @@ export default async function AdminDashboardPage() {
   // the Images tab — listing them as raw text rows here would invite typos
   // that the selector's validation exists to prevent.
   const imageFits: Record<string, string> = {}
+  const imageSizes: Record<string, string> = {}
   for (const row of siteContentRaw) {
     if (row.key.startsWith(IMAGE_FIT_PREFIX)) {
       imageFits[row.key.slice(IMAGE_FIT_PREFIX.length)] = row.value
+    } else if (row.key.startsWith(IMAGE_SIZE_PREFIX)) {
+      imageSizes[row.key.slice(IMAGE_SIZE_PREFIX.length)] = row.value
     }
   }
+  // Both image-fit.* and image-size.* are display settings with dedicated
+  // selectors on the Images tab — keep them out of the raw Text editors so a
+  // typo can't bypass the selectors' validation.
   const textContentRaw = siteContentRaw.filter(
-    (row) => !row.key.startsWith(IMAGE_FIT_PREFIX),
+    (row) =>
+      !row.key.startsWith(IMAGE_FIT_PREFIX) && !row.key.startsWith(IMAGE_SIZE_PREFIX),
   )
 
   const filteredSiteContentRaw = teamTableLive
@@ -685,6 +693,7 @@ export default async function AdminDashboardPage() {
           teamTableMissing={teamMissing}
           themeTableMissing={themeMissing}
           imageFits={imageFits}
+          imageSizes={imageSizes}
         />
       )}
     </main>

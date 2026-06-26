@@ -5,11 +5,20 @@ import { Mail } from "lucide-react"
 import { useLocale } from "@/lib/locale-context"
 import { SiteImage } from "@/components/site-image"
 import { HOME_CONTENT } from "@/lib/cms/home"
-import { useSiteText } from "@/components/site-content-provider"
+import { useSiteText, useSiteContentMap } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
+import { imageSizeKey, normalizeImageSize, pickBySize } from "@/lib/image-size"
 
 export function Footer() {
   const { config } = useLocale()
+  // Same admin logo-size setting as the header, scaled from the footer's
+  // smaller default. One slot (`site.logo`) drives both placements.
+  const logoSize = normalizeImageSize(useSiteContentMap()[imageSizeKey("site.logo")]?.value)
+  const logoClass = pickBySize(logoSize, {
+    sm: "h-10 w-auto",
+    md: "h-14 w-auto",
+    lg: "h-20 w-auto",
+  })
   const tagline = useSiteText(
     "footer.tagline",
     "Welcome to our store, where promoting your business is our business. Born from an expertise in building brands, we offer unique, quality promotional products.",
@@ -57,7 +66,7 @@ export function Footer() {
                 alt="PromoShop Inc"
                 width={165}
                 height={110}
-                className="h-14 w-auto"
+                className={logoClass}
                 unoptimized
               />
             </Link>
