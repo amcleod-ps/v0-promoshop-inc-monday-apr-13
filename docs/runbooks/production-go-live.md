@@ -16,6 +16,14 @@
 - [x] Migrations **0001 → 0007 applied** (confirmed 2026-06-10).
 - [x] **0008 applied** (`supabase/migrations/0008_quote_insert_hardening_and_copy_fix.sql`,
       owner-confirmed 2026-06-10).
+- [ ] **0009 applied** (`supabase/migrations/0009_product_tags.sql` — `products.tags`
+      for the US/Canada toggle + forgiving filter tags, Priority 3). Reads are
+      defensive, so the site is unaffected until it's applied; the toggle/tag
+      filter simply have no tags to act on beforehand.
+- [ ] **0010 applied** (`supabase/migrations/0010_collections.sql` — `collections`
+      + `collection_products`, Priority 4). Applying it is what switches the
+      Collections builder/pages on; the dashboard shows a migration notice until
+      then.
 - [ ] Never re-run 0003 against production; it is for fresh databases only.
 
 ## 2b. Security (pre-launch, long-standing open items)
