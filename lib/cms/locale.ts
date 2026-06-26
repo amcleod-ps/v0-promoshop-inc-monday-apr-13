@@ -48,7 +48,7 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
       country: "Canada",
       phoneLabel: "Windsor HQ",
       phone: "(519) 252-3005",
-      phoneHref: "tel:5192523005",
+      phoneHref: "tel:+15192523005",
     },
     allContacts: [
       {
@@ -58,7 +58,7 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
         country: "Canada",
         phoneLabel: "Windsor HQ",
         phone: "(519) 252-3005",
-        phoneHref: "tel:5192523005",
+        phoneHref: "tel:+15192523005",
       },
       {
         addressLine1: "Toronto Office",
@@ -67,7 +67,7 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
         country: "Canada",
         phoneLabel: "Toronto",
         phone: "(416) 628-8512",
-        phoneHref: "tel:4166288512",
+        phoneHref: "tel:+14166288512",
       },
     ],
     supportLineLabel: "Need help? Give us a call: (519) 252-3005",
@@ -98,7 +98,7 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
       country: "USA",
       phoneLabel: "Detroit",
       phone: "(248) 399-5410",
-      phoneHref: "tel:2483995410",
+      phoneHref: "tel:+12483995410",
     },
     allContacts: [
       {
@@ -108,7 +108,7 @@ export const LOCALES: Record<Locale, LocaleConfig> = {
         country: "USA",
         phoneLabel: "Detroit",
         phone: "(248) 399-5410",
-        phoneHref: "tel:2483995410",
+        phoneHref: "tel:+12483995410",
       },
     ],
     supportLineLabel: "Need help? Give us a call: (248) 399-5410",
