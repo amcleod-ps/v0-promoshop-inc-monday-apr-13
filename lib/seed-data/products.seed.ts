@@ -16,6 +16,10 @@ export interface Product {
   description?: string
   decoLocations?: string[]
   decoMethods?: string[]
+  /** Team-managed filter tags (canonical lowercase). Drives the US/Canada
+   *  toggle and the Studio tag filter (see lib/tags.ts). Optional here because
+   *  the static fallback ships untagged; the live catalog always sets it. */
+  tags?: string[]
 }
 
 // Product data from Abigail's Studio code

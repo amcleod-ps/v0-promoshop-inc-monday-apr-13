@@ -11,17 +11,20 @@ import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
 import type { Product } from "@/lib/products"
+import { displayTag, regionTagForLocale, hasAnyRegionTag } from "@/lib/tags"
 
 interface Props {
   products: Product[]
   categories: string[]
   brands: string[]
+  /** Distinct team-managed filter tags across the catalog (canonical form). */
+  tags: string[]
   /** Pre-selected category (from /studio?category=… deep links). */
   initialCategory?: string
 }
 
-export default function StudioClient({ products, categories, brands, initialCategory }: Props) {
-  const { t } = useLocale()
+export default function StudioClient({ products, categories, brands, tags, initialCategory }: Props) {
+  const { t, locale } = useLocale()
   const pageEyebrow = useSiteText(
     "studio.page.eyebrow",
     `PromoShop Studio — Product ${t("Catalog")}`,
@@ -50,13 +53,24 @@ export default function StudioClient({ products, categories, brands, initialCate
   }, [initialCategory])
   const [activeGender, setActiveGender] = useState("All")
   const [activeBrand, setActiveBrand] = useState("All")
+  const [activeTag, setActiveTag] = useState("All")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const genders = ["All", "Men's", "Women's", "Unisex"]
 
+  // The active region's tag ("canada"/"usa"). The US/Canada toggle drives a
+  // SOFT prioritization (region products float up), not a hard filter — every
+  // product stays visible, matching "mostly see Canada products first".
+  const regionTag = regionTagForLocale(locale)
+  const catalogHasRegionTags = useMemo(
+    () => hasAnyRegionTag(products.map((p) => p.tags)),
+    [products],
+  )
+
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    const searchLower = searchTerm.toLowerCase()
+    const matched = products.filter((product) => {
       const catOk = activeCategory === "All" || product.category === activeCategory
 
       let genderOk = activeGender === "All"
@@ -65,18 +79,28 @@ export default function StudioClient({ products, categories, brands, initialCate
       else if (activeGender === "Unisex") genderOk = product.gender.includes("Unisex")
 
       const brandOk = activeBrand === "All" || product.brands.includes(activeBrand)
+      const tagOk = activeTag === "All" || (product.tags ?? []).includes(activeTag)
 
-      const searchLower = searchTerm.toLowerCase()
       const searchOk =
         !searchTerm ||
         product.name.toLowerCase().includes(searchLower) ||
         product.sku.toLowerCase().includes(searchLower) ||
         product.brands.join(" ").toLowerCase().includes(searchLower) ||
-        product.category.toLowerCase().includes(searchLower)
+        product.category.toLowerCase().includes(searchLower) ||
+        (product.tags ?? []).join(" ").includes(searchLower)
 
-      return catOk && genderOk && brandOk && searchOk
+      return catOk && genderOk && brandOk && tagOk && searchOk
     })
-  }, [products, activeCategory, activeGender, activeBrand, searchTerm])
+
+    // No region tags in the catalog yet → leave the seeded sort_order alone.
+    if (!catalogHasRegionTags) return matched
+    // Stable partition: region-tagged first, original order kept within each
+    // group (the explicit index tiebreak doesn't lean on Array.sort stability).
+    return matched
+      .map((p, i) => ({ p, i, region: (p.tags ?? []).includes(regionTag) ? 0 : 1 }))
+      .sort((a, b) => a.region - b.region || a.i - b.i)
+      .map((x) => x.p)
+  }, [products, activeCategory, activeGender, activeBrand, activeTag, searchTerm, regionTag, catalogHasRegionTags])
 
   const openProductDetail = (product: Product) => {
     setSelectedProduct(product)
@@ -202,6 +226,32 @@ export default function StudioClient({ products, categories, brands, initialCate
                     }`}
                   >
                     {brand}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tag Filter — team-managed (US/Canada plus any custom tags). Hard
+              filter; the region soft-sort above is separate. */}
+          {tags.length > 0 && (
+            <div className="mb-7">
+              <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
+                Tags
+              </h2>
+              <div className="flex flex-wrap lg:flex-col gap-1">
+                {["All", ...tags].map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(tag)}
+                    aria-pressed={activeTag === tag}
+                    className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
+                      activeTag === tag
+                        ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
+                        : "text-[#6b6b6b] hover:text-black"
+                    }`}
+                  >
+                    {tag === "All" ? "All" : displayTag(tag)}
                   </button>
                 ))}
               </div>
