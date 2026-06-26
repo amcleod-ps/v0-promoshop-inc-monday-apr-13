@@ -175,7 +175,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
                   className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 px-0 lg:px-0 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
                     activeCategory === cat
                       ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                      : "text-[#6b6b6b] hover:text-black"
+                      : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
                   }`}
                 >
                   {cat}
@@ -198,7 +198,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
                   className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
                     activeGender === gender
                       ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                      : "text-[#6b6b6b] hover:text-black"
+                      : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
                   }`}
                 >
                   {gender}
@@ -222,7 +222,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
                     className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
                       activeBrand === brand
                         ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                        : "text-[#6b6b6b] hover:text-black"
+                        : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
                     }`}
                   >
                     {brand}
@@ -248,7 +248,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
                     className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
                       activeTag === tag
                         ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                        : "text-[#6b6b6b] hover:text-black"
+                        : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
                     }`}
                   >
                     {tag === "All" ? "All" : displayTag(tag)}

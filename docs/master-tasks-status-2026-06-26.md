@@ -152,11 +152,24 @@ Plus the **Priority 2 grounded leads** and **Priority 5 accessibility** items �
   filter; nav label is "Collection"; XLSX ships as Excel-XML (.xls) and PDF via
   print to avoid heavy admin-bundle deps — a true binary .xlsx/.pdf can be added
   with a library if required.
-- **Priority 5 — accessibility largely DONE.** B5 (real dialogs), M13–M20
-  (keyboard, labels, live regions, autocomplete, headings, CMS logo) all FIXED;
-  the selected-filter left-bar is now consistent. **Remaining:** CTA contrast
-  ~3.7:1 < AA 4.5:1 on `bg-[#ef473f] text-white` (H5); Gender filter group
-  missing the `focus-visible` ring its siblings have (L13); broader polish.
+- **Priority 5 — accessibility largely DONE; the rest is decision-gated.** B5
+  (real dialogs), M13–M20 (keyboard, labels, live regions, autocomplete,
+  headings, CMS logo) all FIXED. Done on `claude/new-session-9ur47b`: the Gender
+  filter focus ring (L13, in PR #47); the **selected-filter shift** is gone — all
+  four Studio filter groups now reserve the indicator's left-bar space in the
+  inactive state, so toggling no longer nudges the label (the named "outline
+  inconsistent / shifts around" complaint); a screen-reader brand-count live
+  region (M15 parity). **DECISION for Victor (not done autonomously):** the
+  **CTA contrast** — white on the brand red `#ef473f` is ~3.7:1, below WCAG AA
+  4.5:1 for normal text. Fixing it means **darkening the brand red**, which is
+  (a) a branding call only the client should make and (b) entangled with the
+  theme-override system (CTAs use `bg-[#ef473f]`, which the theme editor
+  rebrands by exact-class match — swapping the hex would break rebrand on those
+  buttons). Options: darken the brand red in the default theme + everywhere it's
+  matched; or accept the shortfall; or enlarge CTA text to the WCAG "large text"
+  threshold (≥18.66px bold → 3:1 applies, which `#ef473f` passes). **Also still
+  open per the master file:** which a11y items are pre-June-29 vs polish-phase,
+  and the subjective "polish bar Victor wants" — both explicitly Victor's call.
 
 ---
 
