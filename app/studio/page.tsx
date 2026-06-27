@@ -23,9 +23,11 @@ export default async function StudioPage({
 
   const categorySet = new Set<string>()
   const brandSet = new Set<string>()
+  const tagSet = new Set<string>()
   for (const p of products) {
     categorySet.add(p.category)
     for (const b of p.brands) brandSet.add(b)
+    for (const tg of p.tags ?? []) tagSet.add(tg)
   }
 
   return (
@@ -33,6 +35,7 @@ export default async function StudioPage({
       products={products}
       categories={["All", ...Array.from(categorySet).sort()]}
       brands={["All", ...Array.from(brandSet).sort()]}
+      tags={Array.from(tagSet).sort()}
       initialCategory={typeof params.category === "string" ? params.category : undefined}
     />
   )

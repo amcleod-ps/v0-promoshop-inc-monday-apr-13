@@ -7,6 +7,11 @@ import { validateImageUpload } from "@/lib/image-upload"
 import { checkUploadRateLimit } from "@/lib/upload-rate-limit"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { imageFitKey } from "@/lib/image-fit"
+import { imageSizeKey } from "@/lib/image-size"
+import { normalizeTagList } from "@/lib/tags"
+import { getCollectionWithProducts } from "@/lib/supabase/collections"
+import { SITE_URL } from "@/lib/site-url"
+import type { ExportPayload, ExportRow } from "@/lib/collection-export"
 import { adminActionError } from "@/lib/admin-error"
 import { isSafeLinkTarget } from "@/lib/url-safety"
 
@@ -479,6 +484,36 @@ export async function updateProductList(
 }
 
 /**
+ * Replaces a product's filter tags. Tags are canonicalized (lowercase, trimmed,
+ * single-spaced) and de-duped via normalizeTagList, so the team can't create
+ * messy duplicates through casing/spacing — the "forgiving" requirement. The
+ * Studio tag filter and the US/Canada toggle key off this same canonical form
+ * (region tags: "canada" / "usa"). Writes the products.tags column (migration
+ * 0009); a pre-0009 DB returns a generic save error.
+ */
+export async function updateProductTags(
+  sku: string,
+  rawTags: string[],
+): Promise<SimpleResult> {
+  if (!sku) return { ok: false, error: "Missing SKU." }
+  if (!Array.isArray(rawTags)) return { ok: false, error: "Value must be a list." }
+  const tags = normalizeTagList(rawTags)
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("products")
+    .update({ tags })
+    .eq("sku", sku)
+    .select("sku")
+  if (error) return adminActionError("Couldn't save your tags. Please try again.", error.message)
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
  * Updates a product's minimum order quantity (shown in the product detail
  * modal). Previously create-only.
  */
@@ -797,6 +832,7 @@ export type SortableEntity =
   | "product_colour"
   | "product_image"
   | "team_member"
+  | "collection"
 
 const SORTABLE_ENTITIES: Record<SortableEntity, { table: string; pk: string }> = {
   brand: { table: "brands", pk: "slug" },
@@ -805,6 +841,7 @@ const SORTABLE_ENTITIES: Record<SortableEntity, { table: string; pk: string }> =
   product_colour: { table: "product_colours", pk: "id" },
   product_image: { table: "product_images", pk: "id" },
   team_member: { table: "team_members", pk: "slug" },
+  collection: { table: "collections", pk: "id" },
 }
 
 /**
@@ -836,6 +873,181 @@ export async function updateSortOrder(
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }
+}
+
+// ===========================================================================
+// Collections (Priority 4) — tables created by migration 0010
+// ===========================================================================
+
+export async function createCollection(input: {
+  name: string
+  slug?: string
+  description?: string
+}): Promise<CreateResult> {
+  const name = (input.name ?? "").trim()
+  if (!name) return { ok: false, error: "Name is required." }
+  if (name.length > 200) return { ok: false, error: "Name is too long (200 character limit)." }
+  const slug = (input.slug?.trim() || slugify(name)).slice(0, 80)
+  if (!slug) return { ok: false, error: "Could not derive a web address from that name." }
+  const description = (input.description ?? "").trim()
+  if (description.length > 5000) return { ok: false, error: "Description is too long (5000 character limit)." }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("collections")
+    .insert({ slug, name, description: description || null })
+    .select("id")
+    .single()
+  if (error) {
+    if (isDuplicate(error)) {
+      return { ok: false, error: await duplicateMessage(supabase, "collections", "slug", slug, "collection", `address "${slug}"`) }
+    }
+    return adminActionError("Could not create the collection. Please try again.", error.message)
+  }
+  bumpCaches()
+  return { ok: true, id: (data as { id: string }).id }
+}
+
+export type CollectionTextField = "name" | "description"
+const COLLECTION_TEXT_FIELDS: CollectionTextField[] = ["name", "description"]
+
+export async function updateCollectionText(
+  id: string,
+  field: CollectionTextField,
+  value: string,
+): Promise<SimpleResult> {
+  if (!id) return { ok: false, error: "Missing collection id." }
+  if (!COLLECTION_TEXT_FIELDS.includes(field)) return { ok: false, error: `Unknown field: ${String(field)}` }
+  if (typeof value !== "string") return { ok: false, error: "Value must be text." }
+  const trimmed = value.trim()
+  if (field === "name" && !trimmed) return { ok: false, error: "Name cannot be empty." }
+  if (trimmed.length > (field === "name" ? 200 : 5000)) return { ok: false, error: "Too long." }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const stored = field === "description" && !trimmed ? null : trimmed
+  const { data, error } = await supabase.from("collections").update({ [field]: stored }).eq("id", id).select("id")
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/** Saved-filter criteria: tags (canonicalized) + an optional single category. */
+export async function updateCollectionFilter(
+  id: string,
+  rawTags: string[],
+  category: string,
+): Promise<SimpleResult> {
+  if (!id) return { ok: false, error: "Missing collection id." }
+  if (!Array.isArray(rawTags)) return { ok: false, error: "Tags must be a list." }
+  const filter_tags = normalizeTagList(rawTags)
+  const cat = (category ?? "").trim()
+  if (cat.length > 100) return { ok: false, error: "Category is too long (100 character limit)." }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase
+    .from("collections")
+    .update({ filter_tags, filter_category: cat || null })
+    .eq("id", id)
+    .select("id")
+  if (error) return adminActionError("Couldn't save the filter. Please try again.", error.message)
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+export async function softDeleteCollection(id: string): Promise<SimpleResult> {
+  if (!id) return { ok: false, error: "Missing collection id." }
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data, error } = await supabase.from("collections").update({ is_active: false }).eq("id", id).select("id")
+  if (error) return adminActionError("Could not delete the collection. Please try again.", error.message)
+  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
+  bumpCaches()
+  return { ok: true }
+}
+
+/** Append a hand-picked product to a collection (idempotent; ordered last). */
+export async function addCollectionProduct(collectionId: string, sku: string): Promise<SimpleResult> {
+  if (!collectionId || !sku) return { ok: false, error: "Missing collection or product." }
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { data: maxRows } = await supabase
+    .from("collection_products")
+    .select("sort_order")
+    .eq("collection_id", collectionId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+  const nextOrder = ((maxRows as Array<{ sort_order: number }> | null)?.[0]?.sort_order ?? -1) + 1
+  const { error } = await supabase
+    .from("collection_products")
+    .upsert(
+      { collection_id: collectionId, product_sku: sku, sort_order: nextOrder },
+      { onConflict: "collection_id,product_sku" },
+    )
+  if (error) return adminActionError("Could not add the product. Please try again.", error.message)
+  bumpCaches()
+  return { ok: true }
+}
+
+export async function removeCollectionProduct(collectionId: string, sku: string): Promise<SimpleResult> {
+  if (!collectionId || !sku) return { ok: false, error: "Missing collection or product." }
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { error } = await supabase
+    .from("collection_products")
+    .delete()
+    .eq("collection_id", collectionId)
+    .eq("product_sku", sku)
+  if (error) return adminActionError("Could not remove the product. Please try again.", error.message)
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Resolves a collection to a flat ExportPayload (one row per product, absolute
+ * links, real brand names + image URLs) for the dashboard's export menu. Reads
+ * only public collection/product data via the shared public resolver, so it's
+ * not admin-gated — it returns exactly what the public /collections page shows.
+ */
+export async function exportCollectionData(
+  slug: string,
+): Promise<{ ok: true; payload: ExportPayload } | ErrorResult> {
+  if (!slug) return { ok: false, error: "Missing collection." }
+  const data = await getCollectionWithProducts(slug)
+  if (!data) return { ok: false, error: "Collection not found (or not yet migrated)." }
+  const { collection, products } = data
+  const link = `${SITE_URL}/collections/${collection.slug}`
+  const rows: ExportRow[] = products.map((p) => ({
+    name: p.name,
+    sku: p.sku,
+    brand: p.brands.join(", "),
+    category: p.category,
+    description: p.description ?? "",
+    minQty: p.minQty,
+    sizes: p.sizes.join(", "),
+    colours: p.colours.map((c) => c.name).join(", "),
+    imageUrl: p.colours[0]?.images[0] ?? "",
+    link,
+  }))
+  return {
+    ok: true,
+    payload: {
+      name: collection.name,
+      slug: collection.slug,
+      description: collection.description ?? "",
+      rows,
+    },
+  }
 }
 
 // ===========================================================================
@@ -920,6 +1132,40 @@ export async function updateImageFit(
       key: imageFitKey(slot),
       label: `Image display mode: ${slot}`,
       value: fit,
+    },
+    { onConflict: "key" },
+  )
+  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
+  bumpCaches()
+  return { ok: true }
+}
+
+/**
+ * Sets the display size of a free-standing image (today: the site logo) —
+ * "sm" (smaller), "md" (default), or "lg" (larger). Stored as a `site_content`
+ * row keyed `image-size.<slot>` (see lib/image-size.ts), so no schema change is
+ * needed; the public renderers sanitize on read and map the choice to a
+ * placement-appropriate height class.
+ */
+export async function updateImageSize(
+  slot: string,
+  size: string,
+): Promise<SimpleResult> {
+  if (!slot || !/^[a-z0-9._-]+$/i.test(slot)) {
+    return { ok: false, error: "Missing or invalid image slot." }
+  }
+  if (size !== "sm" && size !== "md" && size !== "lg") {
+    return { ok: false, error: 'Display size must be "sm", "md", or "lg".' }
+  }
+
+  const adminResult = await adminOrError()
+  if (!adminResult.ok) return adminResult
+  const { supabase } = adminResult
+  const { error } = await supabase.from("site_content").upsert(
+    {
+      key: imageSizeKey(slot),
+      label: `Image display size: ${slot}`,
+      value: size,
     },
     { onConflict: "key" },
   )

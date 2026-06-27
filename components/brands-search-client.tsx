@@ -64,6 +64,11 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
         </div>
       </section>
 
+      {/* Screen-reader result count (parity with the studio filter count). */}
+      <p aria-live="polite" className="sr-only">
+        {filteredBrands.length} {filteredBrands.length === 1 ? "brand" : "brands"} found
+      </p>
+
       {/* Featured Brands */}
       {displayBrands.length > 0 && (
         <section className="py-12 px-6 lg:px-8">

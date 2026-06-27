@@ -11,6 +11,8 @@ import type { TeamMemberRow } from "./team-tab"
 import type { ThemeEntry } from "./theme-tab"
 import { DEFAULT_THEME } from "@/lib/supabase/theme"
 import { IMAGE_FIT_PREFIX } from "@/lib/image-fit"
+import { IMAGE_SIZE_PREFIX } from "@/lib/image-size"
+import { normalizeTagList } from "@/lib/tags"
 import { EXTRA_TEXT_SLOTS } from "@/lib/cms/text-slots"
 
 export const dynamic = "force-dynamic"
@@ -329,6 +331,44 @@ export default async function AdminDashboardPage() {
   const heroSlides = (heroSlidesRes.data as HeroSlideRowRaw[] | null) ?? []
   const productImages = (productImagesRes.data as ProductImageJoinedRow[] | null) ?? []
   const productRowsRaw = (productsRes.data as ProductFullRow[] | null) ?? []
+  // Product tags (migration 0009) read in a SEPARATE query whose error is
+  // ignored, so a DB without 0009 applied shows the product list untagged
+  // rather than erroring the whole tab (resilience contract, see CLAUDE.md).
+  const productTagsRes = await fetchAll((from, to) =>
+    supabase.from("products").select("sku, tags").eq("is_active", true).range(from, to),
+  )
+  const productTagsBySku = new Map<string, string[]>(
+    productTagsRes.error || !productTagsRes.data
+      ? []
+      : (productTagsRes.data as Array<{ sku: string; tags: string[] | null }>).map((r) => [
+          r.sku,
+          normalizeTagList(r.tags ?? []),
+        ]),
+  )
+
+  // Collections + their hand-picked products (migration 0010). Read separately
+  // and tolerant of the tables being absent so the dashboard works before 0010
+  // is applied — the Collections tab then shows a MigrationGuard.
+  const collectionsRes = await fetchAll((from, to) =>
+    supabase
+      .from("collections")
+      .select("id, slug, name, description, filter_tags, filter_category, sort_order, is_active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true })
+      .range(from, to),
+  )
+  const collectionsTableMissing = missingTableError(collectionsRes.error)
+  const collectionProductsRes = collectionsTableMissing
+    ? { data: [] as Array<{ collection_id: string; product_sku: string }>, error: null }
+    : await fetchAll<{ collection_id: string; product_sku: string; sort_order: number }>((from, to) =>
+        supabase
+          .from("collection_products")
+          .select("collection_id, product_sku, sort_order")
+          .order("collection_id", { ascending: true })
+          .order("sort_order", { ascending: true })
+          .range(from, to),
+      )
   const productColours = (productColoursRes.data as ProductColourRow[] | null) ?? []
   const siteContentRaw = (siteContentRes.data as SiteContentRow[] | null) ?? []
   const teamRaw = (teamRes.data as TeamMemberRowRaw[] | null) ?? []
@@ -365,13 +405,20 @@ export default async function AdminDashboardPage() {
   // the Images tab — listing them as raw text rows here would invite typos
   // that the selector's validation exists to prevent.
   const imageFits: Record<string, string> = {}
+  const imageSizes: Record<string, string> = {}
   for (const row of siteContentRaw) {
     if (row.key.startsWith(IMAGE_FIT_PREFIX)) {
       imageFits[row.key.slice(IMAGE_FIT_PREFIX.length)] = row.value
+    } else if (row.key.startsWith(IMAGE_SIZE_PREFIX)) {
+      imageSizes[row.key.slice(IMAGE_SIZE_PREFIX.length)] = row.value
     }
   }
+  // Both image-fit.* and image-size.* are display settings with dedicated
+  // selectors on the Images tab — keep them out of the raw Text editors so a
+  // typo can't bypass the selectors' validation.
   const textContentRaw = siteContentRaw.filter(
-    (row) => !row.key.startsWith(IMAGE_FIT_PREFIX),
+    (row) =>
+      !row.key.startsWith(IMAGE_FIT_PREFIX) && !row.key.startsWith(IMAGE_SIZE_PREFIX),
   )
 
   const filteredSiteContentRaw = teamTableLive
@@ -453,9 +500,41 @@ export default async function AdminDashboardPage() {
       sizes: p.sizes ?? [],
       min_qty: p.min_qty,
       sort_order: p.sort_order,
+      tags: productTagsBySku.get(p.sku) ?? [],
       colours,
     }
   })
+
+  // Collections for the dashboard tab: resolve each collection's hand-picked
+  // SKUs to product names, and offer the full active catalog as the picker.
+  const skuToName = new Map(productRowsRaw.map((p) => [p.sku, p.name]))
+  const pickedByCollection = new Map<string, Array<{ sku: string; name: string }>>()
+  for (const cp of (collectionProductsRes.data as Array<{ collection_id: string; product_sku: string }> | null) ?? []) {
+    const arr = pickedByCollection.get(cp.collection_id) ?? []
+    arr.push({ sku: cp.product_sku, name: skuToName.get(cp.product_sku) ?? cp.product_sku })
+    pickedByCollection.set(cp.collection_id, arr)
+  }
+  const collectionsForTab = (
+    (collectionsRes.data as Array<{
+      id: string
+      slug: string
+      name: string
+      description: string | null
+      filter_tags: string[] | null
+      filter_category: string | null
+      sort_order: number
+    }> | null) ?? []
+  ).map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    filter_tags: c.filter_tags ?? [],
+    filter_category: c.filter_category,
+    sort_order: c.sort_order,
+    picked: pickedByCollection.get(c.id) ?? [],
+  }))
+  const allProductOptions = productRowsRaw.map((p) => ({ sku: p.sku, name: p.name }))
 
   // ---- Site text rows for the existing Text content tab -------------------
   // DB rows first, then the compiled-in registry of editable slots that have
@@ -605,11 +684,21 @@ export default async function AdminDashboardPage() {
             Hero slides, the About-page hero, and brand lifestyle backdrops
             also offer an <strong>Image display</strong> choice: fill the frame
             (crops to fit) or show the whole image (no cropping) — use the
-            second for logos and tall or wide artwork.
+            second for logos and tall or wide artwork. The <strong>Site logo</strong>{" "}
+            adds a <strong>Display size</strong> choice (Smaller / Default /
+            Larger) that scales it in both the header and footer.
           </li>
           <li>
             Text fields left blank fall back to the site&apos;s built-in copy,
             shown in the field&apos;s hint.
+          </li>
+          <li>
+            A few long-form fields — the <strong>About</strong> story
+            paragraphs, the footer <strong>tagline</strong>, and the{" "}
+            <strong>accessibility notice</strong> — support light formatting:
+            type <code>**bold**</code>, <code>*italic*</code>, or{" "}
+            <code>[link text](https://example.com)</code>. Other fields show
+            those characters as-is.
           </li>
           <li>
             In the <strong>Theme</strong> tab, pick a new colour and click
@@ -685,6 +774,10 @@ export default async function AdminDashboardPage() {
           teamTableMissing={teamMissing}
           themeTableMissing={themeMissing}
           imageFits={imageFits}
+          imageSizes={imageSizes}
+          collections={collectionsForTab}
+          collectionsTableMissing={collectionsTableMissing}
+          allProductOptions={allProductOptions}
         />
       )}
     </main>

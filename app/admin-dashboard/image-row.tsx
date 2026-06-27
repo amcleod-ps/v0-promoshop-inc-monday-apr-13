@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { removeImage, replaceImage, type ReplaceTarget } from "./actions"
-import { updateImageFit } from "./create-actions"
+import { updateImageFit, updateImageSize } from "./create-actions"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
 import { isSafeLinkTarget } from "@/lib/url-safety"
 
@@ -17,6 +17,11 @@ interface ImageRowProps {
    *  hero slides, about.hero, brand lifestyle backdrops). */
   fitSlot?: string
   currentFit?: string
+  /** When set, offers the Smaller/Default/Larger display-size selector for
+   *  this placement (only pass it for slots whose renderer reads it — today
+   *  the site logo in the header and footer). */
+  sizeSlot?: string
+  currentSize?: string
 }
 
 function formatBytes(bytes: number): string {
@@ -32,7 +37,7 @@ function removeConfirmMessage(target: ReplaceTarget): string {
   return "Remove this image? The site will fall back to its default. You can upload a new image any time."
 }
 
-export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, currentFit }: ImageRowProps) {
+export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, currentFit, sizeSlot, currentSize }: ImageRowProps) {
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [status, setStatus] = useState<{
@@ -248,6 +253,7 @@ export function ImageRow({ target, id, label, currentUrl, hint, fitSlot, current
         </form>
 
         {fitSlot ? <ImageFitControl slot={fitSlot} initial={currentFit} /> : null}
+        {sizeSlot ? <ImageSizeControl slot={sizeSlot} initial={currentSize} /> : null}
 
         {previewUrl && isSafeLinkTarget(previewUrl) ? (
           // Guard the href: site_images.url can be set via the Supabase Table
@@ -317,6 +323,72 @@ function ImageFitControl({ slot, initial }: { slot: string; initial?: string }) 
         >
           <option value="cover">Fill the frame (crops to fit)</option>
           <option value="contain">Show the whole image (no cropping)</option>
+        </select>
+      </label>
+      {status.message ? (
+        <span
+          style={{
+            ...styles.status,
+            color:
+              status.kind === "err" ? "#b00020" : status.kind === "ok" ? "#0a7f3f" : "#444",
+          }}
+        >
+          {status.message}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * Smaller/Default/Larger size selector for free-standing images (the logo).
+ * Saves on change and reverts the optimistic value if the server rejects it,
+ * mirroring ImageFitControl above.
+ */
+function ImageSizeControl({ slot, initial }: { slot: string; initial?: string }) {
+  const [size, setSize] = useState(initial === "sm" || initial === "lg" ? initial : "md")
+  const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
+    kind: "idle",
+    message: "",
+  })
+  const [isPending, startTransition] = useTransition()
+
+  const handleChange = (next: string) => {
+    const previous = size
+    setSize(next)
+    setStatus({ kind: "idle", message: "Saving…" })
+    startTransition(async () => {
+      try {
+        const result = await updateImageSize(slot, next)
+        if (result.ok) {
+          setStatus({ kind: "ok", message: "Saved. Live on the site." })
+        } else {
+          setSize(previous)
+          setStatus({ kind: "err", message: result.error })
+        }
+      } catch {
+        setSize(previous)
+        setStatus({
+          kind: "err",
+          message: "Something went wrong. Check your connection and try again.",
+        })
+      }
+    })
+  }
+
+  return (
+    <div style={styles.fitRow}>
+      <label style={styles.fitLabel}>
+        Display size
+        <select
+          value={size}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={isPending}
+          style={styles.fitSelect}
+        >
+          <option value="sm">Smaller</option>
+          <option value="md">Default size</option>
+          <option value="lg">Larger</option>
         </select>
       </label>
       {status.message ? (

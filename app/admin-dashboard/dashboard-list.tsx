@@ -10,6 +10,7 @@ import {
 } from "./create-forms"
 import { ProductsTab, type ProductRow } from "./products-tab"
 import { TeamTab, type TeamMemberRow } from "./team-tab"
+import { CollectionsTab, type CollectionAdminRow, type ProductOption } from "./collections-tab"
 import { ThemeTab, type ThemeEntry } from "./theme-tab"
 import {
   softDeleteBrand,
@@ -84,9 +85,15 @@ interface Props {
   /** Current cover/contain choice per fit slot (see lib/image-fit.ts),
    *  keyed by slot (`hero_slide.<id>`, `about.hero`, …). */
   imageFits: Record<string, string>
+  /** Current sm/md/lg display-size choice per size slot (see
+   *  lib/image-size.ts), keyed by slot (`site.logo`). */
+  imageSizes: Record<string, string>
+  collections: CollectionAdminRow[]
+  collectionsTableMissing: boolean
+  allProductOptions: ProductOption[]
 }
 
-type Tab = "images" | "text" | "products" | "team" | "theme"
+type Tab = "images" | "text" | "products" | "collections" | "team" | "theme"
 
 export function DashboardList({
   siteImages,
@@ -100,6 +107,10 @@ export function DashboardList({
   teamTableMissing,
   themeTableMissing,
   imageFits,
+  imageSizes,
+  collections,
+  collectionsTableMissing,
+  allProductOptions,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -204,6 +215,7 @@ export function DashboardList({
         <TabButton tabKey="images" label="Images" active={tab === "images"} onClick={() => setTab("images")} />
         <TabButton tabKey="text" label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
         <TabButton tabKey="products" label="Products" active={tab === "products"} onClick={() => setTab("products")} />
+        <TabButton tabKey="collections" label="Collections" active={tab === "collections"} onClick={() => setTab("collections")} />
         <TabButton tabKey="team" label="Team" active={tab === "team"} onClick={() => setTab("team")} />
         <TabButton tabKey="theme" label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
       </div>
@@ -248,6 +260,7 @@ export function DashboardList({
                 key={row.key}
                 row={row}
                 imageFits={imageFits}
+                imageSizes={imageSizes}
               />
             ))}
           </Section>
@@ -505,6 +518,16 @@ export function DashboardList({
         </div>
       ) : null}
 
+      {tab === "collections" ? (
+        <div role="tabpanel" id="panel-collections" aria-labelledby="tab-collections">
+          {collectionsTableMissing ? (
+            <MigrationGuard migration="0010_collections.sql" feature="Collections editor" />
+          ) : (
+            <CollectionsTab collections={collections} allProducts={allProductOptions} />
+          )}
+        </div>
+      ) : null}
+
       {tab === "team" ? (
         <div role="tabpanel" id="panel-team" aria-labelledby="tab-team">
           {teamTableMissing ? (
@@ -719,14 +742,24 @@ function fitSlotForSiteImage(key: string): string | undefined {
   return undefined
 }
 
+// Only the logo currently has a renderer (header + footer) that reads the
+// display-size setting — offering it elsewhere would save a value nothing
+// consults, exactly like the fit selector above.
+function sizeSlotForSiteImage(key: string): string | undefined {
+  return key === "site.logo" ? key : undefined
+}
+
 function SiteImageRowWithDelete({
   row,
   imageFits,
+  imageSizes,
 }: {
   row: SiteImageRow
   imageFits: Record<string, string>
+  imageSizes: Record<string, string>
 }) {
   const fitSlot = fitSlotForSiteImage(row.key)
+  const sizeSlot = sizeSlotForSiteImage(row.key)
   return (
     <div>
       <ImageRow
@@ -737,6 +770,8 @@ function SiteImageRowWithDelete({
         hint={row.alt_text}
         fitSlot={fitSlot}
         currentFit={fitSlot ? imageFits[fitSlot] : undefined}
+        sizeSlot={sizeSlot}
+        currentSize={sizeSlot ? imageSizes[sizeSlot] : undefined}
       />
       <div style={{ marginTop: 4, marginBottom: 4, marginLeft: 12 }}>
         <TextRow

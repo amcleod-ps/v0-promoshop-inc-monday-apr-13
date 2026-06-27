@@ -360,7 +360,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                           </select>
                           {products.length === 0 && (
                             <p className="text-xs text-[#6b6b6b] mt-2 font-visby">
-                              The catalogue is being stocked — use the notes on the Project Details tab to describe what you need.
+                              The {t("catalog")} is being stocked — use the notes on the Project Details tab to describe what you need.
                             </p>
                           )}
                         </div>
@@ -457,7 +457,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 </div>
                 <div className="md:col-span-2">
                   <label htmlFor="project-notes" className={labelClass}>Additional Notes</label>
-                  {/* The serialized cart shares the action's 10,000-char message
+                  {/* The serialized cart shares the action's 16,000-char message
                       cap with these notes — 4,000 leaves generous headroom so a
                       long note can never make the submission bounce. */}
                   <textarea id="project-notes" rows={4} maxLength={4000} value={projectInfo.notes} onChange={(e) => setProjectInfo({ notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="Tell us about your project, branding requirements, or any questions..." />

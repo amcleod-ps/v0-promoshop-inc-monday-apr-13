@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { createClient } from "./server"
 import { withCacheBust } from "@/lib/cache-bust"
+import { normalizeTagList } from "@/lib/tags"
 
 export interface ProductColour {
   name: string
@@ -21,6 +22,7 @@ export interface Product {
   description?: string
   decoLocations?: string[]
   decoMethods?: string[]
+  tags: string[]
 }
 
 interface ProductRow {
@@ -98,8 +100,11 @@ export const getAllProducts = cache(async (): Promise<Product[] | null> => {
     return null
   }
 
-  const [{ data: productRows, error: productsError }, { data: brandRows }] =
-    await Promise.all([
+  const [
+    { data: productRows, error: productsError },
+    { data: brandRows },
+    { data: tagRows },
+  ] = await Promise.all([
       supabase
         .from("products")
         .select(
@@ -111,12 +116,24 @@ export const getAllProducts = cache(async (): Promise<Product[] | null> => {
         .eq("is_active", true)
         .order("sort_order", { ascending: true }),
       supabase.from("brands").select("slug, name"),
+      // Tags live in a column added by migration 0009. Read them in a SEPARATE
+      // query so a DB that hasn't applied 0009 yet (the migrations are applied
+      // by hand) resolves this with an error and falls back to "no tags" —
+      // rather than erroring the main catalog query and collapsing /studio to
+      // the static fallback. Mirrors the defensive-getter contract.
+      supabase.from("products").select("sku, tags").eq("is_active", true),
     ])
 
   if (productsError || !productRows) return null
 
   const slugToName = new Map<string, string>(
     (brandRows || []).map((b) => [b.slug, b.name]),
+  )
+
+  const tagsBySku = new Map<string, string[]>(
+    ((tagRows as Array<{ sku: string; tags: string[] | null }> | null) || []).map(
+      (r) => [r.sku, normalizeTagList(r.tags || [])],
+    ),
   )
 
   return (productRows as ProductRow[]).map((p) => {
@@ -144,6 +161,7 @@ export const getAllProducts = cache(async (): Promise<Product[] | null> => {
       description: p.description || undefined,
       decoLocations: p.deco_locations || undefined,
       decoMethods: p.deco_methods || undefined,
+      tags: tagsBySku.get(p.sku) ?? [],
     }
   })
 })

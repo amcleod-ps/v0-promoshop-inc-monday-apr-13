@@ -11,12 +11,14 @@ import {
   updateProductColour,
   updateProductList,
   updateProductMinQty,
+  updateProductTags,
   updateProductText,
   updateSortOrder,
 } from "./create-actions"
 import { TextRow } from "./text-row"
 import { parseRequiredNumber } from "./parse-required-number"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
+import { parseTagInput } from "@/lib/tags"
 
 interface ProductImage {
   id: string
@@ -41,6 +43,7 @@ export interface ProductRow {
   brand_slugs: string[]
   genders: string[]
   sizes: string[]
+  tags: string[]
   min_qty: number
   sort_order: number
   colours: ProductColour[]
@@ -424,6 +427,14 @@ function ProductCard({ product }: { product: ProductRow }) {
               v.split(",").map((g) => g.trim()).filter(Boolean),
             )
           }
+        />
+        <TextRow
+          source="custom"
+          idLabel={`product:${product.sku}:tags`}
+          label="Filter tags (comma-separated)"
+          hint="Drives the Studio Tags filter and the US/Canada toggle. Use canada and usa for region — products tagged for the visitor's region show first. Tags are lower-cased and de-duped automatically, so casing/spacing won't make duplicates."
+          currentValue={product.tags.join(", ")}
+          onSave={(v) => updateProductTags(product.sku, parseTagInput(v))}
         />
         <TextRow
           source="custom"

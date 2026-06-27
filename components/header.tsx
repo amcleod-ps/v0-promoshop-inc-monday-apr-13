@@ -8,8 +8,9 @@ import { useLocale } from "@/lib/locale-context"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { SiteImage } from "@/components/site-image"
 import { useAuth } from "@/lib/auth/AuthProvider"
-import { useSiteText } from "@/components/site-content-provider"
+import { useSiteText, useSiteContentMap } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
+import { imageSizeKey, normalizeImageSize, pickBySize } from "@/lib/image-size"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -17,6 +18,7 @@ const navigation = [
   { name: "Brands", href: "/brands" },
   { name: "START MY QUOTE", href: "/my-quote" },
   { name: "About", href: "/about" },
+  { name: "Collection", href: "/collections" },
 ]
 
 // Module-level (not defined inside Header's render) so React keeps a stable
@@ -60,6 +62,15 @@ export function Header() {
   const { config } = useLocale()
   const { isAuthenticated, user, signOut } = useAuth()
   const quoteCta = useSiteText("header.cta", textFallback("header.cta"))
+  // Admin-chosen logo size (Images tab → Site logo → Display size). w-auto
+  // keeps the 3:2 ratio; the nav row grows to the taller logo, so scaling up
+  // reflows rather than overlapping.
+  const logoSize = normalizeImageSize(useSiteContentMap()[imageSizeKey("site.logo")]?.value)
+  const logoClass = pickBySize(logoSize, {
+    sm: "h-16 lg:h-20 w-auto",
+    md: "h-20 lg:h-24 w-auto",
+    lg: "h-24 lg:h-32 w-auto",
+  })
 
   useEffect(() => {
     const handleScroll = () => {
@@ -140,7 +151,7 @@ export function Header() {
             alt={HOME_CONTENT.hero.logoAlt}
             width={165}
             height={110}
-            className="h-20 lg:h-24 w-auto"
+            className={logoClass}
             priority
           />
         </Link>

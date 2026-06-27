@@ -92,11 +92,6 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
-        hostname: 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
-        pathname: '/**',
-      },
-      {
         // GitHub user-attachment images (brand logos, team photos uploaded
         // via issue/PR comments or the CMS upload flow).
         protocol: 'https',
