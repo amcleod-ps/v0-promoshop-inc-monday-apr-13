@@ -117,6 +117,21 @@ Files:
 
 Review result: `pnpm audit` now reports `No known vulnerabilities found`.
 
+### Migration syntax reinforced
+
+Changes:
+
+- Corrected the PL/pgSQL `END;` terminator in the existing `0006_sort_order_triggers.sql` helper.
+- Corrected the same terminator in the new `0011_quote_id_and_product_image_order_hardening.sql` helper before merge.
+- Re-ran the migration terminator scan so a fresh Supabase apply does not carry a known function-body syntax issue.
+
+Files:
+
+- `supabase/migrations/0006_sort_order_triggers.sql`
+- `supabase/migrations/0011_quote_id_and_product_image_order_hardening.sql`
+
+Review result: both migration files now use valid PL/pgSQL block termination.
+
 ### Documentation updated
 
 Changes:
@@ -164,6 +179,7 @@ Passed in code:
 - Customer password collection was removed.
 - Quote direct-insert hardening was added at the database layer.
 - Dependency audit is clean: `pnpm audit` reports no known vulnerabilities.
+- Redirect/link sanitization, admin password verification, collection-export escaping, quote quantity clamping, and migration function termination were stress-checked.
 - Existing admin server-action authorization remains unchanged.
 - Product images still flow through the existing safe image path and fallback handling.
 
@@ -212,6 +228,8 @@ Completed on 2026-06-29:
 - `pnpm audit`: passed with `No known vulnerabilities found`.
 - `pnpm lint`: passed.
 - `pnpm build`: passed on Next.js `16.2.9`.
+- Migration syntax sweep: no unterminated lowercase `end` blocks remain in `supabase/migrations`.
+- Pure function stress checks: redirect/link safety rejected off-site/script-style payloads; collection HTML/CSV/Markdown exports escaped injected content; quote quantity clamping handled tampered values; admin Basic auth accepted the correct password and rejected wrong/missing credentials.
 - Production server smoke: `/`, `/studio`, `/collections`, `/my-quote`, `/sign-up`, `/sign-in`, `/admin-dashboard`, `/robots.txt`, and `/sitemap.xml` returned `200`.
 - Unknown route smoke: `/definitely-not-a-real-page` returned `404`.
 - Dynamic unknown slug smoke: `/brands/definitely-not-a-real-brand` and `/collections/definitely-not-a-real-collection` rendered branded 404 UI with `noindex`; response status was `200`, matching current Next.js streaming behavior.
@@ -219,10 +237,11 @@ Completed on 2026-06-29:
 - Browser check: `/sign-up?redirect=/my-quote` has zero password fields, saves a browser-local profile, redirects to `/my-quote`, and pre-fills quote contact fields.
 - Browser check: `/sign-in?redirect=/my-quote` has one email field, zero password fields, redirects to `/my-quote`, and preserves the existing quote cart.
 - Browser check: Studio search narrows `JBL` to the JBL product, the product modal opens, selecting `One Size` enables `Add 1 item to Quote`, and the quote contains `JBL GO 4`, `White`, and `One Size`.
+- Browser stress rerun after clearing localhost storage: profile save, quote autofill, Studio search, product modal add, email-only continue, and cart preservation all passed from a fresh visitor state.
 - Mobile browser smoke at `390x844`: `/sign-up`, `/studio`, and `/my-quote` had no horizontal overflow.
 - Browser console check: no errors or warnings after the interaction smoke pass.
 - GitHub PR status: PR #48 opened against `main`: https://github.com/amcleod-ps/v0-promoshop-inc-monday-apr-13/pull/48
-- Merge status: not self-merged. This is production client code, so the standing human review gate remains in force.
+- Merge authorization: Victor explicitly requested final verification and merge in the 2026-06-29 continuation prompt.
 
 Next.js references for dynamic streamed 404 behavior:
 

@@ -47,7 +47,7 @@ begin
 
   new.sort_order := next_val;
   return new;
-end
+end;
 $$;
 
 -- Table-wide ordering -------------------------------------------------------
