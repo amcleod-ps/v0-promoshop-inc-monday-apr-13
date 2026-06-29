@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useDeferredValue } from "react"
 import Link from "next/link"
 import { Search, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
@@ -37,6 +37,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
   )
   const bannerCta = useSiteText("studio.banner.cta", textFallback("studio.banner.cta"))
   const [searchTerm, setSearchTerm] = useState("")
+  const deferredSearchTerm = useDeferredValue(searchTerm)
   const [activeCategory, setActiveCategory] = useState(
     initialCategory && categories.includes(initialCategory) ? initialCategory : "All",
   )
@@ -69,7 +70,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
   )
 
   const filteredProducts = useMemo(() => {
-    const searchLower = searchTerm.toLowerCase()
+    const searchLower = deferredSearchTerm.toLowerCase()
     const matched = products.filter((product) => {
       const catOk = activeCategory === "All" || product.category === activeCategory
 
@@ -82,7 +83,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
       const tagOk = activeTag === "All" || (product.tags ?? []).includes(activeTag)
 
       const searchOk =
-        !searchTerm ||
+        !deferredSearchTerm ||
         product.name.toLowerCase().includes(searchLower) ||
         product.sku.toLowerCase().includes(searchLower) ||
         product.brands.join(" ").toLowerCase().includes(searchLower) ||
@@ -100,7 +101,7 @@ export default function StudioClient({ products, categories, brands, tags, initi
       .map((p, i) => ({ p, i, region: (p.tags ?? []).includes(regionTag) ? 0 : 1 }))
       .sort((a, b) => a.region - b.region || a.i - b.i)
       .map((x) => x.p)
-  }, [products, activeCategory, activeGender, activeBrand, activeTag, searchTerm, regionTag, catalogHasRegionTags])
+  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags])
 
   const openProductDetail = (product: Product) => {
     setSelectedProduct(product)

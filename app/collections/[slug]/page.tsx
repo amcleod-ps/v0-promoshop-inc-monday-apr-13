@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const data = await getCollectionWithProducts(slug)
-  if (!data) return {}
+  if (!data) notFound()
   const { collection } = data
   return {
     title: collection.name,

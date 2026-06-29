@@ -16,15 +16,16 @@ Your website has a built-in **admin dashboard** where you can change images,
 text, products, team members, and brand colours yourself. Changes appear on
 the live site immediately — no developer needed.
 
-One important thing to understand before you start: **this site does not use a
-username-and-password screen for the admin dashboard.** Instead, access works
-on two things:
+One important thing to understand before you start: **this site uses a browser
+password prompt for the admin dashboard when `ADMIN_DASHBOARD_PASSWORD` is set
+in Vercel.** Access works on three things:
 
 1. **A private web address.** The dashboard lives at a hidden page on your
    site. It isn't linked from anywhere and search engines are told to ignore
-   it — but *anyone who knows the address can edit the site*. The address IS
-   your password. Treat it like one.
-2. **Three keys stored in Vercel** (the service that runs your website).
+   it. Treat the address as private even when the password gate is on.
+2. **One admin password stored in Vercel.** This turns on the browser password
+   prompt in front of the dashboard and all save actions.
+3. **Three keys stored in Vercel** (the service that runs your website).
    These let the website and its dashboard talk to your database — and one of
    them, the *service_role* key, is the master secret that makes editing
    possible. You'll set them up now, in your own accounts, so that you — not
@@ -58,20 +59,21 @@ on two things:
 > it into a chat or document, never share it. It goes only two places: your
 > password manager and Vercel (next step).
 
-## Step 2 — Put the keys into Vercel
+## Step 2 — Put the keys and admin password into Vercel
 
 1. Go to **vercel.com**, sign in, and open the website's project.
 2. Click **Settings** (top menu) → **Environment Variables** (left sidebar).
-3. Add the three entries below. For each one: type the **Key** *exactly* as
+3. Add the four entries below. For each one: type the **Key** *exactly* as
    shown (capital letters and underscores matter), paste the matching value
    from Step 1, leave all environments ticked (Production, Preview,
    Development), and click **Save**.
 
-   | Key (type exactly) | Value (from Step 1) |
+   | Key (type exactly) | Value |
    | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | service_role key |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Project URL from Step 1 |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public key from Step 1 |
+   | `SUPABASE_SERVICE_ROLE_KEY` | service_role key from Step 1 |
+   | `ADMIN_DASHBOARD_PASSWORD` | a strong password you create and save in your password manager |
 
    If a variable with the same name already exists, click the **⋯** menu next
    to it and choose **Edit** instead of adding a duplicate.
@@ -94,20 +96,23 @@ Key changes only take effect after the site is re-published:
 1. In your browser, go to your website address followed by
    `/admin-dashboard` — for example:
    `https://www.promoshopstudio.com/admin-dashboard`
-2. You should see a page titled **"Image & Content Dashboard"** with a line
+2. If `ADMIN_DASHBOARD_PASSWORD` is set, your browser should ask for a
+   username and password. The username can be anything; the password must be
+   the value you saved in Vercel.
+3. You should see a page titled **"Image & Content Dashboard"** with a line
    like *"Managing 120 images, 80 text fields…"* and tabs for Images, Text
    content, Products, Team, and Theme. Expand **"How to use this page"** at
    the top for a built-in mini-manual.
-3. Try a harmless edit (change one word of text, click **Save**, check the
+4. Try a harmless edit (change one word of text, click **Save**, check the
    live site, change it back).
 
 **If you instead see "Server is not configured":** a key is missing or its
 name was mistyped. Go back to Step 2, check the three names character by
 character, then redeploy (Step 3).
 
-## Step 5 — Protect your "login" from now on
+## Step 5 — Protect your admin access from now on
 
-Since the address is the password:
+Since both the address and the admin password protect the dashboard:
 
 - **Bookmark it privately** and give the bookmark a discreet name.
 - **Share it only with people who should be able to edit the entire site.**
@@ -118,9 +123,11 @@ Since the address is the password:
 
 ## If the address or a key ever leaks (or a staff member leaves)
 
-- The dashboard's **address can't be changed without a developer** (it's part
-  of the site's code) — but the dashboard only works because of the keys, so
-  cutting off the keys cuts off access:
+- If only the admin password leaks, change `ADMIN_DASHBOARD_PASSWORD` in Vercel
+  and redeploy.
+- If the dashboard address or a Supabase key leaks, rotate the Supabase keys
+  too. The address is part of the site's code, but the dashboard only works
+  because of the Vercel password and Supabase keys:
   1. In Supabase: **Project Settings → API** → rotate/regenerate the keys
      (the option may be called "Rotate JWT secret"; it renews **both** the
      anon and service_role keys at once).
@@ -130,10 +137,8 @@ Since the address is the password:
 - If you're unsure, ask your developer to walk through rotation with you —
   it's a 10-minute job.
 
-## Want a real login screen later?
+## Want per-person staff accounts later?
 
-A password screen in front of the dashboard was deliberately left out (your
-decision with the developer in June 2026) to keep the handoff simple. If you
-later want one — for example, once several staff members need access — a
-developer can add it with a small code change. Ask for *"authentication on
-/admin-dashboard"*.
+The current admin gate is one shared password. If several staff members need
+individual access later, ask for *"per-person authentication and audit logging
+on /admin-dashboard"*.

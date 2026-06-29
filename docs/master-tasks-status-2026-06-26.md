@@ -1,5 +1,10 @@
 # Master tasks — live-code status audit (2026-06-26)
 
+> Superseded for launch closeout by
+> `docs/master-dev-tasks-completion-2026-06-29.md`. This file remains the
+> June 26 audit snapshot; H10, M23, L1/L2, and M12/L8 received additional
+> code/doc work on 2026-06-29.
+
 > Confirms the current state of every item in `PromoShopStudioMasterDevTasks.md`
 > against the actual code on branch `claude/new-session-9ur47b`. The master list
 > was built from the **June 10** review; substantial work landed after it (admin

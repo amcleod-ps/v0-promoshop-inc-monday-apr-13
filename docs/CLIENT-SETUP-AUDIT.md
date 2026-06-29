@@ -1,6 +1,6 @@
 > **SUPERSEDED (2026-06-10).** This audit describes the repository as it
 > stood on 2026-05-11 (Azure workflows, `lib/db/`, no migrations). The
-> codebase has since been rebuilt around Vercel + Supabase with eight
+> codebase has since been rebuilt around Vercel + Supabase with eleven
 > migrations and an in-app admin dashboard. Kept for history only —
 > do not act on its recommendations. Current docs: `README.md`,
 > `CLAUDE.md`, `docs/hardening-status.md`,

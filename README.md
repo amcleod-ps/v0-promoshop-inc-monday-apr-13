@@ -86,7 +86,7 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 
 ## Supabase setup
 
-Eight migrations live in `supabase/migrations/`. Run them in order from
+Eleven migrations live in `supabase/migrations/`. Run them in order from
 the Supabase Dashboard → SQL Editor → New query:
 
 1. `0001_init.sql` — base tables: `brands`, `hero_slides`, `quote_requests`
@@ -109,8 +109,15 @@ the Supabase Dashboard → SQL Editor → New query:
    `quote_requests` as a backstop for direct PostgREST inserts.
 8. `0008_quote_insert_hardening_and_copy_fix.sql` — forces server-side
    timestamps on `quote_requests` inserts (plus a guarded seeded-copy fix).
+9. `0009_product_tags.sql` — adds forgiving product tags used by the
+   Canada/United States toggle and dashboard-managed filters.
+10. `0010_collections.sql` — adds public Collections plus the dashboard
+    collection builder and picked-product join table.
+11. `0011_quote_id_and_product_image_order_hardening.sql` — forces
+    server-side quote ids, adds a small direct-insert email throttle, and
+    fixes product-level image ordering.
 
-After running all eight, the dashboard's Table Editor shows:
+After running all eleven, the dashboard's Table Editor shows:
 
 | Table | Rows | What it controls |
 | --- | --- | --- |
@@ -119,6 +126,8 @@ After running all eight, the dashboard's Table Editor shows:
 | `products` | full catalog | Studio page and brand-specific listings |
 | `product_colours` | colour variants per product | Colour pickers |
 | `product_images` | all product gallery imagery | Product cards, modal, lightbox |
+| `collections` | curated collection pages | Public Collections page and export menus |
+| `collection_products` | hand-picked collection products | Manual product selections per collection |
 | `site_images` | every other image | Site logo, About hero, brand logos, brand lifestyle backdrops, team photos |
 | `quote_requests` | filled from the public form | Incoming quote requests |
 
@@ -235,7 +244,7 @@ app/                     # Next.js App Router pages
   studio/                # Product catalog
   my-quote/              # Quote-request flow
   about/                 # About page
-  sign-in/ sign-up/      # Customer auth gate (localStorage-backed)
+  sign-in/ sign-up/      # Browser-local quote profile, not real auth
   actions/               # Server actions (quote submission)
 components/              # UI components
   site-images-provider.tsx  # Root-layout context for site_images map
@@ -248,12 +257,12 @@ lib/
     data.ts              #   getHeroSlides, getSupabaseBrands
     products.ts          #   getAllProducts (products + colours + images)
     images.ts            #   getSiteImagesMap (the site_images registry)
-  auth/                  # Customer-auth provider (localStorage-backed)
+  auth/                  # Browser-local profile provider (localStorage-backed)
   cms/                   # Static marketing copy (titles, body, etc.)
   seed-data/             # Compiled-in fallback catalog (used by the seed generator)
 public/                  # Static assets (favicons, seeded imagery)
 scripts/
   generate-seed-sql.ts   # Regenerates supabase/migrations/0003_seed_data.sql
 supabase/
-  migrations/            # 0001 → 0008, applied in order by hand (SQL Editor)
+  migrations/            # 0001 → 0011, applied in order by hand (SQL Editor)
 ```

@@ -419,7 +419,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
             <div role="tabpanel" id="panel-contact" aria-labelledby="tab-contact" className="bg-white border border-[#e5e5e5] rounded-lg p-6 lg:p-8 shadow-sm">
               <h2 className="font-montserrat font-bold text-xl text-[#1a1a1a] mb-4">Your Contact Information</h2>
               <p className="text-[#666] text-sm mb-6 font-visby">
-                Signed-in users can auto-fill this information. <Link href="/sign-in" className="text-[#d93e36] underline hover:no-underline">Sign in</Link> to save time.
+                Saved profiles can auto-fill this information. <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline">Save a profile</Link> to save time.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div><label htmlFor="quote-first-name" className={labelClass}>First Name *</label><input id="quote-first-name" type="text" autoComplete="given-name" maxLength={100} required value={contactInfo.firstName} onChange={(e) => setContactInfo({ firstName: e.target.value })} className={inputClass} placeholder="John" /></div>

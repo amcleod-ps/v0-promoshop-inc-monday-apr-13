@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { setFallbackUser } from "@/lib/auth/AuthProvider"
 import { toSafeRedirect } from "@/lib/auth/safe-redirect"
 import { SiteImage } from "@/components/site-image"
@@ -20,8 +20,6 @@ function SignInPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -33,7 +31,7 @@ function SignInPageInner() {
     setIsLoading(true)
 
     await new Promise(resolve => setTimeout(resolve, 1000))
-    if (email && password) {
+    if (email) {
       setFallbackUser({
         email,
         firstName: email.split("@")[0],
@@ -42,7 +40,7 @@ function SignInPageInner() {
       })
       router.push(redirectTarget)
     } else {
-      setError("Please enter your email and password")
+      setError("Please enter your email address")
     }
     setIsLoading(false)
   }
@@ -65,10 +63,10 @@ function SignInPageInner() {
           </Link>
 
           <h1 className="font-montserrat font-bold text-3xl text-[#1a1a1a] mb-2">
-            Welcome Back
+            Continue with Your Profile
           </h1>
           <p className="text-[#666] mb-8 font-visby">
-            Sign in to your account to manage quotes and access saved information.
+            Enter your email to use a browser-saved quote profile. This is not a password account.
           </p>
 
           {error && (
@@ -94,33 +92,6 @@ function SignInPageInner() {
               />
             </div>
 
-            <div>
-              <label htmlFor="signin-password" className="block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="signin-password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3.5 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors pr-12"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -129,11 +100,11 @@ function SignInPageInner() {
               {isLoading ? (
                 <>
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                  Signing In...
+                  Continuing...
                 </>
               ) : (
                 <>
-                  Sign In
+                  Continue
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </>
               )}
@@ -142,8 +113,8 @@ function SignInPageInner() {
 
           <div className="mt-8 pt-8 border-t border-[#e5e5e5] text-center">
             <p className="text-[#666] font-visby">
-              Don&apos;t have an account?{" "}
-              <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline font-semibold">Sign up</Link>
+              Need to save your details?{" "}
+              <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline font-semibold">Save a profile</Link>
             </p>
           </div>
 
@@ -176,8 +147,8 @@ function SignInPageInner() {
             Premium Branded Merchandise
           </h2>
           <p className="text-[#888] leading-relaxed font-visby">
-            Access your account to manage quotes, save your information,
-            and auto-fill quote forms for faster ordering.
+            Save your contact details on this browser to auto-fill quote forms
+            and keep the quote workflow moving.
           </p>
         </div>
       </div>

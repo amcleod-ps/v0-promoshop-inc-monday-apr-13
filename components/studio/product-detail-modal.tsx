@@ -23,9 +23,9 @@ interface ProductDetailModalProps {
 // more sizes in a single action, then have the cross-product added to their
 // quote as individual line items. e.g. navy + (S,M,L,XL) → 4 line items.
 //
-// Unauthenticated guests still pass through the sign-up page on "Add to
+// Guests without a saved profile still pass through the profile page on "Add to
 // quote" (client feedback Apr 16), but their selections are added to the
-// localStorage cart FIRST — the cart is not auth-gated, and discarding the
+// localStorage cart FIRST — the cart is not profile-gated, and discarding the
 // picks stranded every first-time visitor on an empty quote.
 export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailModalProps) {
   const [selectedColours, setSelectedColours] = useState<ProductColour[]>([])
@@ -158,8 +158,8 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     if (!canAdd) return
 
     // Fan out the cartesian product as individual quote line items. This
-    // happens BEFORE any auth gating: the cart lives in localStorage and is
-    // not auth-gated, so the visitor's selections must never be discarded.
+    // happens BEFORE any profile gate: the cart lives in localStorage and is
+    // not profile-gated, so the visitor's selections must never be discarded.
     for (const colour of selectedColours) {
       for (const size of selectedSizes) {
         addItem({
@@ -174,8 +174,8 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
     }
     onClose()
 
-    // Unauthenticated visitors pass through sign-up on their way to the
-    // quote; their items are already saved in the cart.
+    // Visitors without a saved profile pass through that profile form on
+    // their way to the quote; their items are already saved in the cart.
     router.push(isAuthenticated ? "/my-quote" : "/sign-up?redirect=/my-quote")
   }
 
