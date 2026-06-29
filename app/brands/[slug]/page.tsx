@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
   const brand = lookup.ok && lookup.brand?.is_active ? lookup.brand : null
   const fallback = getBrandBySlug(slug)
   const name = brand?.name ?? fallback?.name
-  if (!name) return {}
+  if (!name) notFound()
   const description = (brand?.description ?? fallback?.description) || undefined
   return {
     title: `${name} Promotional Products`,

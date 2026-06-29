@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, ArrowRight, Check } from "lucide-react"
+import { ArrowRight, Check } from "lucide-react"
 import { setFallbackUser } from "@/lib/auth/AuthProvider"
 import { toSafeRedirect } from "@/lib/auth/safe-redirect"
 import { useQuote } from "@/lib/quote-context"
@@ -22,9 +22,8 @@ function SignUpPageInner() {
   const searchParams = useSearchParams()
   const { setContactInfo } = useQuote()
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "", company: "", phone: "", password: "", confirmPassword: "",
+    firstName: "", lastName: "", email: "", company: "", phone: "",
   })
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -38,8 +37,6 @@ function SignUpPageInner() {
     e.preventDefault()
     setError("")
 
-    if (formData.password !== formData.confirmPassword) { setError("Passwords do not match"); return }
-    if (formData.password.length < 8) { setError("Password must be at least 8 characters"); return }
     setIsLoading(true)
     await new Promise(resolve => setTimeout(resolve, 1000))
     setFallbackUser({
@@ -62,15 +59,6 @@ function SignUpPageInner() {
     setIsLoading(false)
   }
 
-  const passwordStrength = () => {
-    const p = formData.password
-    if (p.length === 0) return { text: "", color: "" }
-    if (p.length < 6) return { text: "Weak", color: "text-red-700" }
-    if (p.length < 10) return { text: "Medium", color: "text-yellow-700" }
-    return { text: "Strong", color: "text-[#2e7d32]" }
-  }
-  const strength = passwordStrength()
-
   const inputClass = "w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
@@ -88,10 +76,10 @@ function SignUpPageInner() {
             className="h-16 w-auto mb-8"
           />
           <h2 className="font-montserrat font-bold text-2xl text-[#1a1a1a] mb-4">
-            Join PromoShop
+            Save Your Quote Profile
           </h2>
           <p className="text-[#666] leading-relaxed mb-8 font-visby">
-            Create a profile to streamline your quote requests.
+            Store your contact details on this browser to streamline quote requests.
           </p>
           <div className="space-y-4">
             {[
@@ -123,8 +111,10 @@ function SignUpPageInner() {
             />
           </Link>
 
-          <h1 className="font-montserrat font-bold text-3xl text-[#1a1a1a] mb-2">Create Account</h1>
-          <p className="text-[#666] mb-6 font-visby">Get started with PromoShop today.</p>
+          <h1 className="font-montserrat font-bold text-3xl text-[#1a1a1a] mb-2">Save Profile</h1>
+          <p className="text-[#666] mb-6 font-visby">
+            Save a local quote profile. No password or server account is created.
+          </p>
 
           {error && (
             <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#d93e36] px-4 py-3 rounded mb-6 text-sm">{error}</div>
@@ -138,31 +128,14 @@ function SignUpPageInner() {
             <div><label htmlFor="signup-email" className={labelClass}>Email Address *</label><input id="signup-email" type="email" name="email" autoComplete="email" required value={formData.email} onChange={handleChange} className={inputClass} placeholder="you@company.com" /></div>
             <div><label htmlFor="signup-company" className={labelClass}>Company *</label><input id="signup-company" type="text" name="company" autoComplete="organization" required value={formData.company} onChange={handleChange} className={inputClass} placeholder="Acme Corp" /></div>
             <div><label htmlFor="signup-phone" className={labelClass}>Phone</label><input id="signup-phone" type="tel" name="phone" autoComplete="tel" value={formData.phone} onChange={handleChange} className={inputClass} placeholder="(555) 123-4567" /></div>
-            <div>
-              <label htmlFor="signup-password" className={labelClass}>Password *</label>
-              <div className="relative">
-                <input id="signup-password" type={showPassword ? "text" : "password"} name="password" autoComplete="new-password" required value={formData.password} onChange={handleChange} className={`${inputClass} pr-12`} placeholder="Minimum 8 characters" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
-                </button>
-              </div>
-              {strength.text && <p className={`text-xs mt-1 ${strength.color}`}>Password strength: {strength.text}</p>}
-            </div>
-            <div><label htmlFor="signup-confirm-password" className={labelClass}>Confirm Password *</label><input id="signup-confirm-password" type="password" name="confirmPassword" autoComplete="new-password" required value={formData.confirmPassword} onChange={handleChange} className={inputClass} placeholder="Re-enter your password" /></div>
 
             <button type="submit" disabled={isLoading} className="w-full bg-[#ef473f] text-white py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 mt-6">
-              {isLoading ? (<><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />Creating Account...</>) : (<>Create Account <ArrowRight className="w-4 h-4" aria-hidden="true" /></>)}
+              {isLoading ? (<><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />Saving Profile...</>) : (<>Save Profile <ArrowRight className="w-4 h-4" aria-hidden="true" /></>)}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-[#666] font-visby">Already have an account? <Link href="/sign-in" className="text-[#d93e36] underline hover:no-underline font-semibold">Sign in</Link></p>
+            <p className="text-[#666] font-visby">Already saved a profile? <Link href="/sign-in" className="text-[#d93e36] underline hover:no-underline font-semibold">Continue</Link></p>
           </div>
           <div className="mt-6 text-center">
             <Link href="/" className="text-sm text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors font-visby">Back to Home</Link>

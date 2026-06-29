@@ -251,8 +251,9 @@ admin writes go through the service-role key.
 
 Despite README phrasing ("no admin UI"), `app/admin-dashboard/` **is** a working
 CMS with five tabs (Images, Text, Products, Team, Theme), built largely with
-inline styles. It is **intentionally unauthenticated** — the URL is the secret;
-`robots: { index:false, follow:false }`. Files: `page.tsx` (fetches 9 tables),
+inline styles. It has an opt-in Basic-auth gate via `ADMIN_DASHBOARD_PASSWORD`;
+when that env var is unset, the URL is the secret. `robots: { index:false,
+follow:false }`. Files: `page.tsx` (fetches 9 tables),
 `dashboard-list.tsx`, `image-row.tsx`, `text-row.tsx`, `products-tab.tsx`,
 `team-tab.tsx`, `theme-tab.tsx`, `create-forms.tsx`. Requires
 `SUPABASE_SERVICE_ROLE_KEY`; renders a config-error screen if it's missing.
@@ -271,8 +272,8 @@ inline styles. It is **intentionally unauthenticated** — the URL is the secret
 | `/studio` | `studio/page.tsx` → `StudioClient.tsx` | Client | Catalog with category/gender/brand/text filters; product modal + lightbox |
 | `/my-quote` | `app/my-quote/page.tsx` | Client | 3-tab quote builder (Items → Contact → Project), localStorage cart |
 | `/about` | `app/about/page.tsx` | Server | Story + team grid (dark `#111111`) |
-| `/sign-in`, `/sign-up` | resp. | Client (Suspense) | **localStorage-only** auth gate (not real security) |
-| `/admin-dashboard` | `admin-dashboard/page.tsx` | Server | Unauthenticated CMS (see §4.7) |
+| `/sign-in`, `/sign-up` | resp. | Client (Suspense) | Browser-local quote profile helpers, not real auth |
+| `/admin-dashboard` | `admin-dashboard/page.tsx` | Server | CMS with optional Basic-auth gate (see §4.7) |
 
 ### 5.2 Component inventory — 🟢
 
@@ -282,7 +283,7 @@ inline styles. It is **intentionally unauthenticated** — the URL is the secret
   marquee, pause-on-hover, edge fades), `brand-hero.tsx`, `team-section.tsx`.
 - **Search/catalog:** `brands-search-client.tsx`, `studio/product-card.tsx`,
   `studio/product-detail-modal.tsx` (multi-select colour×size → cartesian line
-  items; auth-gates guests), `studio/product-lightbox.tsx`,
+  items; profile pass-through for guests), `studio/product-lightbox.tsx`,
   `home/hero-slideshow.tsx` (Embla, 5s autoplay, keyboard nav).
 - **Providers/resolvers:** `site-image(s)-provider`, `site-content-provider`,
   `team-provider`, `theme-vars-provider`, `theme-provider` (next-themes).
@@ -348,10 +349,11 @@ semantics and keyboard handling.
 
 ### 5.7 Client-only state (not security) — 🟢
 
-Customer "auth" (`lib/auth/AuthProvider.tsx`, `/sign-in`, `/sign-up`), the quote
-cart (`lib/quote-context.tsx`), and locale (`lib/locale-context.tsx`, CAN/USA
-spelling via `t(key)`) are **localStorage-only** UI personalization. The only
-server-persisted data is quote submissions.
+Customer "auth" (`lib/auth/AuthProvider.tsx`, `/sign-in`, `/sign-up`) is a
+browser-local quote profile, not access control. The quote cart
+(`lib/quote-context.tsx`) and locale (`lib/locale-context.tsx`, CAN/USA
+spelling via `t(key)`) are also **localStorage-only** UI personalization. The
+only server-persisted data is quote submissions.
 
 ---
 
@@ -362,7 +364,7 @@ server-persisted data is quote submissions.
 | Tagline / meta copy | "Premium merch for premium brands" / "Born from an expertise…" | identical meta description (`layout.tsx:41`) | 🟢 yes |
 | Brand roster | 20 premium lifestyle/outdoor brands | identical 20 (`brands.seed.ts`) | 🟢 yes |
 | Team | Phil Duym + Amy Duquette, Ania Wlodarkiewicz, Alex Cyrenne | identical (`0005` seed) | 🟢 yes |
-| Navigation | Home / Studio / Brands / Quote / About / Login | same routes | 🟢 yes |
+| Navigation | Home / Studio / Brands / Quote / About / Save Profile | same routes | 🟢 yes |
 | Locale | Canadian (Windsor/Toronto) | CAN/USA spelling toggle | 🟢 yes |
 | Quote-first UX | "START MY QUOTE" | quote cart + `/my-quote` | 🟢 yes |
 | Naming | "PromoShop Studio" / PromoShop Canada Ltd. | repo titled "PromoShop Inc." | 🟡 umbrella-brand naming, not a contradiction |

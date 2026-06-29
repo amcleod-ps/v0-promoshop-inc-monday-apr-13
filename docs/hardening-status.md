@@ -48,6 +48,17 @@ flat config) is restored and passing** — run both before pushing.
 > `pnpm up next@16.2.9 && pnpm build && pnpm lint` — 16.2.9 is clean. Full
 > report: `docs/security-review-2026-06-15.md`.
 
+> **Update 2026-06-29 - master dev task closeout (branch `prereleasemasterdevtasks`).**
+> H10 is closed in code: `/sign-in` and `/sign-up` no longer collect or discard
+> passwords, and the public UI now describes the feature as a browser-saved
+> quote profile rather than a real account. M23 is materially hardened by
+> `0011_quote_id_and_product_image_order_hardening.sql`, which forces
+> `quote_requests.id` server-side and adds a DB-side email throttle for direct
+> PostgREST inserts. L1/L2 are closed: product-level images now order correctly
+> when `colour_id IS NULL` and render as shared product galleries on the public
+> catalog. M12/L8 received low-risk launch improvements: route loading shells,
+> deferred Studio filtering, and memoized product cards.
+
 ## ✅ Done & merged to `main`
 **PR #13** (merge `6096c18`):
 - **`CLAUDE.md`** — architecture & conventions; **`docs/promoshop-research.md`** — deep-research dossier.
@@ -108,10 +119,10 @@ shape-guarding.
 
 ## Production infrastructure
 - **Supabase:** project **`promoshopstudio`**, ref **`rfvnjxrhainbldxtzdfb`** — the **client's** account. (Note: the Supabase MCP in these sessions is connected to a *different* "Nest Digital" account holding unrelated `GMS`/`landalgorithm` projects — do not confuse them, and don't query them. Live re-verification of the client DB isn't available from that MCP.)
-- **Migrations `0001`–`0008` are all applied** (0007 and 0008 both applied 2026-06-10, owner-confirmed — note the sessions' Supabase MCP cannot see the client project, so this is recorded from the owner's confirmation, not a live query).
+- **Migrations `0001`–`0008` are all applied** (0007 and 0008 both applied 2026-06-10, owner-confirmed — note the sessions' Supabase MCP cannot see the client project, so this is recorded from the owner's confirmation, not a live query). **Migrations `0009`–`0011` still need to be applied in production** unless Abigail/Victor has separately run them after this handoff.
 - **Storage:** the `site-images` bucket exists, is public, has no size/MIME cap, accepts service-role uploads. Replaced uploads are now pruned by the dashboard; removals deliberately keep the file for recovery.
 - **Server Actions:** the 10 MB `serverActions.bodySizeLimit` is in `next.config.mjs`.
-- **Vercel:** the project builds under the **"Nest Digital Solutions Inc"** team. The client may also run their own Vercel/domain (`promoshopstudio.com`) — confirm which is production.
+- **Vercel:** the project builds under the **"Nest Digital Canada Inc."** team. The client may also run their own Vercel/domain (`promoshopstudio.com`); confirm which is production.
 - **The GitHub repo is PUBLIC.** No secret key values are committed (verified). Keep all keys in Vercel env vars only.
 
 ## Remaining backlog (prioritized)
@@ -120,7 +131,7 @@ shape-guarding.
 - [ ] **Turn on the admin gate**: set `ADMIN_DASHBOARD_PASSWORD` in Vercel (Production + Preview). The code shipped dormant in #32; until the var is set, the dashboard stays URL-as-secret while wielding the service-role key. (Client originally deferred auth on 2026-06-01; the owner merged the opt-in gate on 2026-06-10 — flipping it on is now a pure config decision.)
 
 ### Medium
-- [ ] Product modal keys colours by `name` (duplicate names break multi-select); guest "add to quote" discards the selection at the sign-up gate. *(The product-card keyboard a11y half of this cluster shipped in PR #18.)*
+- [ ] Product modal keys colours by `name` (duplicate names break multi-select). The old guest add-to-quote selection-loss bug is fixed: selections are added to the local cart before the saved-profile pass-through.
 - [ ] A real captcha (Turnstile/hCaptcha) on the quote form for determined bots — the honeypot + rate limit from #28 blunt scripted spam but aren't a captcha.
 
 ### Low / robustness & polish
@@ -128,7 +139,7 @@ shape-guarding.
 - [ ] `updateTeamMemberText` allows empty name/role; hard deletes (product images, colours) orphan their storage objects; soft-delete has no in-UI reactivation.
 - [x] **ESLint flat-config repair** — DONE. `eslint@9` + `eslint-config-next` are in devDependencies and `eslint.config.mjs` (flat config) exists; `pnpm lint` passes clean. Both `pnpm build` and `pnpm lint` are correctness gates again (matches CLAUDE.md).
 - [ ] a11y: several inputs are labelled by a sibling `<div>` rather than a real `<label>` (`text-row.tsx`, `image-row.tsx`). (Note: `create-forms.tsx` & `team-tab.tsx` already use proper `<label>`.) A real dialog role + focus management for the studio product modal would also be a good a11y follow-up.
-- [ ] `docs/code-review-2026-06-10.md` findings not covered above (fonts, legal pages, SEO, newsletter, sign-out) — mostly client-decision or content items; triage with the client.
+- [ ] `docs/code-review-2026-06-10.md` findings not covered above (legal pages, newsletter, brand-red contrast, production-domain choices) — mostly client-decision or content items; triage with the client.
 
 ### Content gaps (not bugs, for the client)
 - [ ] 9 of 20 brands have no logo (render the text wordmark); many `site_images` slots are empty (mostly the intentional opt-in lifestyle/slideshow slots).

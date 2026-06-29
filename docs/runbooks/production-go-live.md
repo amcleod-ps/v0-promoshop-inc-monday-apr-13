@@ -24,6 +24,9 @@
       + `collection_products`, Priority 4). Applying it is what switches the
       Collections builder/pages on; the dashboard shows a migration notice until
       then.
+- [ ] **0011 applied** (`supabase/migrations/0011_quote_id_and_product_image_order_hardening.sql`
+      — forces quote ids server-side, adds the DB-side email throttle for
+      direct inserts, and fixes product-level image sort order).
 - [ ] Never re-run 0003 against production; it is for fresh databases only.
 
 ## 2b. Security (pre-launch, long-standing open items)
@@ -73,7 +76,7 @@
 
 ## 6. Smoke test (on the live domain)
 
-- [ ] Add-to-quote as a brand-new visitor → selections survive the sign-up
+- [ ] Add-to-quote as a brand-new visitor → selections survive the saved-profile
       pass-through → submit → row in `quote_requests` **and** notification
       email received.
 - [ ] Homepage contact form → same two checks.
@@ -83,7 +86,8 @@
 
 ## 7. Post-launch
 
-- [ ] Watch `quote_requests` row counts (anon INSERT is rate-limited in-app
-      but unbounded via direct PostgREST — accepted risk, monitor).
+- [ ] Watch `quote_requests` row counts (anon INSERT is rate-limited in-app and
+      throttled by email in the database, but a real captcha is still the next
+      step if junk rows appear).
 - [ ] Rotate any key that ever leaks (Supabase → regenerate; Resend → revoke;
       update Vercel; redeploy).

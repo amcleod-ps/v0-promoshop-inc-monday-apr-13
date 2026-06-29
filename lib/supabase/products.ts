@@ -137,16 +137,25 @@ export const getAllProducts = cache(async (): Promise<Product[] | null> => {
   )
 
   return (productRows as ProductRow[]).map((p) => {
+    const productLevelImages = (p.product_images || [])
+      .filter((img) => img.colour_id === null)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((img) => withCacheBust(img.url, img.updated_at))
+
     const colours = (p.product_colours || [])
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((c) => {
-        const images = (p.product_images || [])
+        const colourImages = (p.product_images || [])
           .filter((img) => img.colour_id === c.id)
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((img) => withCacheBust(img.url, img.updated_at))
+        const images = colourImages.length > 0 ? colourImages : productLevelImages
         return { name: c.name, hex: safeHex(c.hex), images }
       })
+    if (colours.length === 0 && productLevelImages.length > 0) {
+      colours.push({ name: "Default", hex: "#cccccc", images: productLevelImages })
+    }
 
     return {
       sku: p.sku,

@@ -126,9 +126,9 @@ export function Header() {
                 </button>
               </>
             ) : (
-              <Link href="/sign-in" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
+              <Link href="/sign-up" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
                 <User className="w-3 h-3" aria-hidden="true" />
-                Login / Register
+                Save Profile
               </Link>
             )}
             <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
@@ -259,11 +259,11 @@ export function Header() {
                 </button>
               ) : (
                 <Link
-                  href="/sign-in"
+                  href="/sign-up"
                   className="block py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Login / Register
+                  Save Profile
                 </Link>
               )}
             </div>

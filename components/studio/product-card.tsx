@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import type { Product } from "@/lib/products"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
@@ -9,7 +10,7 @@ interface ProductCardProps {
   onClick?: () => void
 }
 
-export function ProductCard({ product, onClick }: ProductCardProps) {
+function ProductCardBase({ product, onClick }: ProductCardProps) {
   const firstColour = product.colours[0]
   // Cards render up to ~290px CSS in the 4-up grid; 750w covers 2x displays
   // without forcing the low seeded `format=500w` hint to upscale soft.
@@ -80,3 +81,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     </div>
   )
 }
+
+export const ProductCard = memo(ProductCardBase, (prev, next) => {
+  return prev.product === next.product && Boolean(prev.onClick) === Boolean(next.onClick)
+})
