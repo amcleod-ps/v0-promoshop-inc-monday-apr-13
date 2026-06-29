@@ -221,7 +221,8 @@ Completed on 2026-06-29:
 - Browser check: Studio search narrows `JBL` to the JBL product, the product modal opens, selecting `One Size` enables `Add 1 item to Quote`, and the quote contains `JBL GO 4`, `White`, and `One Size`.
 - Mobile browser smoke at `390x844`: `/sign-up`, `/studio`, and `/my-quote` had no horizontal overflow.
 - Browser console check: no errors or warnings after the interaction smoke pass.
-- GitHub PR status: to be filled after commit and PR creation.
+- GitHub PR status: PR #48 opened against `main`: https://github.com/amcleod-ps/v0-promoshop-inc-monday-apr-13/pull/48
+- Merge status: not self-merged. This is production client code, so the standing human review gate remains in force.
 
 Next.js references for dynamic streamed 404 behavior:
 
