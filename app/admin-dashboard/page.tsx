@@ -345,6 +345,10 @@ export default async function AdminDashboardPage() {
           normalizeTagList(r.tags ?? []),
         ]),
   )
+  // Missing products.tags column (0009 not applied) — surfaced as a notice in
+  // the Products tab so the admin learns the fix BEFORE a tag save fails,
+  // instead of only from the save error.
+  const productTagsColumnMissing = missingTableError(productTagsRes.error)
 
   // Collections + their hand-picked products (migration 0010). Read separately
   // and tolerant of the tables being absent so the dashboard works before 0010
@@ -769,6 +773,7 @@ export default async function AdminDashboardPage() {
           productGroups={productGroups}
           siteContent={siteContent}
           productRows={productRows}
+          productTagsColumnMissing={productTagsColumnMissing}
           team={team}
           theme={theme}
           teamTableMissing={teamMissing}

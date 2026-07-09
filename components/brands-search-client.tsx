@@ -4,6 +4,11 @@ import { useState, useMemo } from "react"
 import Link from "next/link"
 import { ArrowRight, Search } from "lucide-react"
 import { BrandLogo } from "@/components/brand-logo"
+import { SiteImage } from "@/components/site-image"
+import { brandLifestyleId } from "@/lib/image-registry"
+import { useImageSrc } from "@/hooks/use-image-src"
+import { useSiteText } from "@/components/site-content-provider"
+import { imageFitClass, imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 
 interface Brand {
   id: string
@@ -18,6 +23,55 @@ interface Brand {
 
 interface BrandsSearchClientProps {
   brands: Brand[]
+}
+
+/**
+ * The image area at the top of a brand card. Prefers the brand's header
+ * image — the same `brand.<slug>.lifestyle` slot the detail-page hero
+ * (BrandHero) renders, managed in the dashboard's Images tab — and falls
+ * back to today's logo-on-grey box (then to the name as text) when no
+ * header image is configured, so cards without one look exactly as before.
+ * The photo frame is aspect-[8/3], matching the slot's recommended
+ * 1600×600 landscape source, so a well-sized upload shows uncropped; the
+ * admin's cover/contain choice for the slot is respected like BrandHero.
+ */
+function BrandCardMedia({ brand }: { brand: Brand }) {
+  const headerId = brandLifestyleId(brand.slug)
+  const headerSrc = useImageSrc(headerId, "")
+  const headerFit = normalizeImageFit(useSiteText(imageFitKey(headerId), "cover"))
+
+  if (headerSrc) {
+    return (
+      <div className="relative w-full aspect-[8/3] bg-[#f5f5f5] rounded overflow-hidden mb-6">
+        <SiteImage
+          imageId={headerId}
+          defaultSrc=""
+          // Decorative here — the card heading right below carries the brand
+          // name; an admin-entered alt_text still wins inside SiteImage.
+          alt=""
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          // Cards render ~330-660 CSS px wide; 1000w keeps a Squarespace-hosted
+          // source sharp on 2x screens instead of upscaling a low format= hint.
+          minSrcWidth={1000}
+          className={`${imageFitClass(headerFit)} ${
+            headerFit === "cover"
+              ? "transition-transform duration-500 group-hover:scale-105"
+              : ""
+          }`}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full h-20 bg-[#f5f5f5] rounded flex items-center justify-center mb-6 group-hover:bg-[#fef2f2] transition-colors overflow-hidden px-4">
+      <BrandLogo
+        brand={brand}
+        fallbackClassName="font-montserrat font-bold text-xl tracking-wider text-[#373a36]/60 group-hover:text-[#ef473f] transition-colors uppercase"
+      />
+    </div>
+  )
 }
 
 export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
@@ -86,12 +140,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                   href={`/brands/${brand.slug}`}
                   className="group bg-white border border-[#e5e5e5] rounded-lg p-8 hover:border-[#ef473f] hover:shadow-md transition-all duration-300"
                 >
-                  <div className="w-full h-20 bg-[#f5f5f5] rounded flex items-center justify-center mb-6 group-hover:bg-[#fef2f2] transition-colors overflow-hidden px-4">
-                    <BrandLogo
-                      brand={brand}
-                      fallbackClassName="font-montserrat font-bold text-xl tracking-wider text-[#373a36]/60 group-hover:text-[#ef473f] transition-colors uppercase"
-                    />
-                  </div>
+                  <BrandCardMedia brand={brand} />
 
                   <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#ef473f] transition-colors">
                     {brand.name}
@@ -135,12 +184,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                   href={`/brands/${brand.slug}`}
                   className="group bg-white border border-[#e5e5e5] rounded-lg p-8 hover:border-[#ef473f] hover:shadow-md transition-all duration-300"
                 >
-                  <div className="w-full h-20 bg-[#f5f5f5] rounded flex items-center justify-center mb-6 group-hover:bg-[#fef2f2] transition-colors overflow-hidden px-4">
-                    <BrandLogo
-                      brand={brand}
-                      fallbackClassName="font-montserrat font-bold text-xl tracking-wider text-[#373a36]/60 group-hover:text-[#ef473f] transition-colors uppercase"
-                    />
-                  </div>
+                  <BrandCardMedia brand={brand} />
 
                   <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#ef473f] transition-colors">
                     {brand.name}

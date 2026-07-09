@@ -78,6 +78,9 @@ interface Props {
   productGroups: ProductGroup[]
   siteContent: SiteContentEntry[]
   productRows: ProductRow[]
+  /** products.tags column absent (migration 0009 not applied) — the Products
+   *  tab shows a migration notice so tag saves aren't a mystery error. */
+  productTagsColumnMissing: boolean
   team: TeamMemberRow[]
   theme: ThemeEntry[]
   teamTableMissing: boolean
@@ -102,6 +105,7 @@ export function DashboardList({
   productGroups,
   siteContent,
   productRows,
+  productTagsColumnMissing,
   team,
   theme,
   teamTableMissing,
@@ -514,6 +518,7 @@ export function DashboardList({
           <ProductsTab
             products={productRows}
             brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
+            tagsColumnMissing={productTagsColumnMissing}
           />
         </div>
       ) : null}

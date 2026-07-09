@@ -8,9 +8,17 @@ import { withMinImageWidth } from "@/lib/image-resolution"
 interface ProductCardProps {
   product: Product
   onClick?: () => void
+  /**
+   * Surface the card sits on. The studio and brand pages are light; the
+   * collection pages are near-black (#111111), where the default black
+   * product name disappeared into the background (Abigail, Jul 9). "dark"
+   * flips only the text/border colours — layout and behaviour are identical.
+   */
+  tone?: "light" | "dark"
 }
 
-function ProductCardBase({ product, onClick }: ProductCardProps) {
+function ProductCardBase({ product, onClick, tone = "light" }: ProductCardProps) {
+  const onDark = tone === "dark"
   const firstColour = product.colours[0]
   // Cards render up to ~290px CSS in the 4-up grid; 750w covers 2x displays
   // without forcing the low seeded `format=500w` hint to upscale soft.
@@ -21,7 +29,9 @@ function ProductCardBase({ product, onClick }: ProductCardProps) {
 
   return (
     <div
-      className="group cursor-pointer rounded transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2"
+      className={`group cursor-pointer rounded transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 ${
+        onDark ? "focus-visible:ring-offset-[#111111]" : ""
+      }`}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -60,7 +70,9 @@ function ProductCardBase({ product, onClick }: ProductCardProps) {
         {product.colours.slice(0, 8).map((colour, index) => (
           <span
             key={index}
-            className="w-5 h-5 rounded-full border-2 border-black/10 flex-shrink-0 transition-transform hover:scale-110"
+            className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-transform hover:scale-110 ${
+              onDark ? "border-white/25" : "border-black/10"
+            }`}
             style={{ backgroundColor: colour.hex }}
             title={colour.name}
           >
@@ -68,14 +80,23 @@ function ProductCardBase({ product, onClick }: ProductCardProps) {
           </span>
         ))}
         {product.colours.length > 8 && (
-          <span className="text-[10px] text-[#777] font-semibold tracking-wide self-center">
+          <span
+            className={`text-[10px] font-semibold tracking-wide self-center ${
+              onDark ? "text-[#aaa]" : "text-[#777]"
+            }`}
+          >
             +{product.colours.length - 8} more
           </span>
         )}
       </div>
 
       {/* Product Name */}
-      <h3 id={titleId} className="font-bold text-xs uppercase tracking-wide text-black leading-tight">
+      <h3
+        id={titleId}
+        className={`font-bold text-xs uppercase tracking-wide leading-tight ${
+          onDark ? "text-white" : "text-black"
+        }`}
+      >
         {product.name}
       </h3>
     </div>
@@ -83,5 +104,9 @@ function ProductCardBase({ product, onClick }: ProductCardProps) {
 }
 
 export const ProductCard = memo(ProductCardBase, (prev, next) => {
-  return prev.product === next.product && Boolean(prev.onClick) === Boolean(next.onClick)
+  return (
+    prev.product === next.product &&
+    Boolean(prev.onClick) === Boolean(next.onClick) &&
+    prev.tone === next.tone
+  )
 })

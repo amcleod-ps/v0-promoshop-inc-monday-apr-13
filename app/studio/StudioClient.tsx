@@ -23,6 +23,49 @@ interface Props {
   initialCategory?: string
 }
 
+/**
+ * The selected-option marker for the sidebar filters, defined once so every
+ * group matches and the shape is a one-line change. Abigail (Jul 7) asked to
+ * replace the previous mark — a full-height red left border that bent around
+ * the button's rounded corners into a "little red parenthesis" and grew with
+ * wrapped labels — with "a line or little circle" sitting at the same
+ * distance from the start of every label. This is the little circle; for a
+ * short line use e.g. "w-2.5 h-0.5" instead.
+ */
+const FILTER_MARKER_SHAPE = "w-1.5 h-1.5 rounded-full"
+
+function FilterOption({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-start gap-2 text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
+        active ? "text-black font-extrabold" : "text-[#6b6b6b] hover:text-black"
+      }`}
+    >
+      {/* The marker keeps its slot in both states (transparent when idle) so
+          labels never shift on selection; mt centres the dot on the first
+          text line when a long label wraps. */}
+      <span
+        aria-hidden="true"
+        className={`${FILTER_MARKER_SHAPE} mt-[5px] flex-shrink-0 ${
+          active ? "bg-[#ef473f]" : "bg-transparent"
+        }`}
+      />
+      <span>{label}</span>
+    </button>
+  )
+}
+
 export default function StudioClient({ products, categories, brands, tags, initialCategory }: Props) {
   const { t, locale } = useLocale()
   const pageEyebrow = useSiteText(
@@ -169,18 +212,12 @@ export default function StudioClient({ products, categories, brands, tags, initi
             </h2>
             <div className="flex flex-wrap lg:flex-col gap-1">
               {categories.map((cat) => (
-                <button
+                <FilterOption
                   key={cat}
+                  label={cat}
+                  active={activeCategory === cat}
                   onClick={() => setActiveCategory(cat)}
-                  aria-pressed={activeCategory === cat}
-                  className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 px-0 lg:px-0 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
-                    activeCategory === cat
-                      ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                      : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
-                  }`}
-                >
-                  {cat}
-                </button>
+                />
               ))}
             </div>
           </div>
@@ -192,18 +229,12 @@ export default function StudioClient({ products, categories, brands, tags, initi
             </h2>
             <div className="flex flex-wrap lg:flex-col gap-1">
               {genders.map((gender) => (
-                <button
+                <FilterOption
                   key={gender}
+                  label={gender}
+                  active={activeGender === gender}
                   onClick={() => setActiveGender(gender)}
-                  aria-pressed={activeGender === gender}
-                  className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
-                    activeGender === gender
-                      ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                      : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
-                  }`}
-                >
-                  {gender}
-                </button>
+                />
               ))}
             </div>
           </div>
@@ -216,18 +247,12 @@ export default function StudioClient({ products, categories, brands, tags, initi
               </h2>
               <div className="flex flex-wrap lg:flex-col gap-1">
                 {brands.map((brand) => (
-                  <button
+                  <FilterOption
                     key={brand}
+                    label={brand}
+                    active={activeBrand === brand}
                     onClick={() => setActiveBrand(brand)}
-                    aria-pressed={activeBrand === brand}
-                    className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
-                      activeBrand === brand
-                        ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                        : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
-                    }`}
-                  >
-                    {brand}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
@@ -242,18 +267,12 @@ export default function StudioClient({ products, categories, brands, tags, initi
               </h2>
               <div className="flex flex-wrap lg:flex-col gap-1">
                 {["All", ...tags].map((tag) => (
-                  <button
+                  <FilterOption
                     key={tag}
+                    label={tag === "All" ? "All" : displayTag(tag)}
+                    active={activeTag === tag}
                     onClick={() => setActiveTag(tag)}
-                    aria-pressed={activeTag === tag}
-                    className={`text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
-                      activeTag === tag
-                        ? "text-black font-extrabold border-l-2 border-[#ef473f] pl-2"
-                        : "text-[#6b6b6b] hover:text-black border-l-2 border-transparent pl-2"
-                    }`}
-                  >
-                    {tag === "All" ? "All" : displayTag(tag)}
-                  </button>
+                  />
                 ))}
               </div>
             </div>

@@ -80,6 +80,14 @@ function isDuplicate(error: PgError | null | undefined): boolean {
   return error?.code === "23505"
 }
 
+// The products.tags column arrives with migration 0009 — on a database that
+// hasn't run it, the tags UPDATE fails as undefined_column (42703, raw
+// Postgres) or PGRST204 (PostgREST's schema cache has no such column). The
+// statement only writes `tags`, so either code here can only mean that column.
+function isMissingTagsColumn(error: PgError | null | undefined): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204"
+}
+
 // Matches the free-text cap the update actions enforce (updateProductText /
 // updateTeamMemberText at 5000, updateHeroSlideText / updateBrandText via
 // actions.ts MAX_TEXT_LEN). The create actions previously capped nothing, so a
@@ -507,6 +515,16 @@ export async function updateProductTags(
     .update({ tags })
     .eq("sku", sku)
     .select("sku")
+  // Name the real fix when the column itself is missing: "try again" is a
+  // dead end when no retry can succeed until migration 0009 is applied. The
+  // message stays curated (it names our own migration file, not raw
+  // Postgres internals), so it's safe on the open-by-Next-Action-id path.
+  if (error && isMissingTagsColumn(error)) {
+    return adminActionError(
+      "Tags can't be saved yet — the database is missing migration 0009 (product tags). Run supabase/migrations/0009_product_tags.sql in the Supabase SQL Editor, then try again.",
+      error.message,
+    )
+  }
   if (error) return adminActionError("Couldn't save your tags. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
