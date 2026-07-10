@@ -76,7 +76,10 @@ export default async function CollectionsPage() {
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="absolute inset-0 grid place-items-center text-[#444] font-montserrat font-black text-2xl uppercase tracking-widest">
+                      // #888 (not the old #444): the name must stay readable
+                      // on the #0d0d0d cover area — same dark-on-dark class of
+                      // bug as the product names on the detail page.
+                      <div className="absolute inset-0 grid place-items-center text-[#888] font-montserrat font-black text-2xl uppercase tracking-widest">
                         {collection.name}
                       </div>
                     )}

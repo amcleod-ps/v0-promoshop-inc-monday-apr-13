@@ -57,9 +57,12 @@ interface BrandOption {
 export function ProductsTab({
   products,
   brands,
+  tagsColumnMissing,
 }: {
   products: ProductRow[]
   brands: BrandOption[]
+  /** products.tags column absent (migration 0009 not applied). */
+  tagsColumnMissing?: boolean
 }) {
   const [q, setQ] = useState("")
   const needle = q.trim().toLowerCase()
@@ -76,6 +79,22 @@ export function ProductsTab({
 
   return (
     <div>
+      {/* Same look/wording as the tab-level MigrationGuard, but inline: the
+          rest of the Products tab still works pre-0009, only tag saves fail
+          (e.g. tagging a product "usa"/"canada" — Abigail, Jul 9). */}
+      {tagsColumnMissing ? (
+        <div style={styles.migrationNote} role="alert">
+          <strong>Filter tags need migration 0009_product_tags.sql.</strong>
+          <p style={{ margin: "8px 0 0" }}>
+            Saving the “Filter tags” field (for example <code>usa</code> or{" "}
+            <code>canada</code>) will fail until the migration runs. In the
+            Supabase Dashboard → SQL Editor, paste the contents of{" "}
+            <code>supabase/migrations/0009_product_tags.sql</code> and click
+            Run, then refresh this page.
+          </p>
+        </div>
+      ) : null}
+
       <AddProductForm brands={brands} />
 
       <div style={styles.searchWrap}>
@@ -902,6 +921,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  // Mirrors dashboard-list's migrationGuard palette so migration notices
+  // read as one family.
+  migrationNote: {
+    background: "#fffaf0",
+    border: "1px solid #f0c060",
+    color: "#73510a",
+    padding: 16,
+    borderRadius: 6,
+    marginBottom: 16,
+  },
   addShell: {
     border: "1px dashed #999",
     borderRadius: 6,

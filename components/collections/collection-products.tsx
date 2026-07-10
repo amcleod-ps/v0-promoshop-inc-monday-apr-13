@@ -34,8 +34,10 @@ export function CollectionProducts({ products }: { products: Product[] }) {
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+        {/* tone="dark": this grid sits on the collection page's #111111
+            background, where the card's default black name was unreadable. */}
         {products.map((product) => (
-          <ProductCard key={product.sku} product={product} onClick={() => open(product)} />
+          <ProductCard key={product.sku} product={product} tone="dark" onClick={() => open(product)} />
         ))}
       </div>
       <ProductDetailModal product={selected} isOpen={isOpen} onClose={close} />
