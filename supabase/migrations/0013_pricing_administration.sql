@@ -41,7 +41,7 @@ alter table public.product_price_tiers
   add constraint product_price_tiers_product_sku_fkey
   foreign key (product_sku)
   references public.products (sku)
-  on update cascade
+  on update restrict
   on delete restrict;
 
 create table public.product_price_tier_sets (
@@ -198,6 +198,54 @@ alter table public.product_price_tier_sets force row level security;
 alter table public.product_price_tier_audit enable row level security;
 alter table public.product_price_tier_audit force row level security;
 
+-- Catalogue changes must follow retire -> catalogue edit -> replacement. The
+-- product row is already locked when this BEFORE trigger runs; locking the
+-- state row next preserves the mutation function's product -> state order.
+create function public.enforce_product_pricing_lifecycle()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $protect_product$
+declare
+  v_status text;
+begin
+  if new.min_qty is not distinct from old.min_qty
+     and new.is_active is not distinct from old.is_active then
+    return new;
+  end if;
+
+  select state.status
+    into v_status
+  from public.product_price_tier_sets as state
+  where state.product_sku = old.sku
+  for update;
+
+  if found and v_status = 'active' then
+    if new.min_qty is distinct from old.min_qty then
+      raise exception
+        'retire active pricing before changing product MOQ for SKU %',
+        old.sku
+        using errcode = '55000';
+    end if;
+
+    if new.is_active is distinct from true then
+      raise exception
+        'retire active pricing before deactivating product SKU %',
+        old.sku
+        using errcode = '55000';
+    end if;
+  end if;
+
+  return new;
+end
+$protect_product$;
+
+create trigger products_protect_active_pricing
+before update of min_qty, is_active on public.products
+for each row
+execute function public.enforce_product_pricing_lifecycle();
+
 -- Canonical content hash for one complete SKU state. Prices are normalized to
 -- four decimals and tiers are sorted before hashing.
 create function public.pricing_tier_set_fingerprint(
@@ -252,6 +300,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = ''
+set lock_timeout = '5s'
 as $replace_sets$
 declare
   v_operation jsonb;
@@ -283,6 +332,7 @@ declare
   v_operation_count integer;
   v_total_tiers integer := 0;
   v_retirement_count integer := 0;
+  v_requested_tiers integer;
 begin
   if p_operations is null
      or pg_catalog.jsonb_typeof(p_operations) <> 'array' then
@@ -340,7 +390,7 @@ begin
     v_sku := v_operation ->> 'sku';
     if v_sku = ''
        or v_sku <> pg_catalog.btrim(v_sku)
-       or pg_catalog.char_length(v_sku) > 200 then
+       or pg_catalog.char_length(v_sku) > 5000 then
       raise exception 'sku is invalid'
         using errcode = '22023';
     end if;
@@ -449,6 +499,20 @@ begin
       using errcode = '22023';
   end if;
 
+  select pg_catalog.coalesce(
+    pg_catalog.sum(
+      pg_catalog.jsonb_array_length(operation.value -> 'tiers')
+    ),
+    0
+  )::integer
+    into v_requested_tiers
+  from pg_catalog.jsonb_array_elements(p_operations) as operation(value);
+
+  if v_requested_tiers > 10000 then
+    raise exception 'operations exceed the 10,000-tier atomic limit'
+      using errcode = '22023';
+  end if;
+
   -- Product rows exist even for the first price write, so locking every one in
   -- deterministic C order closes the absent-state concurrency race.
   perform product.sku
@@ -500,7 +564,8 @@ begin
     from public.products as product
     where product.sku = v_sku;
 
-    if not v_product_active then
+    if v_action = 'replace'
+       and v_product_active is distinct from true then
       raise exception 'pricing SKU is not active: %', v_sku
         using errcode = '22023';
     end if;
@@ -775,13 +840,16 @@ begin
     pg_catalog.sha256(
       pg_catalog.convert_to(
         pg_catalog.coalesce(
-          pg_catalog.string_agg(
-            state.product_sku || '|' || state.status || '|' || state.fingerprint,
-            E'\n'
+          pg_catalog.jsonb_agg(
+            pg_catalog.jsonb_build_array(
+              state.product_sku,
+              state.status,
+              state.fingerprint
+            )
             order by state.product_sku collate "C"
           ),
-          'pricing-state:empty'
-        ),
+          '[]'::jsonb
+        )::text,
         'UTF8'
       )
     ),
@@ -802,6 +870,142 @@ begin
 end
 $replace_sets$;
 
+-- One service-role-only scalar RPC returns the editable catalogue, tiers,
+-- revision state, integrity evidence, audit tail and release flag from the
+-- invoking statement's single database snapshot. This avoids row-cap
+-- truncation and torn reads across otherwise independent REST requests.
+create function public.load_pricing_admin_snapshot()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $snapshot$
+  select pg_catalog.jsonb_build_object(
+    'schema_version', 1,
+    'products', pg_catalog.coalesce(
+      (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'sku', product.sku,
+            'name', product.name,
+            'min_qty', product.min_qty,
+            'is_active', product.is_active
+          )
+          order by product.sku collate "C"
+        )
+        from public.products as product
+        where product.is_active = true
+           or exists (
+             select 1
+             from public.product_price_tier_sets as state
+             where state.product_sku = product.sku
+               and state.status = 'active'
+           )
+      ),
+      '[]'::jsonb
+    ),
+    'tiers', pg_catalog.coalesce(
+      (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'product_sku', tier.product_sku,
+            'tier_start_quantity', tier.tier_start_quantity,
+            'unit_price_usd',
+            pg_catalog.to_char(tier.unit_price_usd, 'FM99999990.0000')
+          )
+          order by
+            tier.product_sku collate "C",
+            tier.tier_start_quantity
+        )
+        from public.product_price_tiers as tier
+      ),
+      '[]'::jsonb
+    ),
+    'states', pg_catalog.coalesce(
+      (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'product_sku', state.product_sku,
+            'revision', state.revision::text,
+            'status', state.status,
+            'fingerprint', state.fingerprint,
+            'tier_count', state.tier_count,
+            'actual_tier_count', (
+              select pg_catalog.count(*)
+              from public.product_price_tiers as counted_tier
+              where counted_tier.product_sku = state.product_sku
+            ),
+            'computed_fingerprint',
+            public.pricing_tier_set_fingerprint(
+              state.product_sku,
+              state.status,
+              pg_catalog.coalesce(
+                (
+                  select pg_catalog.jsonb_agg(
+                    pg_catalog.jsonb_build_object(
+                      'tier_start_quantity',
+                      hashed_tier.tier_start_quantity,
+                      'unit_price_usd',
+                      pg_catalog.to_char(
+                        hashed_tier.unit_price_usd,
+                        'FM99999990.0000'
+                      )
+                    )
+                    order by hashed_tier.tier_start_quantity
+                  )
+                  from public.product_price_tiers as hashed_tier
+                  where hashed_tier.product_sku = state.product_sku
+                ),
+                '[]'::jsonb
+              )
+            ),
+            'updated_at', state.updated_at
+          )
+          order by state.product_sku collate "C"
+        )
+        from public.product_price_tier_sets as state
+      ),
+      '[]'::jsonb
+    ),
+    'audit', pg_catalog.coalesce(
+      (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.to_jsonb(recent)
+          order by recent.changed_at desc, recent.id desc
+        )
+        from (
+          select
+            audit.id,
+            audit.change_id,
+            audit.product_sku,
+            audit.action,
+            audit.previous_revision,
+            audit.revision,
+            audit.previous_tier_count,
+            audit.tier_count,
+            audit.actor,
+            audit.reason,
+            audit.source_fingerprint,
+            audit.changed_at
+          from public.product_price_tier_audit as audit
+          order by audit.changed_at desc, audit.id desc
+          limit 50
+        ) as recent
+      ),
+      '[]'::jsonb
+    ),
+    'pricing_enabled', pg_catalog.coalesce(
+      (
+        select flag.enabled
+        from public.feature_flags as flag
+        where flag.key = 'tiered_pricing'
+      ),
+      false
+    )
+  )
+$snapshot$;
+
 -- New objects expose no browser-role surface and have no RLS policies.
 revoke all privileges on table public.product_price_tier_sets
   from public, anon, authenticated, service_role;
@@ -819,6 +1023,18 @@ grant usage on schema public to service_role;
 grant select on table public.product_price_tiers to service_role;
 grant select on table public.product_price_tier_sets to service_role;
 grant select on table public.product_price_tier_audit to service_role;
+
+revoke all
+  on function public.enforce_product_pricing_lifecycle()
+  from public, anon, authenticated, service_role;
+
+revoke all
+  on function public.load_pricing_admin_snapshot()
+  from public, anon, authenticated, service_role;
+
+grant execute
+  on function public.load_pricing_admin_snapshot()
+  to service_role;
 
 revoke all
   on function public.pricing_tier_set_fingerprint(text, text, jsonb)
@@ -847,6 +1063,31 @@ begin
      or exists (select 1 from public.product_price_tier_sets)
      or exists (select 1 from public.product_price_tier_audit) then
     raise exception '0013 must finish without pricing data'
+      using errcode = '55000';
+  end if;
+
+  if (
+    select pg_catalog.count(*)
+    from public.feature_flags
+    where key = 'tiered_pricing'
+      and enabled = false
+  ) <> 1 then
+    raise exception '0013 must finish with exactly one inactive pricing flag'
+      using errcode = '55000';
+  end if;
+
+  if exists (
+    select 1
+    from pg_catalog.pg_proc as procedure
+    join pg_catalog.pg_roles as owner
+      on owner.oid = procedure.proowner
+    where procedure.oid in (
+      'public.replace_product_price_tier_sets(jsonb,text,text)'::pg_catalog.regprocedure,
+      'public.load_pricing_admin_snapshot()'::pg_catalog.regprocedure
+    )
+      and not (owner.rolsuper or owner.rolbypassrls)
+  ) then
+    raise exception '0013 SECURITY DEFINER owner must bypass forced RLS'
       using errcode = '55000';
   end if;
 end
