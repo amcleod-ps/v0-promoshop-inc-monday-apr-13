@@ -59,7 +59,7 @@ create table public.product_price_tier_sets (
   constraint product_price_tier_sets_product_sku_fkey
     foreign key (product_sku)
     references public.products (sku)
-    on update cascade
+    on update restrict
     on delete restrict,
 
   constraint product_price_tier_sets_revision_positive
