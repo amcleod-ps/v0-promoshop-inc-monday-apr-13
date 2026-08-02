@@ -1,7 +1,9 @@
 const UNIT_SCALE_DIGITS = 4
-const UNIT_SCALE_FACTOR = 10_000n
-const SCALED_UNITS_PER_CENT = 100n
-const MAX_WHOLE_UNIT_PRICE = 100_000_000n
+const ZERO = BigInt(0)
+const CENTS_PER_DOLLAR = BigInt(100)
+const UNIT_SCALE_FACTOR = BigInt(10_000)
+const SCALED_UNITS_PER_CENT = BigInt(100)
+const MAX_WHOLE_UNIT_PRICE = BigInt(100_000_000)
 const UNIT_PRICE_PATTERN = /^(0|[1-9]\d*)(?:\.(\d{1,4}))?$/
 
 function parseUnitPriceUsd(value: string): bigint | null {
@@ -15,7 +17,7 @@ function parseUnitPriceUsd(value: string): bigint | null {
   const fraction = (match[2] ?? "").padEnd(UNIT_SCALE_DIGITS, "0")
   const scaled = whole * UNIT_SCALE_FACTOR + BigInt(fraction || "0")
 
-  return scaled > 0n ? scaled : null
+  return scaled > ZERO ? scaled : null
 }
 
 function formatScaledUnitPrice(scaled: bigint): string {
@@ -28,8 +30,8 @@ function formatScaledUnitPrice(scaled: bigint): string {
 }
 
 function formatCents(cents: bigint): string {
-  const whole = cents / 100n
-  const fraction = (cents % 100n).toString().padStart(2, "0")
+  const whole = cents / CENTS_PER_DOLLAR
+  const fraction = (cents % CENTS_PER_DOLLAR).toString().padStart(2, "0")
 
   return whole.toString() + "." + fraction
 }
@@ -60,7 +62,8 @@ export function calculateSubtotalUsd(
 
   const scaledSubtotal = scaledUnitPrice * BigInt(quantity)
   const cents =
-    (scaledSubtotal + SCALED_UNITS_PER_CENT / 2n) / SCALED_UNITS_PER_CENT
+    (scaledSubtotal + SCALED_UNITS_PER_CENT / BigInt(2)) /
+    SCALED_UNITS_PER_CENT
 
   return formatCents(cents)
 }
