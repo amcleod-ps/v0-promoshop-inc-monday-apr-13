@@ -12,6 +12,7 @@ export interface PricingAdminProduct {
   sku: string
   name: string
   minimumQuantity: number
+  isActive: boolean
   revision: string
   status: "never_configured" | "active" | "retired"
   fingerprint: string | null
