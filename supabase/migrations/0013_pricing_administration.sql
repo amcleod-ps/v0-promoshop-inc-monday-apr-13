@@ -261,8 +261,8 @@ declare
   v_sku text;
   v_action text;
   v_expected_revision bigint;
-  v_start integer;
-  v_previous_start integer;
+  v_start bigint;
+  v_previous_start bigint;
   v_price numeric;
   v_canonical_tiers jsonb;
   v_previous_tiers jsonb;
@@ -489,7 +489,7 @@ begin
   for v_operation in
     select operation.value
     from pg_catalog.jsonb_array_elements(p_operations) as operation(value)
-    order by operation.value ->> 'sku' collate "C"
+    order by (operation.value ->> 'sku') collate "C"
   loop
     v_sku := v_operation ->> 'sku';
     v_action := v_operation ->> 'action';
@@ -652,7 +652,7 @@ begin
   for v_prepared_operation in
     select operation.value
     from pg_catalog.jsonb_array_elements(v_prepared) as operation(value)
-    order by operation.value ->> 'sku' collate "C"
+    order by (operation.value ->> 'sku') collate "C"
   loop
     v_sku := v_prepared_operation ->> 'sku';
     v_action := v_prepared_operation ->> 'action';
