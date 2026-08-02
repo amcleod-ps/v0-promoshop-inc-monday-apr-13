@@ -1,6 +1,9 @@
 import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { adminGateEnabled } from "@/lib/admin-auth"
+import { getPricingAdminAccess } from "@/lib/pricing/admin-access"
+import type { PricingPanelState } from "@/lib/pricing/admin-types"
+import { loadPricingAdminPanel } from "@/lib/supabase/pricing-admin"
 import {
   DashboardList,
   type ProductGroup,
@@ -212,6 +215,11 @@ export default async function AdminDashboardPage() {
       </main>
     )
   }
+
+  const pricingAccess = await getPricingAdminAccess()
+  const pricing: PricingPanelState = pricingAccess.allowed
+    ? await loadPricingAdminPanel(supabase)
+    : { kind: "locked", reason: pricingAccess.reason }
 
   const [
     siteImagesRes,
@@ -671,7 +679,7 @@ export default async function AdminDashboardPage() {
         <ol style={pageStyles.helpList}>
           <li>
             Pick a tab: <strong>Images</strong>, <strong>Text content</strong>,{" "}
-            <strong>Products</strong>, <strong>Team</strong>, or <strong>Theme</strong>.
+            <strong>Products</strong>, <strong>Pricing</strong>, <strong>Team</strong>, or <strong>Theme</strong>.
           </li>
           <li>
             Inside each tab, expand <strong>+ Add new …</strong> to create a new
@@ -783,6 +791,7 @@ export default async function AdminDashboardPage() {
           collections={collectionsForTab}
           collectionsTableMissing={collectionsTableMissing}
           allProductOptions={allProductOptions}
+          pricing={pricing}
         />
       )}
     </main>
