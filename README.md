@@ -264,9 +264,9 @@ public/                  # Static assets (favicons, seeded imagery)
 scripts/
   generate-seed-sql.ts   # Regenerates supabase/migrations/0003_seed_data.sql
 supabase/
-  migrations/            # 0001 → 0011, applied in order by hand (SQL Editor)
+  migrations/            # 0001 → 0012, applied in order by hand (SQL Editor)
 ```
 
 ## Pricing add-on delivery
 
-The gate-driven implementation plan, Stage 0 readiness record, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). No production pricing data belongs in the repository.
+The gate-driven implementation plan, readiness records, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). The Stage 1 foundation remains dual-gated and contains no production pricing data.

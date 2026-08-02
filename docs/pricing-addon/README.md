@@ -2,6 +2,8 @@
 
 This folder is the canonical technical plan for adding quantity-based USD estimates to the existing quote-first storefront. It deliberately contains no customer price data, contract terms, personal information, credentials, or production secrets.
 
+Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundation.md`](./stage-1-foundation.md).
+
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:
@@ -56,7 +58,7 @@ Exit only when the checks in [`stage-0-readiness.md`](./stage-0-readiness.md) ar
 ### Stage 1 — pricing model and engine
 
 - Add a normalized tier table linked to `products`.
-- Enforce positive quantities, non-negative exact prices and one unique start quantity per product.
+- Enforce positive quantities, strictly positive exact prices and one unique start quantity per product.
 - Add explicit grants and RLS policies.
 - Implement a pure deterministic tier-selection and subtotal calculator.
 - Add focused automated tests for tier boundaries, precision and invalid inputs.
@@ -143,4 +145,4 @@ Final decisions belong in the Stage 0 readiness record before Stage 1 implementa
 
 ## Verification
 
-The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint and production build. Stage-specific automated tests are added as implementation begins.
+The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint, focused unit tests and a production build. Stage-specific coverage expands with each implementation stage.
