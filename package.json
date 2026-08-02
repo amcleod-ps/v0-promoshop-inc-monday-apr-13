@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts"
+    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts tests/pricing/matrix.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
