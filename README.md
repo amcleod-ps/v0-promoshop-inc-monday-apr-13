@@ -266,3 +266,7 @@ scripts/
 supabase/
   migrations/            # 0001 → 0011, applied in order by hand (SQL Editor)
 ```
+
+## Pricing add-on delivery
+
+The gate-driven implementation plan, Stage 0 readiness record, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). No production pricing data belongs in the repository.
