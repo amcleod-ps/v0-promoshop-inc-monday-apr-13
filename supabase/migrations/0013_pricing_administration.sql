@@ -900,7 +900,6 @@ as $snapshot$
              select 1
              from public.product_price_tier_sets as state
              where state.product_sku = product.sku
-               and state.status = 'active'
            )
       ),
       '[]'::jsonb
@@ -980,8 +979,8 @@ as $snapshot$
             audit.change_id,
             audit.product_sku,
             audit.action,
-            audit.previous_revision,
-            audit.revision,
+            audit.previous_revision::text as previous_revision,
+            audit.revision::text as revision,
             audit.previous_tier_count,
             audit.tier_count,
             audit.actor,
