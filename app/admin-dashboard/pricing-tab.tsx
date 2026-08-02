@@ -23,6 +23,13 @@ type Status = {
 
 const idleStatus: Status = { kind: "idle", message: "" }
 
+function formatUtcTimestamp(value: string): string {
+  const timestamp = new Date(value)
+  return Number.isNaN(timestamp.getTime())
+    ? "Invalid timestamp"
+    : timestamp.toISOString().replace("T", " ").replace(".000Z", " UTC")
+}
+
 export function PricingTab({ state }: { state: PricingPanelState }) {
   if (state.kind === "locked") {
     return (
@@ -465,7 +472,7 @@ function ProductPricingEditor({
         <p style={styles.help}>
           Revision {product.revision}
           {product.updatedAt
-            ? " · changed " + new Date(product.updatedAt).toLocaleString()
+            ? " · changed " + formatUtcTimestamp(product.updatedAt)
             : " · no pricing history"}
         </p>
 
@@ -649,7 +656,7 @@ function AuditList({
                 {entry.previousTierCount} → {entry.tierCount} tiers
               </span>
               <span>
-                {new Date(entry.changedAt).toLocaleString()} · {entry.actor}
+                {formatUtcTimestamp(entry.changedAt)} · {entry.actor}
               </span>
               {entry.reason ? <span>{entry.reason}</span> : null}
             </li>
