@@ -2,9 +2,10 @@
 
 Status date: 2026-08-02  
 Upstream repository: `amcleod-ps/v0-promoshop-inc-monday-apr-13`  
-Verified upstream base: `b7336b97091c2fb045b01564424afc03834b6478`
+Verified upstream base: `b7336b97091c2fb045b01564424afc03834b6478`  
+Stage 0 merge: `942051ae656559b86a7507a231f01ea694950fd8`
 
-Stage 0 prepares the pricing add-on without implementing, migrating, loading or activating production pricing.
+Stage 0 prepared the repository, evidence boundaries and controls without loading or activating production pricing. Its repository work completed in the merged Stage 0 pull request; unresolved client-input and hosted-release checks remain explicit gates for later data import and public release.
 
 ## Verified baseline
 
@@ -25,8 +26,10 @@ Stage 0 prepares the pricing add-on without implementing, migrating, loading or 
 - The custom domains were not attached to that connected Vercel project and were serving a different deployment path.
 - The apex `.com` host redirected to `www` only after bypassing a certificate-name mismatch; its certificate covered the `www` host but not the apex host.
 - The repository-connected deployment returned the administration page without the optional `ADMIN_DASHBOARD_PASSWORD` gate.
-- The hosted Supabase project referenced by this application was not available through the connected Supabase account.
-- Consequently, the live migration ledger and exact table, policy, grant and function state are unverified. Repository migrations `0009` through `0011` must not be assumed applied solely because they exist in Git.
+- The correct hosted Supabase project, `rfvnjxrhainbldxtzdfb`, is accessible through the PromoShop Inc. organization.
+- The project has no Supabase-managed migration ledger because repository migrations were applied manually.
+- Object-level reconciliation confirmed migrations through `0010`; the previously missing reviewed `0011` was applied and its trigger, function security and NULL-scope ordering markers were verified on 2026-08-02.
+- All twelve predecessor public tables have RLS enabled but not forced. Existing tables retain broad historical role grants; `0012` therefore revokes defaults and rebuilds least-privilege grants for its new tables explicitly.
 
 ## Repository preparation
 
@@ -66,10 +69,10 @@ Changing a provisional default updates this record and the acceptance matrix bef
 
 ## Hosted access and operational controls
 
-- [ ] Obtain access to the correct hosted Supabase project.
-- [ ] Verify the hosted migration ledger against repository migrations `0001` through `0011`.
-- [ ] Record exact current RLS, policy, grant, trigger and relevant function state.
-- [ ] Resolve any verified migration drift before authoring the pricing migration.
+- [x] Obtain access to the correct hosted Supabase project.
+- [x] Verify that no managed ledger exists and reconcile hand-applied migrations `0001` through `0011` through object evidence.
+- [x] Record current RLS, policy, grant, trigger and relevant function state.
+- [x] Resolve verified predecessor drift by applying and verifying the reviewed `0011` migration.
 - [ ] Confirm the Vercel project that owns the production custom domains.
 - [ ] Confirm preview and production environment-variable ownership.
 - [x] Authorize and verify the Vercel fork-based preview for PR #50.
@@ -81,26 +84,26 @@ Changing a provisional default updates this record and the acceptance matrix bef
 
 Before a pricing migration is authored:
 
-- [ ] Choose the exact decimal scale and rounding rule.
-- [ ] Confirm whether tier prices may be zero.
-- [ ] Confirm whether future-dated tiers are required in the initial release.
-- [ ] Confirm deletion/retirement semantics for a SKU's tiers.
-- [ ] Confirm the feature-flag owner and activation path.
-- [ ] Define the server-owned quote snapshot shape.
-- [ ] Define the atomic import transaction and reconciliation output.
+- [x] Store one to four decimal places, canonicalize unit prices to four decimals and round final SKU subtotals half up to cents.
+- [x] Require strictly positive tier prices; absence of tiers means unpriced.
+- [x] Exclude future-dated tiers from the initial release.
+- [x] Allow complete tier retirement only through an explicit Stage 2 atomic operation.
+- [x] Require both the database flag and exact server environment value `TIERED_PRICING_ENABLED=true`; both default off.
+- [x] Define the Stage 4 server snapshot fields in `stage-1-foundation.md`.
+- [x] Define the Stage 2 atomic replacement and reconciliation contract in `stage-1-foundation.md`.
 
-The anticipated next migration name is `0012_tiered_pricing.sql`, but it must not be created until the hosted ledger confirms that `0011` is the true predecessor.
+The exact hosted objects now establish `0011` as the predecessor. Stage 1 authors `0012_tiered_pricing.sql` without loading or activating pricing.
 
 ## Stage 0 exit criteria
 
-Stage 0 completes only when:
+The repository-preparation portion of Stage 0 is complete: its pull request is green, reviewed and merged; the hosted database is accessible and reconciled through `0011`; and the foundation design gates are resolved.
 
-1. the Stage 0 pull request is green and reviewed;
-2. required inputs and behaviour decisions are recorded;
-3. the correct hosted database is accessible and reconciled;
-4. the release project and environment ownership are unambiguous;
-5. the hosted administration route is protected;
-6. all custom-domain TLS and redirect checks pass; and
-7. a reproducible pre-change baseline is retained.
+The following remain release-readiness gates carried into later stages:
 
-Until every exit criterion passes, there is no production pricing migration, matrix import, public activation, release or customer acceptance.
+1. required client inputs and final behaviour decisions are recorded;
+2. the release project and environment ownership are unambiguous;
+3. the hosted administration route is protected;
+4. all custom-domain TLS and redirect checks pass; and
+5. a reproducible pre-change production baseline is retained.
+
+An empty, off-by-default foundation schema and isolated pricing engine may be installed and verified while those release gates remain open. Until every release-readiness gate passes, there is no customer matrix import, public activation, customer-facing pricing release or customer acceptance.

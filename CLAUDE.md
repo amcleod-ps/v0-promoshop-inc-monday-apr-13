@@ -15,15 +15,16 @@ pnpm dev      # dev server on :3000
 pnpm build    # production build — also the reliable type-check (tsc noEmit via Next)
 pnpm start    # serve the production build
 pnpm lint     # eslint . (flat config in eslint.config.mjs; ignores components/ui)
+pnpm test     # Node test runner through tsx; focused pricing foundation tests
 
 # Regenerate supabase/migrations/0003_seed_data.sql from in-repo seed files.
 # Run after editing lib/seed-data/* or lib/cms/team.ts.
 pnpm tsx scripts/generate-seed-sql.ts
 ```
 
-There is no test framework configured. `pnpm build` is the de-facto correctness
-gate (it type-checks); `pnpm lint` must also stay green — run both before
-pushing. `react-hooks/set-state-in-effect` is deliberately off in
+Focused tests use Node's built-in test runner through the existing `tsx`
+dependency. `pnpm build` remains the reliable type-check; `pnpm test`,
+`pnpm lint`, and `pnpm build` must all stay green before pushing. `react-hooks/set-state-in-effect` is deliberately off in
 eslint.config.mjs: the localStorage hydration pattern below and the
 dashboard's preview/re-sync effects are intentional setState-in-effect.
 
@@ -214,7 +215,7 @@ fails the submission; with the vars unset it silently no-ops).
 - `next/image` runs with `unoptimized: true` globally; new external image hosts
   must be added to `images.remotePatterns` in `next.config.mjs`.
 - Migrations in `supabase/migrations/` are applied **in order, by hand** via the
-  Supabase SQL Editor (0001 → 0011). There are eleven; 0004 adds `site_content`,
+  Supabase SQL Editor (0001 → 0012). There are twelve; 0004 adds `site_content`,
   0005 adds `team_members` + `site_theme`, 0006 adds the `assign_sort_order`
   insert triggers the dashboard's create actions rely on for race-free
   ordering (they fall back to read-max+1 without it), 0007 adds
@@ -226,6 +227,8 @@ fails the submission; with the vars unset it silently no-ops).
   `lib/supabase/collections.ts` are defensive so the site is unaffected until
   it's applied). 0011 forces quote ids server-side, adds a small DB-side email
   throttle for direct inserts, and fixes NULL-scoped product-image ordering.
+  0012 adds the off-by-default feature flag and normalized USD product tiers
+  with explicit grants and forced RLS; it loads no pricing data.
   0003 is reseed-safe:
   conflicts are DO NOTHING / no-op, so re-running never overwrites admin edits.
   **Resilience contract:** code that reads a column added by a not-yet-applied
@@ -244,3 +247,5 @@ enables the admin-dashboard Basic-auth gate (unset = open); `RESEND_API_KEY`,
 `QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM` enable quote-request
 email notifications (`docs/RESEND-EMAIL-SETUP.md` is the client-facing setup
 guide; `docs/ADMIN-LOGIN-SETUP.md` covers admin-dashboard access).
+`TIERED_PRICING_ENABLED` is server-only, defaults off, and enables pricing code
+only for the exact lowercase value `true`; the database flag must also be on.

@@ -86,8 +86,10 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 
 ## Supabase setup
 
-Eleven migrations live in `supabase/migrations/`. Run them in order from
-the Supabase Dashboard → SQL Editor → New query:
+Twelve repository migrations live in `supabase/migrations/`. Run them in order from
+the Supabase Dashboard → SQL Editor → New query. Repository presence is not
+proof of hosted application; reconcile the hosted objects against the relevant
+stage record before relying on a migration:
 
 1. `0001_init.sql` — base tables: `brands`, `hero_slides`, `quote_requests`
    with Row-Level Security.
@@ -116,8 +118,11 @@ the Supabase Dashboard → SQL Editor → New query:
 11. `0011_quote_id_and_product_image_order_hardening.sql` — forces
     server-side quote ids, adds a small direct-insert email throttle, and
     fixes product-level image ordering.
+12. `0012_tiered_pricing.sql` — adds an off-by-default release flag and
+    normalized USD product tiers. Both tables are service-role-only and the
+    migration loads no customer pricing.
 
-After running all eleven, the dashboard's Table Editor shows:
+After applying all twelve, the dashboard's Table Editor shows:
 
 | Table | Rows | What it controls |
 | --- | --- | --- |
@@ -128,6 +133,8 @@ After running all eleven, the dashboard's Table Editor shows:
 | `product_images` | all product gallery imagery | Product cards, modal, lightbox |
 | `collections` | curated collection pages | Public Collections page and export menus |
 | `collection_products` | hand-picked collection products | Manual product selections per collection |
+| `feature_flags` | `tiered_pricing=false` initially | Server-verified pricing release gate |
+| `product_price_tiers` | empty until controlled import | Service-only USD quantity tiers |
 | `site_images` | every other image | Site logo, About hero, brand logos, brand lifestyle backdrops, team photos |
 | `quote_requests` | filled from the public form | Incoming quote requests |
 
@@ -264,9 +271,9 @@ public/                  # Static assets (favicons, seeded imagery)
 scripts/
   generate-seed-sql.ts   # Regenerates supabase/migrations/0003_seed_data.sql
 supabase/
-  migrations/            # 0001 → 0011, applied in order by hand (SQL Editor)
+  migrations/            # 0001 → 0012, applied in order by hand (SQL Editor)
 ```
 
 ## Pricing add-on delivery
 
-The gate-driven implementation plan, Stage 0 readiness record, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). No production pricing data belongs in the repository.
+The gate-driven implementation plan, readiness records, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). The Stage 1 foundation remains dual-gated and contains no production pricing data.

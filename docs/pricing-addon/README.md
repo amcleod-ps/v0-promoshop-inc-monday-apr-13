@@ -2,6 +2,8 @@
 
 This folder is the canonical technical plan for adding quantity-based USD estimates to the existing quote-first storefront. It deliberately contains no customer price data, contract terms, personal information, credentials, or production secrets.
 
+Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundation.md`](./stage-1-foundation.md).
+
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:
@@ -39,7 +41,7 @@ An estimate must remain clearly identified as an estimate. The add-on must not i
 
 1. **Server authority.** Browser calculations improve the experience; the server performs the authoritative calculation from current persisted tiers.
 2. **Exact money handling.** Persist prices as PostgreSQL `NUMERIC`, never binary floating point. The final scale and rounding rule must be approved before the migration is authored.
-3. **Least privilege.** Public clients may read only the pricing data required to calculate an estimate. Writes remain server-side and administrator-authorized. Database grants and RLS policies are explicit in the same migration.
+3. **Least privilege.** Browser roles cannot query pricing tables directly. A server-only data-access boundary verifies both release gates and returns only the pricing fields required by the application. Writes remain server-side and administrator-authorized; database grants and forced RLS are explicit in the same migration.
 4. **Safe activation.** New schema and code deploy with the pricing feature disabled. Data is loaded and reconciled before activation.
 5. **Atomic administration.** A product's tier set is validated and replaced as one operation; partial imports or half-written tier sets are not acceptable.
 6. **Backward compatibility.** Existing browser-local quote carts without pricing fields continue to load and are recalculated from current data.
@@ -56,8 +58,8 @@ Exit only when the checks in [`stage-0-readiness.md`](./stage-0-readiness.md) ar
 ### Stage 1 — pricing model and engine
 
 - Add a normalized tier table linked to `products`.
-- Enforce positive quantities, non-negative exact prices and one unique start quantity per product.
-- Add explicit grants and RLS policies.
+- Enforce positive quantities, strictly positive exact prices and one unique start quantity per product.
+- Add explicit service-role-only grants and forced RLS; public roles receive no table privileges or policies.
 - Implement a pure deterministic tier-selection and subtotal calculator.
 - Add focused automated tests for tier boundaries, precision and invalid inputs.
 - Add a release flag that defaults off.
@@ -105,7 +107,7 @@ Exit when required checks are green and review feedback is resolved or explicitl
 
 ### Stage 6 — controlled release and handoff
 
-- Apply and verify the exact hosted migration before loading data.
+- Reconfirm that the exact inactive hosted migration remains installed and unchanged before loading data.
 - Reconcile the complete approved matrix while the feature remains off.
 - Deploy an exact reviewed commit.
 - Smoke-test every custom host, redirect, TLS certificate, catalogue path, cart path, quote path and protected administration route.
@@ -124,7 +126,7 @@ Required validation:
 - `min_order_quantity` is a positive integer and is consistent for every row of a SKU;
 - `tier_start_quantity` is a positive integer, is at least the MOQ and is strictly increasing within a SKU;
 - the first tier starts at the MOQ unless an approved exception is recorded;
-- `unit_price_usd` is a non-negative decimal using the approved precision;
+- `unit_price_usd` is a strictly positive decimal using the approved precision;
 - `product_name` and `notes` are reference-only fields and never update catalogue content;
 - duplicate SKU/start pairs are rejected;
 - blank or malformed required values are rejected; and
@@ -143,4 +145,4 @@ Final decisions belong in the Stage 0 readiness record before Stage 1 implementa
 
 ## Verification
 
-The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint and production build. Stage-specific automated tests are added as implementation begins.
+The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint, focused unit tests and a production build. Stage-specific coverage expands with each implementation stage.
