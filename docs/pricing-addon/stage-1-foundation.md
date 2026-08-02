@@ -43,9 +43,11 @@ This establishes `0011` as the verified hosted predecessor for `0012_tiered_pric
 ## Verification state
 
 - [x] Existing `0011` predecessor applied and object-verified.
-- [ ] Stage 1 pull request checks completed.
-- [ ] Exact reviewed `0012` applied to the hosted project.
-- [ ] Hosted constraints, grants, forced RLS, policies, flag state and empty tier state verified.
+- [x] Stage 1 pull request checks completed on the reviewed implementation head.
+- [x] Exact reviewed `0012` applied to the hosted project.
+- [x] Hosted constraints, grants, forced RLS, absence of policies, flag state and empty tier state verified.
 - [ ] Stage 1 pull request merged and exact `main` head verified.
+
+The applied migration is blob `8d1b1886e09dc9e5aa2db614d9520ecf4f191371` from reviewed commit `27f30f7c1d255d6c5897db02a4cb12bc89ae3055`. A consolidated hosted query returned true for all thirteen assertions: both tables and both updated-at triggers exist; all eight constraints match; both tables have enabled and forced RLS; there are no RLS policies or public-role table/column grants; anon and authenticated cannot select or write; the service role retains `BYPASSRLS` and only the intended privileges; `tiered_pricing=false`; the tier table is empty; and the pre-existing manual-migration ledger state is unchanged.
 
 The database flag remains false, the server environment flag is absent unless separately configured, and no customer pricing rows are included in this stage.
