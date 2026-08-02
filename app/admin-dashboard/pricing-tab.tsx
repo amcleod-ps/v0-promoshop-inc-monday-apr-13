@@ -500,7 +500,7 @@ function ProductPricingEditor({
                     onChange={(event) =>
                       updateTier(index, "unitPriceUsd", event.target.value)
                     }
-                    disabled={pending}
+                    disabled={pending || !product.isActive}
                     placeholder="0.0000"
                     style={styles.input}
                   />
