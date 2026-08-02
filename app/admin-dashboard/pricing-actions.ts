@@ -7,11 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requirePricingAdminAction } from "@/lib/pricing/admin-access"
 import type {
   PricingActionFailure,
-  PricingCsvApplyInput,
   PricingDryRunResult,
   PricingMutationResult,
-  PricingReplaceInput,
-  PricingRetireInput,
 } from "@/lib/pricing/admin-types"
 import {
   dryRunPricingMatrixCsv,
