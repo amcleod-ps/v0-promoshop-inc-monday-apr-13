@@ -32,6 +32,11 @@ test("catalogue lifecycle is protected at the database boundary", () => {
 })
 
 test("admin reads use one integrity-bearing scalar snapshot", () => {
+  assert.doesNotMatch(
+    migration,
+    /pg_catalog\\.coalesce/,
+    "COALESCE is SQL syntax and cannot be schema-qualified",
+  )
   assert.match(
     migration,
     /create function public\.load_pricing_admin_snapshot\(\)\s+returns jsonb\s+language sql\s+stable\s+security definer\s+set search_path = ''/i,
