@@ -14,6 +14,7 @@ export const PRICING_MATRIX_LIMITS = {
   maxDataRows: 10_000,
   maxFieldCharacters: 5_000,
   maxTiersPerSku: 1_000,
+  maxSkuSets: 500,
 } as const
 
 const MAX_INT4 = 2_147_483_647
@@ -613,6 +614,15 @@ function validateRows(
     const group = grouped.get(row.sku) ?? []
     group.push(row)
     grouped.set(row.sku, group)
+  }
+
+  if (grouped.size > PRICING_MATRIX_LIMITS.maxSkuSets) {
+    diagnostics.push(
+      diagnostic(
+        "too_many_skus",
+        "The matrix exceeds the 500-SKU atomic import limit.",
+      ),
+    )
   }
 
   const sets: CanonicalTierSet[] = []
