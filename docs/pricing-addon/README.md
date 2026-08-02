@@ -125,6 +125,7 @@ Required validation:
 - `tier_start_quantity` is a positive integer, is at least the MOQ and is strictly increasing within a SKU;
 - the first tier starts at the MOQ unless an approved exception is recorded;
 - `unit_price_usd` is a non-negative decimal using the approved precision;
+- `product_name` and `notes` are reference-only fields and never update catalogue content;
 - duplicate SKU/start pairs are rejected;
 - blank or malformed required values are rejected; and
 - the import reports every error before it writes anything.
