@@ -34,10 +34,10 @@ This establishes `0011` as the verified hosted predecessor for `0012_tiered_pric
 
 - `feature_flags` stores the global, fail-closed database gate.
 - `product_price_tiers` uses the natural composite key `(product_sku, tier_start_quantity)`, an exact numeric price, a product foreign key, constraints, updated-at trigger, explicit grants, and forced RLS.
-- Public roles can read only the approved columns. Tier rows remain invisible unless the database flag is on and the related product is active. Public writes have no policy or grant.
-- Service-role access is limited to flag read/toggle and tier CRUD.
+- Anonymous and authenticated roles receive no privileges or policies on either pricing table. Pricing rows stay behind the server boundary even when the database flag changes.
+- Service-role access is limited to flag read/toggle and tier CRUD; forced RLS remains enabled as defense in depth.
 - `lib/pricing/` contains the pure engine, exact-money helper, types, and strict server flag.
-- `lib/supabase/pricing.ts` is a separate defensive read. With the server flag off it never queries the new table, preserving the existing catalogue if the migration is absent.
+- `lib/supabase/pricing.ts` is a server-only defensive read. It returns before database access unless the exact server flag is on, verifies the independent database flag through the service-role client, and only then reads tiers. A disabled gate never queries or returns tier rows, preserving the existing catalogue if the migration is absent.
 - Node’s built-in test runner executes through the existing `tsx` dependency; the Quality workflow runs tests before the production build.
 
 ## Verification state

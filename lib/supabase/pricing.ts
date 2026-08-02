@@ -4,7 +4,11 @@ import type {
   PriceTier,
   PricingTierMap,
 } from "@/lib/pricing/types"
-import { createClient } from "./server"
+import { createAdminClient } from "./admin"
+
+interface FeatureFlagRow {
+  enabled: unknown
+}
 
 interface PriceTierRow {
   product_sku: unknown
@@ -29,8 +33,11 @@ function requestedSkuList(skus: readonly string[]): string[] {
  * Reads pricing separately from the product catalogue so a disabled feature
  * or missing 0012 migration cannot collapse existing catalogue routes.
  *
- * - {} means pricing is disabled, no SKUs were requested, or no visible rows
- *   exist (the database flag is also off by default).
+ * The server-only service-role client is used because browser roles have no
+ * pricing-table privileges. It queries tiers only after both independent
+ * release gates pass:
+ *
+ * - {} means either gate is disabled, no SKUs were requested, or no rows exist.
  * - null means client initialization, query, or row validation failed.
  */
 export async function getPriceTiersBySku(
@@ -41,13 +48,24 @@ export async function getPriceTiersBySku(
   const requestedSkus = requestedSkuList(skus)
   if (requestedSkus.length === 0) return {}
 
-  let supabase
+  let supabase: ReturnType<typeof createAdminClient>
 
   try {
-    supabase = await createClient()
+    supabase = createAdminClient()
   } catch {
     return null
   }
+
+  const { data: rawFeatureFlag, error: featureFlagError } = await supabase
+    .from("feature_flags")
+    .select("enabled")
+    .eq("key", "tiered_pricing")
+    .maybeSingle()
+
+  if (featureFlagError) return null
+
+  const featureFlag = rawFeatureFlag as FeatureFlagRow | null
+  if (!featureFlag || featureFlag.enabled !== true) return {}
 
   const { data, error } = await supabase
     .from("product_price_tiers")

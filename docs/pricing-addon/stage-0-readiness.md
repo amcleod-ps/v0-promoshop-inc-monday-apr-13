@@ -5,7 +5,7 @@ Upstream repository: `amcleod-ps/v0-promoshop-inc-monday-apr-13`
 Verified upstream base: `b7336b97091c2fb045b01564424afc03834b6478`  
 Stage 0 merge: `942051ae656559b86a7507a231f01ea694950fd8`
 
-Stage 0 prepares the pricing add-on without implementing, migrating, loading or activating production pricing.
+Stage 0 prepared the repository, evidence boundaries and controls without loading or activating production pricing. Its repository work completed in the merged Stage 0 pull request; unresolved client-input and hosted-release checks remain explicit gates for later data import and public release.
 
 ## Verified baseline
 
@@ -96,14 +96,14 @@ The exact hosted objects now establish `0011` as the predecessor. Stage 1 author
 
 ## Stage 0 exit criteria
 
-Stage 0 completes only when:
+The repository-preparation portion of Stage 0 is complete: its pull request is green, reviewed and merged; the hosted database is accessible and reconciled through `0011`; and the foundation design gates are resolved.
 
-1. the Stage 0 pull request is green and reviewed;
-2. required inputs and behaviour decisions are recorded;
-3. the correct hosted database is accessible and reconciled;
-4. the release project and environment ownership are unambiguous;
-5. the hosted administration route is protected;
-6. all custom-domain TLS and redirect checks pass; and
-7. a reproducible pre-change baseline is retained.
+The following remain release-readiness gates carried into later stages:
 
-Until every exit criterion passes, there is no production pricing migration, matrix import, public activation, release or customer acceptance.
+1. required client inputs and final behaviour decisions are recorded;
+2. the release project and environment ownership are unambiguous;
+3. the hosted administration route is protected;
+4. all custom-domain TLS and redirect checks pass; and
+5. a reproducible pre-change production baseline is retained.
+
+An empty, off-by-default foundation schema and isolated pricing engine may be installed and verified while those release gates remain open. Until every release-readiness gate passes, there is no customer matrix import, public activation, customer-facing pricing release or customer acceptance.

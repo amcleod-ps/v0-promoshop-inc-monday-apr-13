@@ -4,9 +4,8 @@
 --
 -- Adds a normalized per-SKU USD tier model and two fail-closed activation
 -- controls. This migration loads no customer pricing and seeds pricing off.
--- Public roles can read only the flag and tier columns required later by the
--- storefront; RLS keeps all tier rows invisible until the database flag is on.
--- Application code also requires the server-only TIERED_PRICING_ENABLED flag.
+-- Both tables remain service-role-only. Server code must verify the exact
+-- TIERED_PRICING_ENABLED value and the database flag before reading tiers.
 
 begin;
 
@@ -75,15 +74,7 @@ revoke all privileges on table public.feature_flags
 revoke all privileges on table public.product_price_tiers
   from public, anon, authenticated, service_role;
 
-grant usage on schema public to anon, authenticated, service_role;
-
-grant select (key, enabled)
-  on table public.feature_flags
-  to anon, authenticated;
-
-grant select (product_sku, tier_start_quantity, unit_price_usd)
-  on table public.product_price_tiers
-  to anon, authenticated;
+grant usage on schema public to service_role;
 
 grant select on table public.feature_flags to service_role;
 grant update (enabled) on table public.feature_flags to service_role;
@@ -92,31 +83,8 @@ grant select, insert, update, delete
   on table public.product_price_tiers
   to service_role;
 
-create policy "feature_flags_public_read_tiered_pricing"
-  on public.feature_flags
-  for select
-  to anon, authenticated
-  using (key = 'tiered_pricing');
-
-create policy "product_price_tiers_public_read_enabled"
-  on public.product_price_tiers
-  for select
-  to anon, authenticated
-  using (
-    exists (
-      select 1
-      from public.products as p
-      where p.sku = product_price_tiers.product_sku
-        and p.is_active = true
-    )
-    and coalesce(
-      (
-        select f.enabled
-        from public.feature_flags as f
-        where f.key = 'tiered_pricing'
-      ),
-      false
-    )
-  );
+-- Deliberately create no policies: anon and authenticated have neither table
+-- privileges nor RLS policies. The server-only service-role client bypasses RLS
+-- and performs the two-gate check before exposing any later pricing result.
 
 commit;
