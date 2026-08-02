@@ -72,7 +72,7 @@ Changing a provisional default updates this record and the acceptance matrix bef
 - [ ] Resolve any verified migration drift before authoring the pricing migration.
 - [ ] Confirm the Vercel project that owns the production custom domains.
 - [ ] Confirm preview and production environment-variable ownership.
-- [ ] Resolve Vercel authorization for fork-based preview deployments; PR #50 currently fails before preview creation.
+- [x] Authorize and verify the Vercel fork-based preview for PR #50.
 - [ ] Enable and verify the administration gate before pricing administration is used on a hosted environment.
 - [ ] Repair and verify the apex `.com` certificate and redirect.
 - [ ] Capture a pre-change smoke baseline for all production hosts and core routes.
