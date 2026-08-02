@@ -267,7 +267,7 @@ as $fingerprint$
           'version', 1,
           'sku', p_sku,
           'status', p_status,
-          'tiers', pg_catalog.coalesce(
+          'tiers', coalesce(
             (
               select pg_catalog.jsonb_agg(
                 pg_catalog.jsonb_build_array(
@@ -499,7 +499,7 @@ begin
       using errcode = '22023';
   end if;
 
-  select pg_catalog.coalesce(
+  select coalesce(
     pg_catalog.sum(
       pg_catalog.jsonb_array_length(operation.value -> 'tiers')
     ),
@@ -621,7 +621,7 @@ begin
       v_current_tier_count := 0;
     end if;
 
-    select pg_catalog.coalesce(
+    select coalesce(
       pg_catalog.jsonb_agg(
         pg_catalog.jsonb_build_object(
           'tier_start_quantity', tier.tier_start_quantity,
@@ -839,7 +839,7 @@ begin
   select pg_catalog.encode(
     pg_catalog.sha256(
       pg_catalog.convert_to(
-        pg_catalog.coalesce(
+        coalesce(
           pg_catalog.jsonb_agg(
             pg_catalog.jsonb_build_array(
               state.product_sku,
@@ -883,7 +883,7 @@ set search_path = ''
 as $snapshot$
   select pg_catalog.jsonb_build_object(
     'schema_version', 1,
-    'products', pg_catalog.coalesce(
+    'products', coalesce(
       (
         select pg_catalog.jsonb_agg(
           pg_catalog.jsonb_build_object(
@@ -904,7 +904,7 @@ as $snapshot$
       ),
       '[]'::jsonb
     ),
-    'tiers', pg_catalog.coalesce(
+    'tiers', coalesce(
       (
         select pg_catalog.jsonb_agg(
           pg_catalog.jsonb_build_object(
@@ -921,7 +921,7 @@ as $snapshot$
       ),
       '[]'::jsonb
     ),
-    'states', pg_catalog.coalesce(
+    'states', coalesce(
       (
         select pg_catalog.jsonb_agg(
           pg_catalog.jsonb_build_object(
@@ -939,7 +939,7 @@ as $snapshot$
             public.pricing_tier_set_fingerprint(
               state.product_sku,
               state.status,
-              pg_catalog.coalesce(
+              coalesce(
                 (
                   select pg_catalog.jsonb_agg(
                     pg_catalog.jsonb_build_object(
@@ -967,7 +967,7 @@ as $snapshot$
       ),
       '[]'::jsonb
     ),
-    'audit', pg_catalog.coalesce(
+    'audit', coalesce(
       (
         select pg_catalog.jsonb_agg(
           pg_catalog.to_jsonb(recent)
@@ -994,7 +994,7 @@ as $snapshot$
       ),
       '[]'::jsonb
     ),
-    'pricing_enabled', pg_catalog.coalesce(
+    'pricing_enabled', coalesce(
       (
         select flag.enabled
         from public.feature_flags as flag
