@@ -216,12 +216,15 @@ export default async function AdminDashboardPage() {
     )
   }
 
-  const pricingAccess = await getPricingAdminAccess()
-  const pricing: PricingPanelState = pricingAccess.allowed
-    ? await loadPricingAdminPanel(supabase)
-    : { kind: "locked", reason: pricingAccess.reason }
+  const pricingPromise: Promise<PricingPanelState> = getPricingAdminAccess().then(
+    (access) =>
+      access.allowed
+        ? loadPricingAdminPanel(supabase)
+        : { kind: "locked", reason: access.reason },
+  )
 
   const [
+    pricing,
     siteImagesRes,
     brandsRes,
     heroSlidesRes,
@@ -232,6 +235,7 @@ export default async function AdminDashboardPage() {
     teamRes,
     themeRes,
   ] = await Promise.all([
+    pricingPromise,
     fetchAll((from, to) =>
       supabase
         .from("site_images")
