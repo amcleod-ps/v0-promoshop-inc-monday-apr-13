@@ -36,8 +36,8 @@ Stage 0 prepares the pricing add-on without implementing, migrating, loading or 
 - [x] Add a canonical, gate-driven stage plan.
 - [x] Add a clean pricing-matrix template and validation contract.
 - [x] Add an acceptance-test inventory.
-- [ ] Confirm the quality workflow succeeds.
-- [ ] Open the draft Stage 0 pull request to upstream and verify its complete diff/check state.
+- [x] Confirm the quality workflow succeeds.
+- [x] Open draft PR #50 to upstream and verify its complete diff and mergeability.
 
 ## Required inputs
 
@@ -72,6 +72,7 @@ Changing a provisional default updates this record and the acceptance matrix bef
 - [ ] Resolve any verified migration drift before authoring the pricing migration.
 - [ ] Confirm the Vercel project that owns the production custom domains.
 - [ ] Confirm preview and production environment-variable ownership.
+- [ ] Resolve Vercel authorization for fork-based preview deployments; PR #50 currently fails before preview creation.
 - [ ] Enable and verify the administration gate before pricing administration is used on a hosted environment.
 - [ ] Repair and verify the apex `.com` certificate and redirect.
 - [ ] Capture a pre-change smoke baseline for all production hosts and core routes.
