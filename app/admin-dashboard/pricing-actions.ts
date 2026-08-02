@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { adminActionError } from "@/lib/admin-error"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { loadPricingAdminPanel } from "@/lib/supabase/pricing-admin"
 import { requirePricingAdminAction } from "@/lib/pricing/admin-access"
 import type {
   PricingActionFailure,
@@ -20,6 +21,7 @@ import {
 
 const REVISION_PATTERN = /^(0|[1-9]\d{0,15})$/
 const FINGERPRINT_PATTERN = /^[0-9a-f]{64}$/
+const MAX_SKU_LENGTH = 5_000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -60,33 +62,23 @@ async function loadCatalogAndRevisions(
     }
   | PricingActionFailure
 > {
-  const [productsResult, statesResult] = await Promise.all([
-    supabase
-      .from("products")
-      .select("sku, name, min_qty")
-      .eq("is_active", true)
-      .order("sku", { ascending: true }),
-    supabase
-      .from("product_price_tier_sets")
-      .select("product_sku, revision"),
-  ])
-
-  if (productsResult.error || statesResult.error) {
+  const snapshot = await loadPricingAdminPanel(supabase)
+  if (snapshot.kind !== "ready") {
     const masked = adminActionError(
       "Could not load the current pricing administration state.",
-      productsResult.error ?? statesResult.error,
     )
     return { ...masked, code: "server_error" }
   }
 
-  const catalog = (productsResult.data ?? []).map((row) => ({
-    sku: String(row.sku),
-    name: String(row.name),
-    minimumQuantity: Number(row.min_qty),
+  const activeProducts = snapshot.products.filter((product) => product.isActive)
+  const catalog = activeProducts.map((product) => ({
+    sku: product.sku,
+    name: product.name,
+    minimumQuantity: product.minimumQuantity,
   }))
   const revisions: Record<string, string> = {}
-  for (const row of statesResult.data ?? []) {
-    revisions[String(row.product_sku)] = String(row.revision)
+  for (const product of activeProducts) {
+    revisions[product.sku] = product.revision
   }
 
   return { ok: true, catalog, revisions }
@@ -101,6 +93,7 @@ function parseExpectedRevisions(
     if (
       !sku ||
       sku !== sku.trim() ||
+      sku.length > MAX_SKU_LENGTH ||
       typeof revision !== "string" ||
       !REVISION_PATTERN.test(revision)
     ) {
@@ -140,7 +133,7 @@ async function runMutation(
   )
 
   if (error) {
-    if (error.code === "40001") {
+    if (error.code === "40001" || error.code === "55P03") {
       return {
         ok: false,
         code: "conflict",
@@ -349,6 +342,7 @@ export async function replacePricingTierSet(
     typeof input.sku !== "string" ||
     !input.sku ||
     input.sku !== input.sku.trim() ||
+    input.sku.length > MAX_SKU_LENGTH ||
     typeof input.expectedRevision !== "string" ||
     !REVISION_PATTERN.test(input.expectedRevision)
   ) {
@@ -402,6 +396,7 @@ export async function retirePricingTierSet(
     typeof input.sku !== "string" ||
     !input.sku ||
     input.sku !== input.sku.trim() ||
+    input.sku.length > MAX_SKU_LENGTH ||
     typeof input.expectedRevision !== "string" ||
     !REVISION_PATTERN.test(input.expectedRevision) ||
     typeof input.confirmationSku !== "string" ||
