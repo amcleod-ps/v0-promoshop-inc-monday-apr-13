@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   PRICING_MATRIX_HEADER,
+  PRICING_MATRIX_LIMITS,
   dryRunPricingMatrixCsv,
   parseCsvRecords,
   validateTierSetDraft,
@@ -262,4 +263,162 @@ test("manual complete-set validation shares MOQ, ordering, and money rules", asy
   if (!staleShape.ok) {
     assert.ok(staleShape.diagnostics.some((d) => d.code === "tiers_not_increasing"))
   }
+})
+
+
+test("accepts 500 SKU sets and rejects 501 before apply", async () => {
+  const makeCatalog = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      sku: "SYN-" + String(index).padStart(3, "0"),
+      name: "Synthetic product " + index,
+      minimumQuantity: 1,
+    }))
+  const makeSource = (
+    products: ReturnType<typeof makeCatalog>,
+  ) =>
+    [
+      header,
+      ...products.map(
+        (product) =>
+          product.sku +
+          "," +
+          product.name +
+          ",1,1,1.0000,limit fixture",
+      ),
+    ].join("\n")
+
+  const atLimitCatalog = makeCatalog(PRICING_MATRIX_LIMITS.maxSkuSets)
+  const atLimit = await dryRunPricingMatrixCsv(
+    makeSource(atLimitCatalog),
+    atLimitCatalog,
+  )
+  assert.equal(atLimit.ok, true)
+
+  const overLimitCatalog = makeCatalog(PRICING_MATRIX_LIMITS.maxSkuSets + 1)
+  const overLimit = await dryRunPricingMatrixCsv(
+    makeSource(overLimitCatalog),
+    overLimitCatalog,
+  )
+  assert.equal(overLimit.ok, false)
+  if (!overLimit.ok) {
+    assert.ok(overLimit.diagnostics.some((item) => item.code === "too_many_skus"))
+    assert.equal("sets" in overLimit, false)
+  }
+})
+
+test("enforces row, field, UTF-8 byte, and per-SKU tier caps", async () => {
+  const row = "SYN-001,Synthetic Mug,12,12,1.0000,n"
+  const maxRows = [header, ...Array(PRICING_MATRIX_LIMITS.maxDataRows).fill(row)].join(
+    "\n",
+  )
+  assert.equal(parseCsvRecords(maxRows).ok, true)
+
+  const tooManyRows =
+    maxRows + "\n" + row
+  const rowResult = parseCsvRecords(tooManyRows)
+  assert.equal(rowResult.ok, false)
+  if (!rowResult.ok) assert.equal(rowResult.diagnostics[0].code, "too_many_rows")
+
+  const maxField = parseCsvRecords(
+    header +
+      "\nSYN-001,Synthetic Mug,12,12,1.0000,\"" +
+      "a".repeat(PRICING_MATRIX_LIMITS.maxFieldCharacters) +
+      "\"",
+  )
+  assert.equal(maxField.ok, true)
+
+  const longField = parseCsvRecords(
+    header +
+      "\nSYN-001,Synthetic Mug,12,12,1.0000,\"" +
+      "a".repeat(PRICING_MATRIX_LIMITS.maxFieldCharacters + 1) +
+      "\"",
+  )
+  assert.equal(longField.ok, false)
+  if (!longField.ok) {
+    assert.ok(longField.diagnostics.some((item) => item.code === "field_too_long"))
+  }
+
+  const exactBytes = parseCsvRecords(
+    "é".repeat(PRICING_MATRIX_LIMITS.maxUtf8Bytes / 2),
+  )
+  assert.equal(
+    exactBytes.ok ||
+      exactBytes.diagnostics.every((item) => item.code !== "file_too_large"),
+    true,
+  )
+  const excessBytes = parseCsvRecords(
+    "é".repeat(PRICING_MATRIX_LIMITS.maxUtf8Bytes / 2 + 1),
+  )
+  assert.equal(excessBytes.ok, false)
+  if (!excessBytes.ok) {
+    assert.equal(excessBytes.diagnostics[0].code, "file_too_large")
+  }
+
+  const tierRows = Array.from(
+    { length: PRICING_MATRIX_LIMITS.maxTiersPerSku },
+    (_, index) =>
+      "SYN-LIMIT,Synthetic tier limit,1," +
+      (index + 1) +
+      ",1.0000,n",
+  )
+  const tierCatalog = [
+    { sku: "SYN-LIMIT", name: "Synthetic tier limit", minimumQuantity: 1 },
+  ]
+  const tierLimit = await dryRunPricingMatrixCsv(
+    [header, ...tierRows].join("\n"),
+    tierCatalog,
+  )
+  assert.equal(tierLimit.ok, true)
+
+  const tooManyTiers = await dryRunPricingMatrixCsv(
+    [header, ...tierRows, "SYN-LIMIT,Synthetic tier limit,1,1001,1.0000,n"].join(
+      "\n",
+    ),
+    tierCatalog,
+  )
+  assert.equal(tooManyTiers.ok, false)
+  if (!tooManyTiers.ok) {
+    assert.ok(
+      tooManyTiers.diagnostics.some((item) => item.code === "too_many_tiers"),
+    )
+  }
+})
+
+test("canonical fingerprint is stable for interleaving and matches fixture", async () => {
+  const grouped = await dryRunPricingMatrixCsv(
+    csv(
+      "SYN-001,Synthetic Mug,12,12,1.0000,n",
+      "SYN-001,Synthetic Mug,12,24,0.9000,n",
+      '"SYN-002","Synthetic Bag, Large",25,25,2.0000,n',
+    ),
+    catalog,
+  )
+  const interleaved = await dryRunPricingMatrixCsv(
+    csv(
+      "SYN-001,Synthetic Mug,12,12,1.0000,n",
+      '"SYN-002","Synthetic Bag, Large",25,25,2.0000,n',
+      "SYN-001,Synthetic Mug,12,24,0.9000,n",
+    ),
+    catalog,
+  )
+  assert.equal(grouped.ok, true)
+  assert.equal(interleaved.ok, true)
+  if (!grouped.ok || !interleaved.ok) return
+  assert.equal(grouped.canonical, interleaved.canonical)
+  assert.equal(grouped.fingerprint, interleaved.fingerprint)
+
+  const fixture = await dryRunPricingMatrixCsv(
+    csv("SYN-001,Synthetic Mug,12,12,1.0000,n"),
+    catalog,
+  )
+  assert.equal(fixture.ok, true)
+  if (!fixture.ok) return
+  assert.equal(
+    fixture.canonical,
+    'pricing-matrix:v1\n[["SYN-001",12,[[12,"1.0000"]]]]\n',
+  )
+  assert.equal(
+    fixture.fingerprint,
+    "6f48033a02508648731a4e9e44fec740824979bf30186a8d24bf0f512ae37cba",
+  )
 })
