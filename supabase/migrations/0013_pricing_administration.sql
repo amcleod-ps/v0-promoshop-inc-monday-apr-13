@@ -204,7 +204,7 @@ alter table public.product_price_tier_audit force row level security;
 create function public.enforce_product_pricing_lifecycle()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $protect_product$
 declare
@@ -1077,12 +1077,13 @@ begin
 
   if exists (
     select 1
-    from pg_catalog.pg_proc as procedure
+    from pg_catalog.pg_proc as proc
     join pg_catalog.pg_roles as owner
-      on owner.oid = procedure.proowner
-    where procedure.oid in (
+      on owner.oid = proc.proowner
+    where proc.oid in (
       'public.replace_product_price_tier_sets(jsonb,text,text)'::pg_catalog.regprocedure,
-      'public.load_pricing_admin_snapshot()'::pg_catalog.regprocedure
+      'public.load_pricing_admin_snapshot()'::pg_catalog.regprocedure,
+      'public.enforce_product_pricing_lifecycle()'::pg_catalog.regprocedure
     )
       and not (owner.rolsuper or owner.rolbypassrls)
   ) then
