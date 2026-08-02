@@ -24,14 +24,14 @@ function formatScaledUnitPrice(scaled: bigint): string {
     .toString()
     .padStart(UNIT_SCALE_DIGITS, "0")
 
-  return \`\${whole}.\${fraction}\`
+  return whole.toString() + "." + fraction
 }
 
 function formatCents(cents: bigint): string {
   const whole = cents / 100n
   const fraction = (cents % 100n).toString().padStart(2, "0")
 
-  return \`\${whole}.\${fraction}\`
+  return whole.toString() + "." + fraction
 }
 
 /**
