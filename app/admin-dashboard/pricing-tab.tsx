@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import type {
@@ -158,8 +158,10 @@ function ReadyPricingTab({
 
 function CsvImporter() {
   const router = useRouter()
+  const fileSelectionToken = useRef(0)
   const [fileName, setFileName] = useState("")
   const [csvText, setCsvText] = useState("")
+  const [readingFile, setReadingFile] = useState(false)
   const [status, setStatus] = useState<Status>(idleStatus)
   const [dryRun, setDryRun] = useState<{
     fingerprint: string
@@ -170,50 +172,64 @@ function CsvImporter() {
   const [pending, startTransition] = useTransition()
 
   const chooseFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const token = fileSelectionToken.current + 1
+    fileSelectionToken.current = token
     const file = event.target.files?.[0]
     setDryRun(null)
     setStatus(idleStatus)
-    if (!file) {
-      setFileName("")
-      setCsvText("")
-      return
-    }
+    setFileName("")
+    setCsvText("")
+    setReadingFile(Boolean(file))
+    if (!file) return
 
     try {
+      const contents = await file.text()
+      if (fileSelectionToken.current !== token) return
       setFileName(file.name)
-      setCsvText(await file.text())
+      setCsvText(contents)
     } catch {
-      setCsvText("")
+      if (fileSelectionToken.current !== token) return
       setStatus({
         kind: "error",
         message: "The selected file could not be read.",
       })
+    } finally {
+      if (fileSelectionToken.current === token) setReadingFile(false)
     }
   }
 
   const runDryRun = () => {
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Validating every row…" })
-      const result = await dryRunPricingCsv({ csvText })
-      if (!result.ok) {
+      try {
+        const result = await dryRunPricingCsv({ csvText })
+        if (!result.ok) {
+          setDryRun(null)
+          setStatus({
+            kind: "error",
+            message: result.error,
+            diagnostics: result.diagnostics,
+          })
+          return
+        }
+        setDryRun(result)
+        setStatus({
+          kind: "ok",
+          message:
+            "Dry run passed: " +
+            result.rowCount +
+            " rows across " +
+            result.skuCount +
+            " SKUs. Nothing has been written.",
+        })
+      } catch {
         setDryRun(null)
         setStatus({
           kind: "error",
-          message: result.error,
-          diagnostics: result.diagnostics,
+          message:
+            "The dry run could not reach the server. Nothing was written; retry when the connection is stable.",
         })
-        return
       }
-      setDryRun(result)
-      setStatus({
-        kind: "ok",
-        message:
-          "Dry run passed: " +
-          result.rowCount +
-          " rows across " +
-          result.skuCount +
-          " SKUs. Nothing has been written.",
-      })
     })
   }
 
@@ -224,30 +240,39 @@ function CsvImporter() {
         kind: "idle",
         message: "Revalidating and applying the complete matrix…",
       })
-      const result = await applyPricingCsv({
-        csvText,
-        dryRunFingerprint: dryRun.fingerprint,
-        expectedRevisions: dryRun.expectedRevisions,
-      })
-      if (!result.ok) {
+      try {
+        const result = await applyPricingCsv({
+          csvText,
+          dryRunFingerprint: dryRun.fingerprint,
+          expectedRevisions: dryRun.expectedRevisions,
+        })
+        if (!result.ok) {
+          setDryRun(null)
+          setStatus({
+            kind: "error",
+            message: result.error,
+            diagnostics: result.diagnostics,
+          })
+          return
+        }
+        setStatus({
+          kind: "ok",
+          message:
+            result.message +
+            " Reconciliation " +
+            result.reconciliationFingerprint.slice(0, 12) +
+            "…",
+        })
+        setDryRun(null)
+        router.refresh()
+      } catch {
         setDryRun(null)
         setStatus({
           kind: "error",
-          message: result.error,
-          diagnostics: result.diagnostics,
+          message:
+            "The apply request lost contact with the server. Refresh and inspect the audit before retrying.",
         })
-        return
       }
-      setStatus({
-        kind: "ok",
-        message:
-          result.message +
-          " Reconciliation " +
-          result.reconciliationFingerprint.slice(0, 12) +
-          "…",
-      })
-      setDryRun(null)
-      router.refresh()
     })
   }
 
@@ -270,7 +295,7 @@ function CsvImporter() {
             type="file"
             accept=".csv,text/csv"
             onChange={chooseFile}
-            disabled={pending}
+            disabled={pending || readingFile}
           />
         </label>
         {fileName ? <span style={styles.fileName}>{fileName}</span> : null}
@@ -280,15 +305,15 @@ function CsvImporter() {
         <button
           type="button"
           onClick={runDryRun}
-          disabled={pending || !csvText}
+          disabled={pending || readingFile || !csvText}
           style={styles.primaryButton}
         >
-          {pending ? "Working…" : "Run dry run"}
+          {readingFile ? "Reading file…" : pending ? "Working…" : "Run dry run"}
         </button>
         <button
           type="button"
           onClick={apply}
-          disabled={pending || !dryRun}
+          disabled={pending || readingFile || !dryRun}
           style={styles.dangerButton}
         >
           Apply validated matrix
@@ -358,44 +383,60 @@ function ProductPricingEditor({
     event.preventDefault()
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Validating and saving…" })
-      const result = await replacePricingTierSet({
-        sku: product.sku,
-        expectedRevision: product.revision,
-        tiers,
-      })
-      if (!result.ok) {
+      try {
+        const result = await replacePricingTierSet({
+          sku: product.sku,
+          expectedRevision: product.revision,
+          tiers,
+        })
+        if (!result.ok) {
+          setStatus({
+            kind: "error",
+            message: result.error,
+            diagnostics: result.diagnostics,
+          })
+          return
+        }
+        setStatus({ kind: "ok", message: result.message })
+        router.refresh()
+      } catch {
         setStatus({
           kind: "error",
-          message: result.error,
-          diagnostics: result.diagnostics,
+          message:
+            "The save request lost contact with the server. Refresh and inspect the current revision before retrying.",
         })
-        return
       }
-      setStatus({ kind: "ok", message: result.message })
-      router.refresh()
     })
   }
 
   const retire = () => {
     startTransition(async () => {
       setStatus({ kind: "idle", message: "Retiring the complete set…" })
-      const result = await retirePricingTierSet({
-        sku: product.sku,
-        expectedRevision: product.revision,
-        confirmationSku: confirmation,
-        reason: retirementReason,
-      })
-      if (!result.ok) {
+      try {
+        const result = await retirePricingTierSet({
+          sku: product.sku,
+          expectedRevision: product.revision,
+          confirmationSku: confirmation,
+          reason: retirementReason,
+        })
+        if (!result.ok) {
+          setStatus({
+            kind: "error",
+            message: result.error,
+            diagnostics: result.diagnostics,
+          })
+          return
+        }
+        setStatus({ kind: "ok", message: result.message })
+        setConfirmation("")
+        router.refresh()
+      } catch {
         setStatus({
           kind: "error",
-          message: result.error,
-          diagnostics: result.diagnostics,
+          message:
+            "The retirement request lost contact with the server. Refresh and inspect the audit before retrying.",
         })
-        return
       }
-      setStatus({ kind: "ok", message: result.message })
-      setConfirmation("")
-      router.refresh()
     })
   }
 
@@ -406,12 +447,21 @@ function ProductPricingEditor({
           <strong>{product.sku}</strong> · {product.name}
         </span>
         <span style={styles.summaryMeta}>
-          MOQ {product.minimumQuantity} · {product.status} · rev{" "}
+          MOQ {product.minimumQuantity} · {product.isActive ? "catalogue active" : "catalogue inactive"} · {product.status} · rev{" "}
           {product.revision}
         </span>
       </summary>
 
       <div style={styles.productBody}>
+        {!product.isActive ? (
+          <Notice tone="warning">
+            <strong>This catalogue product is inactive.</strong>
+            <p style={styles.noticeText}>
+              Existing active pricing can still be retired for recovery. New or
+              replacement tiers require reactivating the product first.
+            </p>
+          </Notice>
+        ) : null}
         <p style={styles.help}>
           Revision {product.revision}
           {product.updatedAt
@@ -437,7 +487,7 @@ function ProductPricingEditor({
                         event.target.value,
                       )
                     }
-                    disabled={pending}
+                    disabled={pending || !product.isActive}
                     style={styles.input}
                   />
                 </label>
@@ -458,7 +508,7 @@ function ProductPricingEditor({
                 <button
                   type="button"
                   onClick={() => removeTier(index)}
-                  disabled={pending}
+                  disabled={pending || !product.isActive}
                   style={styles.secondaryButton}
                   aria-label={"Remove tier " + (index + 1)}
                 >
@@ -472,14 +522,14 @@ function ProductPricingEditor({
             <button
               type="button"
               onClick={addTier}
-              disabled={pending}
+              disabled={pending || !product.isActive}
               style={styles.secondaryButton}
             >
               + Add tier
             </button>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || !product.isActive}
               style={styles.primaryButton}
             >
               Save complete set
