@@ -12,6 +12,8 @@ import { ProductsTab, type ProductRow } from "./products-tab"
 import { TeamTab, type TeamMemberRow } from "./team-tab"
 import { CollectionsTab, type CollectionAdminRow, type ProductOption } from "./collections-tab"
 import { ThemeTab, type ThemeEntry } from "./theme-tab"
+import { PricingTab } from "./pricing-tab"
+import type { PricingPanelState } from "@/lib/pricing/admin-types"
 import {
   softDeleteBrand,
   softDeleteHeroSlide,
@@ -94,9 +96,10 @@ interface Props {
   collections: CollectionAdminRow[]
   collectionsTableMissing: boolean
   allProductOptions: ProductOption[]
+  pricing: PricingPanelState
 }
 
-type Tab = "images" | "text" | "products" | "collections" | "team" | "theme"
+type Tab = "images" | "text" | "products" | "pricing" | "collections" | "team" | "theme"
 
 export function DashboardList({
   siteImages,
@@ -115,6 +118,7 @@ export function DashboardList({
   collections,
   collectionsTableMissing,
   allProductOptions,
+  pricing,
 }: Props) {
   const [tab, setTab] = useState<Tab>("images")
   const [q, setQ] = useState("")
@@ -219,6 +223,7 @@ export function DashboardList({
         <TabButton tabKey="images" label="Images" active={tab === "images"} onClick={() => setTab("images")} />
         <TabButton tabKey="text" label="Text content" active={tab === "text"} onClick={() => setTab("text")} />
         <TabButton tabKey="products" label="Products" active={tab === "products"} onClick={() => setTab("products")} />
+        <TabButton tabKey="pricing" label="Pricing" active={tab === "pricing"} onClick={() => setTab("pricing")} />
         <TabButton tabKey="collections" label="Collections" active={tab === "collections"} onClick={() => setTab("collections")} />
         <TabButton tabKey="team" label="Team" active={tab === "team"} onClick={() => setTab("team")} />
         <TabButton tabKey="theme" label="Theme" active={tab === "theme"} onClick={() => setTab("theme")} />
@@ -520,6 +525,12 @@ export function DashboardList({
             brands={brands.map((b) => ({ slug: b.slug, name: b.name }))}
             tagsColumnMissing={productTagsColumnMissing}
           />
+        </div>
+      ) : null}
+
+      {tab === "pricing" ? (
+        <div role="tabpanel" id="panel-pricing" aria-labelledby="tab-pricing">
+          <PricingTab state={pricing} />
         </div>
       ) : null}
 

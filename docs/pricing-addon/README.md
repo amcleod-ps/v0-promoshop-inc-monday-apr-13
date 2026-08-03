@@ -4,6 +4,8 @@ This folder is the canonical technical plan for adding quantity-based USD estima
 
 Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundation.md`](./stage-1-foundation.md).
 
+Stage 2 administration, import, and verification evidence are recorded in [`stage-2-administration.md`](./stage-2-administration.md).
+
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:
