@@ -2,6 +2,8 @@
 
 Status date: 2026-08-02  
 Repository baseline: `4ed4dff8bca389867a2d059619170ffc280490c9` (Stage 1 merge)  
+Reviewed implementation head: `64b13db881b4d712a6caff4ed2b25a9d451ed292`  
+Reviewed migration blob: `c9071634e751c0b03f80669717846ef049294eff`  
 Hosted Supabase project: `rfvnjxrhainbldxtzdfb`
 
 Stage 2 adds a protected way to validate, reconcile, replace, and explicitly
@@ -73,6 +75,10 @@ database transaction; any error rolls back the complete multi-SKU batch.
 Normal replacement cannot save an empty set. Removing all tiers requires an
 explicit retirement operation against an active current revision.
 
+The database also rejects MOQ changes, product deactivation, SKU deletion, and
+SKU renaming while active pricing evidence exists. The required sequence is
+retire pricing, edit the catalogue, then install a replacement set.
+
 The function is `SECURITY DEFINER` with an empty search path, no dynamic SQL,
 fully qualified relations/functions, and execution granted only to
 `service_role`. Stage 2 revokes the direct service-role tier DML granted
@@ -80,9 +86,16 @@ temporarily by Stage 1. All three pricing tables are read-only to the service
 role outside the function, use enabled and forced RLS, have no policies, and
 grant browser roles nothing.
 
-## Reconciliation and evidence
+## Coherent snapshot and reconciliation
 
-Each successful batch returns:
+The administration panel obtains one scalar JSON snapshot from
+`load_pricing_admin_snapshot()`. The database computes the actual tier count
+and canonical fingerprint in the same statement. The application validates
+the complete structure, ordering, MOQ, lifecycle, count, and fingerprint before
+rendering; a mismatch fails closed instead of displaying a partial or torn
+view.
+
+Each successful mutation batch returns:
 
 - one change ID and timestamp;
 - affected SKU, replacement-tier, and retirement counts;
@@ -94,25 +107,54 @@ observed during that dry run. The server reparses the original CSV from scratch.
 The database checks those revisions again under locks. A changed file or
 concurrent edit rejects the complete import without overwriting newer data.
 
-The hosted migration may be installed only from the exact reviewed blob while
-the feature flag is false and the tier table is empty. Synthetic integration
-checks must run inside a rolled-back transaction so hosted tier, state, and
-audit counts return to zero.
+## Hosted verification
+
+The exact reviewed migration blob was installed while the feature flag was
+false and all pricing tables were empty. The hosted verification found:
+
+- one exact inactive `tiered_pricing` flag;
+- zero tier, state, and audit rows;
+- forced RLS on all three pricing tables and no pricing policies;
+- no browser table or function surface;
+- read-only service-role table access and RPC-only mutation access;
+- pinned `SECURITY DEFINER` functions owned by an RLS-bypassing role;
+- both pricing foreign keys using restrictive update/delete actions; and
+- the catalogue lifecycle trigger installed.
+
+A synthetic test ran inside one outer transaction. It exercised an invalid
+multi-SKU batch with zero partial writes, a valid replacement, coherent
+snapshot reconciliation, stale-revision rejection, active MOQ/deactivation
+guards, replacement, retirement, catalogue change, inactive replacement
+rejection, reactivation, replacement at the new MOQ, and final retirement. The
+outer rollback completed and the final hosted state remained:
+
+- `tiered_pricing = false`;
+- `product_price_tiers = 0`;
+- `product_price_tier_sets = 0`; and
+- `product_price_tier_audit = 0`.
 
 ## Stage 2 verification record
 
 - [x] Stage 1 merge checkpoint reconciled as the repository baseline.
-- [ ] Focused parser/validation tests pass.
-- [ ] Quality workflow passes on the reviewed Stage 2 head.
-- [ ] Security, SQL, and code reviews have no unresolved blocking findings.
-- [ ] Exact reviewed migration is applied to the hosted project.
-- [ ] Hosted grants, forced RLS, policies, function security, flag, and empty
-      state match the reviewed SQL.
-- [ ] Rolled-back synthetic tests prove atomic replace, stale conflict, audit,
-      retirement, and reactivation behaviour.
-- [ ] Locked Pricing panel and unchanged public/legacy-dashboard behaviour are
-      rendered and smoke-tested.
-- [ ] Pull request is merged and the exact new main/deployment state is verified.
+- [x] All 32 focused and regression tests pass.
+- [x] Quality runs `30773067407` and `30773138917` pass on the reviewed
+      implementation head.
+- [x] Independent security, SQL, code, and UI reviews have no unresolved
+      blocking, high, or medium findings.
+- [x] The exact reviewed migration is applied to the hosted project.
+- [x] Hosted grants, forced RLS, policies, function security, lifecycle
+      protections, flag, and empty state match the reviewed SQL.
+- [x] Rolled-back synthetic tests prove atomic replace, conflict rejection,
+      coherent reconciliation, audit, retirement, catalogue guards, and
+      reactivation behaviour.
+- [x] Preview deployment `dpl_CaLkpxzHWLRnA5DQZFjgpSmmr2BW` targets the
+      reviewed implementation head. The locked Pricing panel, legacy dashboard,
+      public Studio, and quote page passed desktop/mobile smoke checks with no
+      pricing output or horizontal overflow, and Vercel reported no runtime
+      errors.
+- [x] Pull request #53 contains the reviewed Stage 2 change and verification
+      evidence. Merge and exact post-merge deployment evidence are recorded on
+      that pull request after the repository transition completes.
 
 Completing this record proves Stage 2 administration readiness only. It does
 not prove an approved customer matrix was received or loaded, public pricing
