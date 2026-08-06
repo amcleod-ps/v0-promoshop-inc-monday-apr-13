@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts tests/pricing/matrix.test.ts tests/pricing/migration-contract.test.ts"
+    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts tests/pricing/matrix.test.ts tests/pricing/snapshot.test.ts tests/pricing/migration-contract.test.ts",
+    "check:sql": "node scripts/check-sql.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -63,6 +64,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "^19",

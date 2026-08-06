@@ -6,6 +6,8 @@ Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundati
 
 Stage 2 administration, import, and verification evidence are recorded in [`stage-2-administration.md`](./stage-2-administration.md).
 
+Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). Stage 4 was built before Stage 3 because it depends on no client input; Stage 3 remains blocked on the approved pricing matrix and the three approved public wordings.
+
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:
@@ -88,7 +90,7 @@ Exit when an authorized administrator can safely load and reconcile synthetic da
 
 Exit when all supported catalogue and cart paths behave correctly on mobile and desktop with synthetic tiers.
 
-### Stage 4 — verified quote snapshot
+### Stage 4 — verified quote snapshot — **DONE**
 
 - Ignore any client-supplied claim that an estimate is authoritative.
 - Re-read products and tiers on the server at submission time.
@@ -97,6 +99,8 @@ Exit when all supported catalogue and cart paths behave correctly on mobile and 
 - Keep notifications consistent with the stored server result.
 
 Exit when tampering and stale-price tests prove that stored estimates always come from the server.
+
+Completed 2026-08-06 in migration `0014` and `lib/pricing/snapshot.ts`. Evidence, including the behavioural anon-forgery test and the mutation results, is in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md).
 
 ### Stage 5 — preview and acceptance
 
@@ -147,4 +151,6 @@ Final decisions belong in the Stage 0 readiness record before Stage 1 implementa
 
 ## Verification
 
-The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint, focused unit tests and a production build. Stage-specific coverage expands with each implementation stage.
+The test inventory is maintained in [`acceptance-test-matrix.md`](./acceptance-test-matrix.md). Pull requests must pass the repository `Quality` workflow, which performs a frozen dependency install, lint, focused unit tests, a schema check and a production build. Stage-specific coverage expands with each implementation stage.
+
+`pnpm check:sql` applies every migration in order to a real PostgreSQL engine (PGlite) and asserts the privilege, RLS and constraint invariants the application depends on. Nothing else in the pipeline executes the SQL, and a migration is the one artefact here that cannot be quietly rolled back in production. Run it before proposing any migration.
