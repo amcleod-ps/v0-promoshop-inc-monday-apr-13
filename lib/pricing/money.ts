@@ -5,6 +5,7 @@ const UNIT_SCALE_FACTOR = BigInt(10_000)
 const SCALED_UNITS_PER_CENT = BigInt(100)
 const MAX_WHOLE_UNIT_PRICE = BigInt(100_000_000)
 const UNIT_PRICE_PATTERN = /^(0|[1-9]\d*)(?:\.(\d{1,4}))?$/
+const SUBTOTAL_PATTERN = /^(0|[1-9]\d*)\.(\d{2})$/
 
 function parseUnitPriceUsd(value: string): bigint | null {
   const match = UNIT_PRICE_PATTERN.exec(value)
@@ -66,4 +67,33 @@ export function calculateSubtotalUsd(
     SCALED_UNITS_PER_CENT
 
   return formatCents(cents)
+}
+
+/**
+ * Adds already-rounded SKU subtotals in exact integer cents.
+ *
+ * Each SKU is rounded once by calculateSubtotalUsd and the results are summed;
+ * the total is never re-derived from unit prices. That ordering is what keeps
+ * the quote total equal to the sum of the SKU figures the customer was shown,
+ * which is the property a back-office reviewer will check first.
+ *
+ * Returns null if any value is not a canonical two-decimal subtotal, so a
+ * malformed figure cannot silently contribute zero to a total.
+ */
+export function sumSubtotalsUsd(
+  values: readonly string[],
+): string | null {
+  let totalCents = ZERO
+
+  for (const value of values) {
+    if (typeof value !== "string") return null
+
+    const match = SUBTOTAL_PATTERN.exec(value)
+    if (!match || match[1].length > 15) return null
+
+    totalCents +=
+      BigInt(match[1]) * CENTS_PER_DOLLAR + BigInt(match[2])
+  }
+
+  return formatCents(totalCents)
 }

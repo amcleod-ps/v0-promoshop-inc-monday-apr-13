@@ -42,5 +42,12 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Applies every migration in order to a real PostgreSQL engine and
+      # asserts the privilege and RLS invariants. Nothing else in this
+      # pipeline executes the SQL, and a migration is the one artefact here
+      # that cannot be quietly rolled back in production.
+      - name: Schema check
+        run: pnpm check:sql
+
       - name: Production build
         run: pnpm build

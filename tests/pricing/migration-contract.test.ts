@@ -7,6 +7,11 @@ const migration = readFileSync(
   "utf8",
 )
 
+const snapshotMigration = readFileSync(
+  "supabase/migrations/0014_quote_pricing_snapshot.sql",
+  "utf8",
+)
+
 test("catalogue lifecycle is protected at the database boundary", () => {
   assert.match(
     migration,
@@ -74,5 +79,24 @@ test("atomic mutation retains bounded resource and inactive-release guards", () 
   assert.match(
     migration,
     /pg_catalog\.jsonb_agg\(\s*pg_catalog\.jsonb_build_array\(\s*state\.product_sku,\s*state\.status,\s*state\.fingerprint/s,
+  )
+})
+
+test("the public quote policy pins the pricing snapshot to NULL", () => {
+  // scripts/check-sql.mjs proves this behaviourally against a real engine.
+  // This guards the source text so the clause cannot be dropped in a rewrite
+  // of the policy without someone deliberately editing this expectation too.
+  assert.match(
+    snapshotMigration,
+    /create policy "quote_requests_public_insert"[\s\S]*?with check \(\s*status = 'new'\s+and admin_notes is null\s+and pricing_snapshot is null\s*\)/,
+  )
+  assert.match(
+    snapshotMigration,
+    /check \(\s*pricing_snapshot is null\s+or jsonb_typeof\(pricing_snapshot\) = 'object'\s*\)/,
+  )
+  assert.doesNotMatch(
+    snapshotMigration,
+    /grant[\s\S]*pricing_snapshot[\s\S]*to (anon|authenticated)/i,
+    "browser roles must never be granted the verified snapshot column",
   )
 })
