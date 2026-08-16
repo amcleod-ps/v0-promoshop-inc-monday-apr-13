@@ -8,6 +8,8 @@ Stage 2 administration, import, and verification evidence are recorded in [`stag
 
 Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). The Stage 3 review-ready record is [`stage-3-review-ready-2026-08-16.md`](./stage-3-review-ready-2026-08-16.md). It records the approved source handling, customer wording, and release controls. It does not prove a hosted migration, data load, release, or customer acceptance.
 
+The August 16 implementation audit is recorded in [`implementation-completion-audit-2026-08-16.md`](./implementation-completion-audit-2026-08-16.md). It records the tested software boundary and the separate hosted release work that remains.
+
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:

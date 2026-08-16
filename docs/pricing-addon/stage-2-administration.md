@@ -38,7 +38,7 @@ quotes. It applies bounded file, row, field, and per-SKU tier limits before any
 write. The dry run:
 
 - reports row, field, and deterministic validation codes;
-- matches case-preserved SKUs and the current reference product name;
+- matches case-preserved SKUs as the stable product identity;
 - verifies every CSV MOQ against the live catalogue;
 - requires positive PostgreSQL-int4 quantities;
 - requires strictly increasing, unique starts whose first value equals MOQ;
@@ -49,8 +49,10 @@ write. The dry run:
 - computes a stable SHA-256 fingerprint over effective sorted pricing data.
 
 Source rows for each SKU must already be strictly increasing. Rows for
-different SKUs may be interleaved. Product names and notes are validation and
-reference inputs only; they never update catalogue content.
+different SKUs may be interleaved. Product names and notes are reference
+inputs only; they never update catalogue content. A non-empty source product
+name may differ from the current catalogue wording without blocking the
+import. The canonical set always uses the current catalogue name.
 
 ## Atomic administration
 

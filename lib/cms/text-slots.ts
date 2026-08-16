@@ -64,7 +64,7 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
   {
     key: "studio.banner.body",
     label: "Studio bottom banner body",
-    fallback: "Start a quote to unlock pricing, quantities, and full customization options.",
+    fallback: "Start a quote to select quantities and full customization options for your project.",
   },
   {
     key: "studio.banner.cta",
@@ -86,7 +86,8 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
   {
     key: "quote.page.subheading",
     label: "Quote page subheading",
-    fallback: "Build your quote and submit it for pricing. We'll get back to you within 24-48 hours.",
+    fallback:
+      "Build your quote and submit it for pricing. A PromoShop specialist will contact you within 2–5 business days.",
   },
   {
     key: "quote.success.heading",
@@ -97,7 +98,7 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
     key: "quote.success.body",
     label: "Quote submitted — success message",
     fallback:
-      "Thank you for your quote request. Our team will review your selections and get back to you within 24-48 hours.",
+      "Thank you for your quote request. A PromoShop specialist will contact you within 2–5 business days.",
     multiline: true,
   },
 

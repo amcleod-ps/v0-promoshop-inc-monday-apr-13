@@ -689,20 +689,11 @@ function validateRows(
       valid = false
     }
 
-    if (product && productName && productName !== product.name.trim()) {
-      diagnostics.push(
-        diagnostic(
-          "product_name_mismatch",
-          "The reference product name does not match the current catalogue name.",
-          {
-            record: sourceRow.record,
-            line: sourceRow.line,
-            field: "product_name",
-          },
-        ),
-      )
-      valid = false
-    }
+    // `product_name` is reference-only. The exact, case-preserved SKU is the
+    // stable import identity, and canonical sets always take their display
+    // name from the current catalogue below. A client worksheet can therefore
+    // carry an older spelling or trademark treatment without blocking an
+    // otherwise exact SKU/tier import or changing catalogue copy.
 
     const minimumQuantity = parsePositiveInt4(minimumQuantityRaw)
     if (minimumQuantityRaw && minimumQuantity === null) {
