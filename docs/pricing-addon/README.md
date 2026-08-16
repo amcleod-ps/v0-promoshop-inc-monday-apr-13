@@ -6,9 +6,9 @@ Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundati
 
 Stage 2 administration, import, and verification evidence are recorded in [`stage-2-administration.md`](./stage-2-administration.md).
 
-Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). The Stage 3 review-ready record is [`stage-3-review-ready-2026-08-16.md`](./stage-3-review-ready-2026-08-16.md). It records the approved source handling, customer wording, and release controls. It does not prove a hosted migration, data load, release, or customer acceptance.
+Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). The Stage 3 review-ready record is [`stage-3-review-ready-2026-08-16.md`](./stage-3-review-ready-2026-08-16.md). It records the approved source handling, customer wording, and release controls.
 
-The August 16 implementation audit is recorded in [`implementation-completion-audit-2026-08-16.md`](./implementation-completion-audit-2026-08-16.md). It records the tested software boundary and the separate hosted release work that remains.
+The August 16 implementation audit is recorded in [`implementation-completion-audit-2026-08-16.md`](./implementation-completion-audit-2026-08-16.md). The later hosted application and independent reconciliation evidence are in [`hosted-review-database-release-2026-08-16.md`](./hosted-review-database-release-2026-08-16.md). The database is ready for protected review, but the public activation and customer-acceptance steps remain separate.
 
 ## Delivery outcome
 

@@ -182,6 +182,101 @@ async function main() {
     )
   }
 
+  // Trigger functions run only through installed table triggers. They must
+  // not also appear as browser-callable RPCs, and every one must resolve names
+  // through a fixed empty search path.
+  const unsafeTriggerFunctions = await db.query(
+    `select p.proname
+       from pg_catalog.pg_proc p
+       join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname in (
+          'set_updated_at', 'assign_sort_order',
+          'force_quote_request_insert_defaults'
+        )
+        and (
+          not coalesce(
+            p.proconfig @> array['search_path=""']::text[],
+            false
+          )
+          or has_function_privilege('anon', p.oid, 'EXECUTE')
+          or has_function_privilege('authenticated', p.oid, 'EXECUTE')
+          or has_function_privilege('service_role', p.oid, 'EXECUTE')
+        )`,
+  )
+
+  if (unsafeTriggerFunctions.rows.length > 0) {
+    fail(
+      `trigger functions retain a direct API grant or mutable search path: ${unsafeTriggerFunctions.rows
+        .map((row) => row.proname)
+        .join(", ")}`,
+    )
+  }
+
+  // Revoking direct EXECUTE must not stop normal table operations from firing
+  // the functions as triggers. Exercise both shared content triggers through
+  // the same service role used by the server-side admin actions.
+  let sortOrderAssigned = false
+  let updatedAtRefreshed = false
+  try {
+    await db.exec("set role service_role;")
+    sortOrderAssigned = await scalar(
+      db,
+      `with inserted as (
+         insert into public.brands (name, slug, sort_order)
+         values ('Trigger check', 'trigger-check', null)
+         returning sort_order
+       )
+       select sort_order is not null from inserted`,
+    )
+    updatedAtRefreshed = await scalar(
+      db,
+      `with updated as (
+         update public.brands
+            set name = 'Trigger check complete',
+                updated_at = '2000-01-01T00:00:00Z'
+          where slug = 'trigger-check'
+        returning updated_at
+       )
+       select updated_at > '2020-01-01T00:00:00Z'::timestamptz
+         from updated`,
+    )
+  } catch (error) {
+    fail(`protected trigger execution failed through normal DML: ${error.message}`)
+  } finally {
+    await db.exec("reset role;")
+  }
+
+  if (!sortOrderAssigned || !updatedAtRefreshed) {
+    fail("protected content triggers did not preserve their normal DML behaviour")
+  }
+
+  const productMembershipIndexReady = await scalar(
+    db,
+    `select exists (
+       select 1
+         from pg_catalog.pg_index i
+         join pg_catalog.pg_class index_class on index_class.oid = i.indexrelid
+         join pg_catalog.pg_class table_class on table_class.oid = i.indrelid
+         join pg_catalog.pg_namespace n on n.oid = table_class.relnamespace
+        where n.nspname = 'public'
+          and table_class.relname = 'collection_products'
+          and index_class.relname = 'collection_products_product_sku_idx'
+          and i.indisvalid
+          and i.indisready
+          and not i.indisunique
+          and i.indpred is null
+          and i.indexprs is null
+          and i.indnkeyatts = 1
+          and i.indnatts = 1
+          and pg_catalog.pg_get_indexdef(i.indexrelid, 1, true) = 'product_sku'
+     )`,
+  )
+
+  if (!productMembershipIndexReady) {
+    fail("collection_products is missing its product-side foreign-key index")
+  }
+
   // The snapshot column must accept only a JSON object.
   const snapshotType = await scalar(
     db,

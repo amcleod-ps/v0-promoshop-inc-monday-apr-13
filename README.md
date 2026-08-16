@@ -88,7 +88,7 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 
 ## Supabase setup
 
-Fifteen repository migrations live in `supabase/migrations/`. Apply only the
+Seventeen repository migrations live in `supabase/migrations/`. Apply only the
 missing migrations, in numeric order, through the approved controlled-release
 process. Repository presence is not proof of hosted application; reconcile the
 hosted objects against the relevant stage record before relying on a migration.
@@ -133,6 +133,10 @@ Do not load price data or enable either pricing gate while applying these files:
     supplier operational quantity internally and makes the approved public
     pricing start one unit. It refuses to run after tier data or tier history
     exists, so it must be reconciled before the first controlled import.
+16. `0016_trigger_function_security_hardening.sql` — removes direct API-role
+    execution from the shared trigger functions and pins their search path.
+17. `0017_collection_product_foreign_key_index.sql` — adds the missing
+    product-side index for collection membership maintenance.
 
 After applying all required migrations, the dashboard's Table Editor shows:
 
