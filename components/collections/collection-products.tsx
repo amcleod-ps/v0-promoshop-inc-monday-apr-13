@@ -4,13 +4,20 @@ import { useState } from "react"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import type { Product } from "@/lib/products"
+import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
 /**
  * The product grid for a collection detail page. Reuses the Studio's
  * ProductCard + accessible ProductDetailModal so a collection behaves exactly
  * like the catalog (pick colours/sizes, add to quote).
  */
-export function CollectionProducts({ products }: { products: Product[] }) {
+export function CollectionProducts({
+  products,
+  pricing,
+}: {
+  products: Product[]
+  pricing: CustomerPricingState
+}) {
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -40,7 +47,13 @@ export function CollectionProducts({ products }: { products: Product[] }) {
           <ProductCard key={product.sku} product={product} tone="dark" onClick={() => open(product)} />
         ))}
       </div>
-      <ProductDetailModal product={selected} isOpen={isOpen} onClose={close} />
+      <ProductDetailModal
+        product={selected}
+        isOpen={isOpen}
+        onClose={close}
+        pricingEnabled={pricing.enabled}
+        tiers={selected ? pricing.tiersBySku[selected.sku] ?? [] : []}
+      />
     </>
   )
 }

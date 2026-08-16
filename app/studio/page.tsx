@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getAllProducts } from "@/lib/supabase/products"
+import { getCustomerPricingBySku } from "@/lib/supabase/pricing"
 import { PRODUCTS } from "@/lib/products"
 import StudioClient from "./StudioClient"
 
@@ -20,6 +21,7 @@ export default async function StudioPage({
   // catalog.
   const [live, params] = await Promise.all([getAllProducts(), searchParams])
   const products = live ?? PRODUCTS
+  const pricing = await getCustomerPricingBySku(products.map((product) => product.sku))
 
   const categorySet = new Set<string>()
   const brandSet = new Set<string>()
@@ -36,6 +38,7 @@ export default async function StudioPage({
       categories={["All", ...Array.from(categorySet).sort()]}
       brands={["All", ...Array.from(brandSet).sort()]}
       tags={Array.from(tagSet).sort()}
+      pricing={pricing}
       initialCategory={typeof params.category === "string" ? params.category : undefined}
     />
   )

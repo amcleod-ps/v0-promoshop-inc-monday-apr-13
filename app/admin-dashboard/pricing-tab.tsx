@@ -289,9 +289,11 @@ function CsvImporter() {
         Validated CSV import
       </h2>
       <p style={styles.help}>
-        Uses the exact six-column pricing matrix template. A dry run reports
+        Uses either the exact six-column pricing matrix template or the
+        formatting-aware PromoShop USD pricing extract. A dry run reports
         every detectable row error. Apply is enabled only after the same file
         passes, and the server validates it again before one atomic write.
+        Raw source exports are not accepted because they lose tier formatting.
         SKUs omitted from the file remain unchanged.
       </p>
 
@@ -454,7 +456,7 @@ function ProductPricingEditor({
           <strong>{product.sku}</strong> · {product.name}
         </span>
         <span style={styles.summaryMeta}>
-          MOQ {product.minimumQuantity} · {product.isActive ? "catalogue active" : "catalogue inactive"} · {product.status} · rev{" "}
+          Public price starts at {product.minimumQuantity} · {product.isActive ? "catalogue active" : "catalogue inactive"} · {product.status} · rev{" "}
           {product.revision}
         </span>
       </summary>

@@ -251,6 +251,24 @@ async function main() {
     fail("anon inserted a pricing snapshot — verified estimates are forgeable")
   }
 
+  // The source treats supplier MOQ as internal operational context while
+  // public pricing begins at one. Migration 0015 preserves the supplier value
+  // and changes the legacy min_qty field only before price history exists.
+  const invalidPublicPricingStarts = await db.query(
+    `select sku, min_qty, supplier_min_qty
+       from public.products
+      where min_qty <> 1
+         or supplier_min_qty <= 0`,
+  )
+
+  if (invalidPublicPricingStarts.rows.length > 0) {
+    fail(
+      `products do not preserve a positive supplier MOQ with public start one: ${invalidPublicPricingStarts.rows
+        .map((row) => row.sku)
+        .join(", ")}`,
+    )
+  }
+
   if (process.exitCode === 1) return
 
   console.log("✔ all schema invariants hold")

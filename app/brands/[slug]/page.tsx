@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer"
 import { getBrandBySlug, type Brand } from "@/lib/brands"
 import { PRODUCTS } from "@/lib/products"
 import { getAllProducts } from "@/lib/supabase/products"
+import { getCustomerPricingBySku } from "@/lib/supabase/pricing"
 import { getSupabaseBrandBySlug } from "@/lib/supabase/data"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 import { textFallback } from "@/lib/cms/text-slots"
@@ -99,6 +100,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
   const brandProducts = products
     ? products.filter((p) => p.brandSlugs.includes(brand.slug))
     : PRODUCTS.filter((p) => p.brands.includes(brand.name))
+  const pricing = await getCustomerPricingBySku(
+    brandProducts.map((product) => product.sku),
+  )
 
   return (
     <div className="min-h-screen bg-[#ededed] text-[#111111] font-montserrat">
@@ -163,7 +167,11 @@ export default async function BrandPage({ params }: BrandPageProps) {
           {/* Clicking a card opens the detail modal in place, restoring the
               add-to-quote flow that was broken when cards were wrapped in a
               Link to /studio (client feedback Apr 16). */}
-          <BrandProductsGrid products={brandProducts} brandName={brand.name} />
+          <BrandProductsGrid
+            products={brandProducts}
+            brandName={brand.name}
+            pricing={pricing}
+          />
         </div>
       </section>
 

@@ -11,11 +11,22 @@ import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
 import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-dialog-focus"
 import { ProductLightbox } from "./product-lightbox"
+import type { PriceTier } from "@/lib/pricing/types"
+import {
+  APPROXIMATE_PRICING_COPY,
+  CANADIAN_PRICING_COPY,
+  formatUsd,
+  missingPricingKind,
+  NO_PRICING_COPY,
+  tierRangeLabel,
+} from "@/lib/pricing/presentation"
 
 interface ProductDetailModalProps {
   product: Product | null
   isOpen: boolean
   onClose: () => void
+  pricingEnabled: boolean
+  tiers: readonly PriceTier[]
 }
 
 // Multi-select version of the product detail modal — per client feedback
@@ -27,7 +38,13 @@ interface ProductDetailModalProps {
 // quote" (client feedback Apr 16), but their selections are added to the
 // localStorage cart FIRST — the cart is not profile-gated, and discarding the
 // picks stranded every first-time visitor on an empty quote.
-export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({
+  product,
+  isOpen,
+  onClose,
+  pricingEnabled,
+  tiers,
+}: ProductDetailModalProps) {
   const [selectedColours, setSelectedColours] = useState<ProductColour[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [previewColour, setPreviewColour] = useState<ProductColour | null>(null)
@@ -287,6 +304,48 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
               {product.name}
             </h2>
 
+            {pricingEnabled ? (
+              tiers.length > 0 ? (
+                <section className="mb-7 rounded border border-[#d6d6d6] bg-white p-4" aria-labelledby="product-pricing-heading">
+                  <h3 id="product-pricing-heading" className="mb-3 text-sm font-extrabold uppercase tracking-wider text-black">
+                    Approximate Pricing
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="text-xs uppercase tracking-wide text-[#666]">
+                        <tr>
+                          <th scope="col" className="pb-2 pr-3">Quantity</th>
+                          <th scope="col" className="pb-2 text-right">Unit price (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tiers.map((tier, index) => (
+                          <tr key={tier.tierStartQuantity} className="border-t border-[#eeeeee]">
+                            <td className="py-2 pr-3">{tierRangeLabel(tiers, index)}</td>
+                            <td className="py-2 text-right font-semibold">{formatUsd(tier.unitPriceUsd)} USD</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-3 text-xs leading-relaxed text-[#666]">{APPROXIMATE_PRICING_COPY}</p>
+                </section>
+              ) : (
+                <section className="mb-7 rounded border border-[#d6d6d6] bg-white p-4" aria-labelledby="product-pricing-heading">
+                  <h3 id="product-pricing-heading" className="mb-2 text-sm font-extrabold uppercase tracking-wider text-black">
+                    {missingPricingKind(product.sku) === "canadian"
+                      ? "Canadian Pricing Coming Soon"
+                      : "Pricing Available on Request"}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-[#666]">
+                    {missingPricingKind(product.sku) === "canadian"
+                      ? CANADIAN_PRICING_COPY
+                      : NO_PRICING_COPY}
+                  </p>
+                </section>
+              )
+            ) : null}
+
             {/* Colour Selection (multi-select). Clicking adds/removes; the
                 coloured chips below list every selected colour. */}
             <div className="mb-7">
@@ -382,7 +441,6 @@ export function ProductDetailModal({ product, isOpen, onClose }: ProductDetailMo
                   <p><strong>SKU:</strong> {product.sku}</p>
                   <p><strong>Category:</strong> {product.category}</p>
                   <p><strong>Brand:</strong> {product.brands.join(", ")}</p>
-                  <p><strong>Min. Order:</strong> {product.minQty} units</p>
                 </div>
               </div>
             )}

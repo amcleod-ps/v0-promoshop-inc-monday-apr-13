@@ -4,7 +4,9 @@ import test from "node:test"
 import {
   PRICING_MATRIX_HEADER,
   PRICING_MATRIX_LIMITS,
+  PROMOSHOP_EXTRACTED_PRICING_HEADER,
   dryRunPricingMatrixCsv,
+  normalizePricingImportCsv,
   parseCsvRecords,
   validateTierSetDraft,
 } from "../../lib/pricing/matrix"
@@ -236,6 +238,51 @@ test("fingerprint changes when effective pricing changes", async () => {
   assert.equal(b.ok, true)
   if (!a.ok || !b.ok) return
   assert.notEqual(a.fingerprint, b.fingerprint)
+})
+
+test("normalizes the formatting-aware PromoShop extract without using supplier MOQ", async () => {
+  const source = [
+    PROMOSHOP_EXTRACTED_PRICING_HEADER.join(","),
+    "PUL 005,Pulse Sport Shirt,Brand,Supplier,24,97.50,95.06,92.63,85.80,1 / 12 / 24 / 48,,extra for XXL+",
+    "TOP 104,Top 104,Brand,Supplier,36,30.00,29.00,27.00,25.00,1 / 24 / 48,12,",
+  ].join("\n")
+
+  const normalized = normalizePricingImportCsv(source)
+  assert.equal(normalized.ok, true)
+  if (!normalized.ok) return
+  assert.equal(normalized.source, "promoshop_extracted")
+  assert.match(normalized.csv, /PUL 005,Pulse Sport Shirt,1,1,97\.50/)
+
+  const result = await dryRunPricingMatrixCsv(normalized.csv, [
+    { sku: "PUL 005", name: "Pulse Sport Shirt", minimumQuantity: 1 },
+    { sku: "TOP 104", name: "Top 104", minimumQuantity: 1 },
+  ])
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+
+  const pul = result.sets.find((set) => set.sku === "PUL 005")
+  const top = result.sets.find((set) => set.sku === "TOP 104")
+  assert.deepEqual(
+    pul?.tiers.map((tier) => tier.tierStartQuantity),
+    [1, 12, 24, 48],
+  )
+  assert.deepEqual(
+    top?.tiers.map((tier) => tier.tierStartQuantity),
+    [1, 24, 48],
+  )
+})
+
+test("rejects a formatting-aware extract with a contradictory tier marker", () => {
+  const source = [
+    PROMOSHOP_EXTRACTED_PRICING_HEADER.join(","),
+    "PUL 005,Pulse Sport Shirt,Brand,Supplier,24,97.50,95.06,92.63,85.80,1 / 12,12,",
+  ].join("\n")
+
+  const normalized = normalizePricingImportCsv(source)
+  assert.equal(normalized.ok, false)
+  if (!normalized.ok) {
+    assert.ok(normalized.diagnostics.some((item) => item.code === "source_tier_conflict"))
+  }
 })
 
 test("manual complete-set validation shares MOQ, ordering, and money rules", async () => {

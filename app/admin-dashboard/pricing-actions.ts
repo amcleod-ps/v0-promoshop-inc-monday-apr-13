@@ -13,6 +13,7 @@ import type {
 } from "@/lib/pricing/admin-types"
 import {
   dryRunPricingMatrixCsv,
+  normalizePricingImportCsv,
   sha256Hex,
   validateTierSetDraft,
   type PricingCatalogProduct,
@@ -192,7 +193,15 @@ export async function dryRunPricingCsv(
   const loaded = await loadCatalogAndRevisions(authorized.supabase)
   if (!loaded.ok) return loaded
 
-  const dryRun = await dryRunPricingMatrixCsv(input.csvText, loaded.catalog)
+  const normalized = normalizePricingImportCsv(input.csvText)
+  if (!normalized.ok) {
+    return validationFailure(
+      "The matrix has validation errors. Nothing was written.",
+      normalized.diagnostics,
+    )
+  }
+
+  const dryRun = await dryRunPricingMatrixCsv(normalized.csv, loaded.catalog)
   if (!dryRun.ok) {
     return validationFailure(
       "The matrix has validation errors. Nothing was written.",
@@ -237,7 +246,15 @@ export async function applyPricingCsv(
   const loaded = await loadCatalogAndRevisions(authorized.supabase)
   if (!loaded.ok) return loaded
 
-  const dryRun = await dryRunPricingMatrixCsv(input.csvText, loaded.catalog)
+  const normalized = normalizePricingImportCsv(input.csvText)
+  if (!normalized.ok) {
+    return validationFailure(
+      "The matrix now has validation errors. Nothing was written.",
+      normalized.diagnostics,
+    )
+  }
+
+  const dryRun = await dryRunPricingMatrixCsv(normalized.csv, loaded.catalog)
   if (!dryRun.ok) {
     return validationFailure(
       "The matrix now has validation errors. Nothing was written.",

@@ -26,6 +26,16 @@ interface PricingProductRow {
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
+/**
+ * Customer-facing pricing is enabled only after both server-controlled gates
+ * are open and the tier rows can be read and validated. A database fault does
+ * not become a misleading "no price" state for every product.
+ */
+export interface CustomerPricingState {
+  readonly enabled: boolean
+  readonly tiersBySku: PricingTierMap
+}
+
 function requestedSkuList(skus: readonly string[]): string[] {
   const unique = new Set<string>()
 
@@ -149,6 +159,44 @@ export async function getPriceTiersBySku(
   if (gates === "closed") return {}
 
   return readTiers(supabase, requestedSkus)
+}
+
+/**
+ * Loads the safe public projection for catalogue and quote pages. `enabled`
+ * is deliberately false for a closed gate *and* for an unavailable pricing
+ * store: both states keep the existing quote-first experience rather than
+ * showing the approved missing-price copy for every SKU during an outage.
+ */
+export async function getCustomerPricingBySku(
+  skus: readonly string[],
+): Promise<CustomerPricingState> {
+  if (!isTieredPricingEnabled()) {
+    return { enabled: false, tiersBySku: {} }
+  }
+
+  const requestedSkus = requestedSkuList(skus)
+  if (requestedSkus.length === 0) {
+    return { enabled: false, tiersBySku: {} }
+  }
+
+  let supabase: AdminClient
+  try {
+    supabase = createAdminClient()
+  } catch {
+    return { enabled: false, tiersBySku: {} }
+  }
+
+  const gates = await pricingGatesOpen(supabase)
+  if (gates !== "open") {
+    return { enabled: false, tiersBySku: {} }
+  }
+
+  const tiersBySku = await readTiers(supabase, requestedSkus)
+  if (tiersBySku === null) {
+    return { enabled: false, tiersBySku: {} }
+  }
+
+  return { enabled: true, tiersBySku }
 }
 
 export type QuotePricingContext =

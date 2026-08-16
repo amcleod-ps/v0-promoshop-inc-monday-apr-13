@@ -80,16 +80,19 @@ is sent. Setup walkthrough: `docs/RESEND-EMAIL-SETUP.md`.
 | `pnpm build` | Production build (includes type-check) |
 | `pnpm start` | Serve the production build |
 | `pnpm lint` | ESLint |
+| `pnpm test` | Pricing, quote-snapshot, and import regression tests |
+| `pnpm check:sql` | Apply all migrations to a fresh PostgreSQL-compatible test database and check invariants |
 | `pnpm tsx scripts/generate-seed-sql.ts` | Regenerate `supabase/migrations/0003_seed_data.sql` from the in-repo seed files (run after editing `lib/seed-data/*` or `lib/cms/team.ts`) |
 
 ---
 
 ## Supabase setup
 
-Twelve repository migrations live in `supabase/migrations/`. Run them in order from
-the Supabase Dashboard → SQL Editor → New query. Repository presence is not
-proof of hosted application; reconcile the hosted objects against the relevant
-stage record before relying on a migration:
+Fifteen repository migrations live in `supabase/migrations/`. Apply only the
+missing migrations, in numeric order, through the approved controlled-release
+process. Repository presence is not proof of hosted application; reconcile the
+hosted objects against the relevant stage record before relying on a migration.
+Do not load price data or enable either pricing gate while applying these files:
 
 1. `0001_init.sql` — base tables: `brands`, `hero_slides`, `quote_requests`
    with Row-Level Security.
@@ -121,8 +124,17 @@ stage record before relying on a migration:
 12. `0012_tiered_pricing.sql` — adds an off-by-default release flag and
     normalized USD product tiers. Both tables are service-role-only and the
     migration loads no customer pricing.
+13. `0013_pricing_administration.sql` — adds protected complete-tier-set
+    administration, revision/audit evidence, and atomic replacement.
+14. `0014_quote_pricing_snapshot.sql` — stores a server-calculated pricing
+    snapshot when the inactive feature is later enabled and supplied with
+    validated tiers.
+15. `0015_public_pricing_start_quantity.sql` — preserves each existing
+    supplier operational quantity internally and makes the approved public
+    pricing start one unit. It refuses to run after tier data or tier history
+    exists, so it must be reconciled before the first controlled import.
 
-After applying all twelve, the dashboard's Table Editor shows:
+After applying all required migrations, the dashboard's Table Editor shows:
 
 | Table | Rows | What it controls |
 | --- | --- | --- |
@@ -135,6 +147,7 @@ After applying all twelve, the dashboard's Table Editor shows:
 | `collection_products` | hand-picked collection products | Manual product selections per collection |
 | `feature_flags` | `tiered_pricing=false` initially | Server-verified pricing release gate |
 | `product_price_tiers` | empty until controlled import | Service-only USD quantity tiers |
+| `product_price_tier_sets` / `product_price_tier_audit` | empty until controlled import | Revision and append-only pricing-change evidence |
 | `site_images` | every other image | Site logo, About hero, brand logos, brand lifestyle backdrops, team photos |
 | `quote_requests` | filled from the public form | Incoming quote requests |
 
@@ -159,6 +172,11 @@ For each image on the site you see:
 Click **Choose File**, pick the new image, click **Replace**. The page
 uploads the file to Supabase Storage and updates the database row
 that points at it. The change is live on the next page request.
+
+For a product gallery image, **Remove image** removes only that gallery row.
+The original file remains in Supabase Storage. It can be recovered and attached
+again if removal was a mistake. Removing a gallery relationship never deletes
+the original Storage file.
 
 The dashboard groups images by type:
 
@@ -271,9 +289,9 @@ public/                  # Static assets (favicons, seeded imagery)
 scripts/
   generate-seed-sql.ts   # Regenerates supabase/migrations/0003_seed_data.sql
 supabase/
-  migrations/            # 0001 → 0012, applied in order by hand (SQL Editor)
+  migrations/            # 0001 → 0015, applied by the controlled release process
 ```
 
 ## Pricing add-on delivery
 
-The gate-driven implementation plan, readiness records, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). The Stage 1 foundation remains dual-gated and contains no production pricing data.
+The gate-driven implementation plan, readiness records, input contract and acceptance-test inventory are maintained in [`docs/pricing-addon/`](./docs/pricing-addon/README.md). The Stage 3 review-ready record is [`docs/pricing-addon/stage-3-review-ready-2026-08-16.md`](./docs/pricing-addon/stage-3-review-ready-2026-08-16.md). Both public pricing gates remain off, and no production pricing data is included in this repository change.

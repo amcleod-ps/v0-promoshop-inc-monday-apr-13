@@ -344,7 +344,6 @@ export async function createProduct(input: {
   brandSlugs?: string[]
   genders?: string[]
   sizes?: string[]
-  minQty?: number
 }): Promise<CreateResult> {
   const sku = (input.sku ?? "").trim()
   const name = (input.name ?? "").trim()
@@ -375,7 +374,10 @@ export async function createProduct(input: {
     brand_slugs: cleanStringList(input.brandSlugs),
     genders: cleanStringList(input.genders),
     sizes: cleanStringList(input.sizes),
-    min_qty: Math.max(1, Math.floor(input.minQty ?? 1)),
+    // Public pricing is allowed from one unit. Supplier operating quantities
+    // are recorded separately by migration 0015 and cannot become a public
+    // quantity gate through this action.
+    min_qty: 1,
     deco_locations: [],
     deco_methods: [],
     is_active: true,
@@ -526,33 +528,6 @@ export async function updateProductTags(
     )
   }
   if (error) return adminActionError("Couldn't save your tags. Please try again.", error.message)
-  if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
-  bumpCaches()
-  return { ok: true }
-}
-
-/**
- * Updates a product's minimum order quantity (shown in the product detail
- * modal). Previously create-only.
- */
-export async function updateProductMinQty(
-  sku: string,
-  value: number,
-): Promise<SimpleResult> {
-  if (!sku) return { ok: false, error: "Missing SKU." }
-  if (!Number.isInteger(value) || value < 1 || value > 1000000) {
-    return { ok: false, error: "Minimum order quantity must be a whole number of at least 1." }
-  }
-
-  const adminResult = await adminOrError()
-  if (!adminResult.ok) return adminResult
-  const { supabase } = adminResult
-  const { data, error } = await supabase
-    .from("products")
-    .update({ min_qty: value })
-    .eq("sku", sku)
-    .select("sku")
-  if (error) return adminActionError("Couldn't save your changes. Please try again.", error.message)
   if (!data || data.length === 0) return { ok: false, error: STALE_ROW_ERROR }
   bumpCaches()
   return { ok: true }

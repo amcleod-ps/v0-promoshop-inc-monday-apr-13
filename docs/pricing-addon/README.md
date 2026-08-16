@@ -6,13 +6,13 @@ Stage 1 implementation decisions and evidence are recorded in [`stage-1-foundati
 
 Stage 2 administration, import, and verification evidence are recorded in [`stage-2-administration.md`](./stage-2-administration.md).
 
-Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). Stage 4 was built before Stage 3 because it depends on no client input; Stage 3 remains blocked on the approved pricing matrix and the three approved public wordings.
+Stage 4 quote-snapshot implementation and verification evidence are recorded in [`stage-4-quote-snapshot.md`](./stage-4-quote-snapshot.md). The Stage 3 review-ready record is [`stage-3-review-ready-2026-08-16.md`](./stage-3-review-ready-2026-08-16.md). It records the approved source handling, customer wording, and release controls. It does not prove a hosted migration, data load, release, or customer acceptance.
 
 ## Delivery outcome
 
 For a product with an approved pricing matrix, the storefront will:
 
-- respect the product minimum order quantity (MOQ);
+- start every approved public price at one unit while retaining supplier operating quantities as internal context;
 - select the correct per-SKU unit price for the requested quantity;
 - show the current unit price and estimated subtotal in USD;
 - preserve continuous tiers by treating each tier start as effective until the next tier starts;
@@ -80,13 +80,18 @@ Exit when the migration is reviewable, the calculator is fully tested and no pri
 
 Exit when an authorized administrator can safely load and reconcile synthetic data without partial writes.
 
-### Stage 3 — customer experience
+### Stage 3 — customer experience — **REVIEW-READY, NOT RELEASED**
 
 - Resolve requested quantity using the approved SKU/variant aggregation rule.
-- Show MOQ, applicable tier, USD unit price and estimated subtotal.
-- Apply the approved below-MOQ and missing-price messages.
+- Show the applicable tier, USD unit price and estimated subtotal.
+- Apply the approved Canadian-pricing and no-pricing messages.
 - Keep the quote-first call to action and existing navigation intact.
 - Migrate legacy local-storage cart entries defensively.
+
+The public rule is SKU aggregation across colour and size lines. A quantity
+between two tier starts uses the last achieved tier. Supplier operating MOQ is
+not a public quantity gate. The exact source handling and remaining release
+evidence are in the Stage 3 review-ready record.
 
 Exit when all supported catalogue and cart paths behave correctly on mobile and desktop with synthetic tiers.
 
@@ -129,9 +134,9 @@ The initial matrix uses [`pricing-matrix-template.csv`](./pricing-matrix-templat
 Required validation:
 
 - `sku` matches one existing product exactly after documented normalization;
-- `min_order_quantity` is a positive integer and is consistent for every row of a SKU;
-- `tier_start_quantity` is a positive integer, is at least the MOQ and is strictly increasing within a SKU;
-- the first tier starts at the MOQ unless an approved exception is recorded;
+- `min_order_quantity` is `1` for the public matrix and is consistent for every row of a SKU;
+- `tier_start_quantity` is a positive integer, starts at `1`, and is strictly increasing within a SKU;
+- the first tier starts at `1`; supplier operating quantities are never copied into this public column;
 - `unit_price_usd` is a strictly positive decimal using the approved precision;
 - `product_name` and `notes` are reference-only fields and never update catalogue content;
 - duplicate SKU/start pairs are rejected;
@@ -140,14 +145,17 @@ Required validation:
 
 ## Provisional decisions
 
-These defaults support implementation planning but are not final customer rules:
+These rules are implemented for review. Hosted use remains subject to the
+release controls:
 
 - aggregate quantities across variants of the same SKU;
-- below-MOQ items remain unpriced and cannot produce an estimate;
+- a quantity between tier starts uses the preceding achieved tier;
 - recalculate all pricing at quote submission; and
 - require review when the server result differs from the last browser display.
 
-Final decisions belong in the Stage 0 readiness record before Stage 1 implementation begins.
+The source note for PUL 005 XXL+ does not create a surcharge, exclusion, or
+customer-facing exception. It remains a client confirmation item before a
+public release.
 
 ## Verification
 

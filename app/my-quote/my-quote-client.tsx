@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -12,6 +13,14 @@ import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
 import { submitQuoteRequest } from "@/app/actions/quotes"
 import { HoneypotField } from "@/components/honeypot-field"
+import { buildCustomerPricingSummary } from "@/lib/pricing/customer"
+import { calculateSubtotalUsd } from "@/lib/pricing/money"
+import {
+  APPROXIMATE_PRICING_COPY,
+  formatUsd,
+  missingPricingCopy,
+} from "@/lib/pricing/presentation"
+import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
 /**
  * Slim projection of the catalog for the manual "Add Product" picker —
@@ -30,7 +39,13 @@ export interface PickerProduct {
 // LIVE product catalog — the manual "Add Product" picker previously offered
 // only the compiled-in seed list, hiding dashboard-created products and
 // still offering deactivated ones.
-export default function MyQuoteClient({ products }: { products: PickerProduct[] }) {
+export default function MyQuoteClient({
+  products,
+  pricing,
+}: {
+  products: PickerProduct[]
+  pricing: CustomerPricingState
+}) {
   const { 
     items, 
     contactInfo, 
@@ -44,6 +59,7 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
     isLoaded 
   } = useQuote()
   const { t } = useLocale()
+  const router = useRouter()
   const pageEyebrow = useSiteText("quote.page.eyebrow", textFallback("quote.page.eyebrow"))
   const pageHeading = useSiteText("quote.page.heading", textFallback("quote.page.heading"))
   const pageSubheading = useSiteText(
@@ -69,6 +85,19 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
   // info; bots that autofill it are silently discarded server-side. Not
   // named "website": browser autofill matches that name (silent lead loss).
   const [hpCheck, setHpCheck] = useState("")
+  const pricingSummary = useMemo(
+    () =>
+      pricing.enabled
+        ? buildCustomerPricingSummary(
+            items.map((item) => ({
+              productSku: item.productSku,
+              quantity: item.quantity,
+            })),
+            pricing.tiersBySku,
+          )
+        : null,
+    [items, pricing],
+  )
 
   const handleAddProduct = () => {
     const product = products.find(p => p.sku === selectedProduct)
@@ -148,12 +177,28 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
         quantity_range: String(totalUnits),
         message,
         hp_check: hpCheck || undefined,
+        items: items.map((item) => ({
+          sku: item.productSku,
+          productName: item.productName,
+          colour: item.colour,
+          size: item.size,
+          quantity: item.quantity,
+        })),
+        displayed_total_usd: pricingSummary?.estimatedTotalUsd ?? undefined,
       })
 
       if (result.success) {
         clearItems()
         setSubmitted(true)
       } else {
+        if (result.status === "review_required") {
+          setSubmitError(
+            "Pricing was updated while you were building this quote. Please review the current estimate and submit again.",
+          )
+          setActiveTab("items")
+          router.refresh()
+          return
+        }
         setSubmitError(
           result.error || "Something went wrong submitting your quote. Please try again.",
         )
@@ -314,7 +359,13 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
               ) : (
                 <>
                   <div className="space-y-4 mb-6">
-                    {items.map((item) => (
+                    {items.map((item) => {
+                      const skuPricing = pricingSummary?.bySku[item.productSku]
+                      const lineSubtotal =
+                        skuPricing?.status === "priced"
+                          ? calculateSubtotalUsd(skuPricing.unitPriceUsd, item.quantity)
+                          : null
+                      return (
                       // flex-wrap: on narrow phones the qty/remove cluster
                       // drops to its own right-aligned row instead of
                       // crushing the product name to nothing.
@@ -331,6 +382,15 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                             <span className="bg-[#f0f0f0] text-[#666] px-2 py-1 rounded">{item.colour}</span>
                             <span className="bg-[#f0f0f0] text-[#666] px-2 py-1 rounded">{item.size}</span>
                           </div>
+                          {pricing.enabled && skuPricing?.status === "priced" ? (
+                            <p className="mt-2 text-xs leading-relaxed text-[#555]">
+                              Combined {item.productSku} quantity: {skuPricing.quantity} · {formatUsd(skuPricing.unitPriceUsd)} USD each at {skuPricing.tierStartQuantity}+ · This line: {lineSubtotal ? `${formatUsd(lineSubtotal)} USD` : "pricing unavailable"}
+                            </p>
+                          ) : pricing.enabled ? (
+                            <p className="mt-2 text-xs leading-relaxed text-[#666]">
+                              {missingPricingCopy(item.productSku)}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-2 ml-auto">
                           <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity - 1) })} aria-label={`Decrease quantity of ${item.productName}`} className="w-9 h-9 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
@@ -345,8 +405,30 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                           </button>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
+
+                  {pricing.enabled && pricingSummary ? (
+                    <section className="mb-6 rounded-lg border border-[#e5e5e5] bg-white p-4" aria-live="polite" aria-label="Estimated product pricing">
+                      <h2 className="mb-2 font-montserrat text-base font-bold text-[#1a1a1a]">Estimated Product Pricing</h2>
+                      {pricingSummary.estimatedTotalUsd ? (
+                        <p className="text-lg font-bold text-[#1a1a1a]">
+                          Estimated product subtotal: {formatUsd(pricingSummary.estimatedTotalUsd)} USD
+                        </p>
+                      ) : (
+                        <p className="text-sm text-[#666]">Pricing will be confirmed by a PromoShop specialist.</p>
+                      )}
+                      {pricingSummary.hasUnpricedItems ? (
+                        <p className="mt-2 text-sm leading-relaxed text-[#666]">
+                          Some selected items do not contribute to this estimated subtotal. {missingPricingCopy("")}
+                        </p>
+                      ) : null}
+                      {pricingSummary.hasPricedItems ? (
+                        <p className="mt-2 text-xs leading-relaxed text-[#666]">{APPROXIMATE_PRICING_COPY}</p>
+                      ) : null}
+                    </section>
+                  ) : null}
 
                   {showAddProduct && (
                     <div className="bg-white border border-[#e5e5e5] rounded-lg p-6 mb-6 shadow-sm">
@@ -470,6 +552,9 @@ export default function MyQuoteClient({ products }: { products: PickerProduct[] 
                 <div className="space-y-2 text-sm font-visby">
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Products:</span><span className="text-[#1a1a1a]">{items.length} item{items.length !== 1 ? "s" : ""}</span></div>
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Total Units:</span><span className="text-[#1a1a1a]">{items.reduce((sum, item) => sum + item.quantity, 0)}</span></div>
+                  {pricing.enabled && pricingSummary?.estimatedTotalUsd ? (
+                    <div className="flex justify-between"><span className="text-[#6b6b6b]">Estimated product subtotal:</span><span className="text-[#1a1a1a]">{formatUsd(pricingSummary.estimatedTotalUsd)} USD</span></div>
+                  ) : null}
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Contact:</span><span className="text-[#1a1a1a]">{contactInfo.firstName} {contactInfo.lastName}</span></div>
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Company:</span><span className="text-[#1a1a1a]">{contactInfo.company || "Not specified"}</span></div>
                 </div>
