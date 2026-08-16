@@ -17,6 +17,16 @@ const publicPricingStartMigration = readFileSync(
   "utf8",
 )
 
+const triggerFunctionHardeningMigration = readFileSync(
+  "supabase/migrations/0016_trigger_function_security_hardening.sql",
+  "utf8",
+)
+
+const collectionProductIndexMigration = readFileSync(
+  "supabase/migrations/0017_collection_product_foreign_key_index.sql",
+  "utf8",
+)
+
 test("catalogue lifecycle is protected at the database boundary", () => {
   assert.match(
     migration,
@@ -130,5 +140,44 @@ test("public pricing starts at one while supplier MOQ stays internal", () => {
   assert.match(
     publicPricingStartMigration,
     /never display it as a public quantity gate/i,
+  )
+})
+
+test("trigger functions have no direct API surface or mutable search path", () => {
+  for (const functionName of [
+    "set_updated_at",
+    "assign_sort_order",
+    "force_quote_request_insert_defaults",
+  ]) {
+    assert.match(
+      triggerFunctionHardeningMigration,
+      new RegExp(
+        `alter function public\\.${functionName}\\(\\)\\s+set search_path = ''`,
+        "i",
+      ),
+    )
+    assert.match(
+      triggerFunctionHardeningMigration,
+      new RegExp(
+        `revoke all\\s+on function public\\.${functionName}\\(\\)\\s+from public, anon, authenticated, service_role`,
+        "i",
+      ),
+    )
+  }
+
+  assert.match(
+    triggerFunctionHardeningMigration,
+    /must remove direct trigger-function execution from API roles/i,
+  )
+})
+
+test("collection membership has a product-side foreign-key index", () => {
+  assert.match(
+    collectionProductIndexMigration,
+    /create index if not exists collection_products_product_sku_idx\s+on public\.collection_products \(product_sku\)/i,
+  )
+  assert.match(
+    collectionProductIndexMigration,
+    /must create a ready, valid product_sku index/i,
   )
 })

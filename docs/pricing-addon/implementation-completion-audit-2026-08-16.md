@@ -56,23 +56,34 @@ by the default no-pricing notice.
   approved response period, the product dialog works without the old minimum
   wording, and the mobile Studio page has no horizontal overflow.
 
-## Hosted release still required
+## Hosted database preparation completed
 
-The software implementation is complete, but the full operational project is
-not complete until all of these separate release steps have evidence:
+The controlled hosted preparation now has evidence:
 
-1. Verify the hosted migration ledger and apply migrations `0014` and `0015`
-   if they are absent.
-2. Run the source dry run against the authenticated hosted catalogue.
-3. Load and reconcile the 88 SKU sets and 349 tier rows while both gates stay
-   off.
-4. Complete a protected preview review.
-5. Open both pricing gates in a separate controlled activation.
-6. Verify representative priced, Canadian, unpriced, 30-unit, 48-unit, and
+- The project has no managed migration ledger, consistent with its documented
+  manual process. Object checks confirmed the predecessor state.
+- Migrations `0014` and `0015` were applied together and verified.
+- The authenticated hosted dry run passed for all 88 SKU sets and 349 rows.
+- One protected atomic change loaded and reconciled the complete matrix.
+- Both pricing gates stayed off, and fresh public checks showed no prices.
+- Two additional migrations removed broad trigger-function execution and added
+  the missing collection-membership foreign-key index.
+
+Full counts, hashes, advisor results, and the public smoke evidence are in the
+[hosted review-database release record](./hosted-review-database-release-2026-08-16.md).
+
+## Preview and activation work still required
+
+The software and hosted review database are complete. The full operational
+release is not complete until these separate steps have evidence:
+
+1. Complete Abigail's protected preview review and record activation approval.
+2. Open both pricing gates in a separate controlled activation.
+3. Verify representative priced, Canadian, unpriced, 30-unit, 48-unit, and
    mixed-cart paths on every production host.
-7. Submit a controlled production quote and verify its stored server snapshot
+4. Submit a controlled production quote and verify its stored server snapshot
    and notification.
-8. Record Abigail's acceptance separately.
+5. Record Abigail's acceptance separately.
 
 Reconfirm the 30-unit rule and PUL 005 XXL+ treatment with Abigail on the next
 call. These confirmations do not change the implemented safe defaults.

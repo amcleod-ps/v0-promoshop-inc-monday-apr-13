@@ -1,11 +1,12 @@
 # Stage 3 — customer pricing review-ready record
 
 Status date: 2026-08-16
-Repository state: prepared for review; not deployed or activated
+Repository state: hosted review database prepared; not publicly activated
 
 This record covers the customer-facing pricing implementation prepared from
-the August 7 client package. It does not prove a hosted migration, a price-data
-load, a public release, a sent client notice, or client acceptance.
+the August 7 client package. The later hosted migration, load, and
+reconciliation evidence is recorded separately. Neither record proves a public
+release, a sent client notice, or client acceptance.
 
 ## Implemented public rules
 
@@ -75,13 +76,12 @@ dialog states this recovery boundary before the action runs.
 
 ## Release boundary
 
-Both pricing controls stay off: the database flag remains false and the
-server environment flag remains unset. No migration was applied, no client
-price was imported, no Vercel deployment was changed, and no external message
-was sent by this work.
+Both pricing controls stay off: the database flag remains false and the server
+environment flag remains unset. The required schema and the validated matrix
+are now installed and reconciled in the hosted database. No Vercel setting was
+changed, no public price was enabled, and no external message was sent.
 
-Before a controlled release, reconcile the hosted migration state; apply and
-verify `0015` before the first tier import; dry-run the reviewed source; load
-the validated matrix while both gates remain off; obtain preview acceptance;
-then make a separate activation decision. Reconfirm the 30-unit rule and the
-PUL 005 XXL+ handling on the next call with Abigail.
+The exact hosted evidence is in the
+[hosted review-database release record](./hosted-review-database-release-2026-08-16.md).
+Obtain preview acceptance before a separate activation decision. Reconfirm the
+30-unit rule and the PUL 005 XXL+ handling on the next call with Abigail.
