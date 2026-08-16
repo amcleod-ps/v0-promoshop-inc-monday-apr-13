@@ -10,6 +10,15 @@ export const CANADIAN_PRICING_COPY =
 export const NO_PRICING_COPY =
   "Add this product to your quote and our team will reach out with accurate pricing. Please note: your subtotal will not reflect this item when you submit your quote."
 
+export const LARGE_QUANTITY_START = 48
+
+export const LARGE_QUANTITY_COPY =
+  "Planning 48 or more units? Contact our team for better pricing on larger quantities."
+
+export function tierPriceBasisLabel(tierStartQuantity: number): string {
+  return tierStartQuantity === 1 ? "No decoration" : "With decoration"
+}
+
 /**
  * The source sheet places these SKUs in its Canadian-pricing section. Every
  * other SKU without an enabled USD tier set follows the supplied no-pricing

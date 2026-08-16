@@ -39,7 +39,7 @@ Priority meanings:
 | ADMIN-003 | P0 | Editing | Authorized user replaces a complete valid tier set | All tiers change atomically and the result is revalidated | Integration/UI |
 | ADMIN-004 | P0 | Editing | Stale administrator form submits after another update | Conflict is detected; newer data is not overwritten silently | Integration |
 | ADMIN-005 | P1 | Editing | User attempts to remove all tiers | Approved retirement rule is enforced and clearly reported | Integration/UI |
-| DB-001 | P0 | Database | Anonymous role reads pricing | Only approved pricing columns/rows are readable | SQL/security |
+| DB-001 | P0 | Database | Anonymous role reads pricing tables directly | Database denies the read; the server-only projection exposes only approved pricing fields after both release gates open | SQL/security |
 | DB-002 | P0 | Database | Anonymous/authenticated role attempts pricing write | Database denies the write | SQL/security |
 | DB-003 | P0 | Database | Migration is reapplied in verification environment | Result follows documented idempotency/one-way expectations without silent drift | SQL |
 | FLAG-001 | P0 | Release flag | New code and schema deploy with flag off | Existing public behaviour remains unchanged | Integration/browser |

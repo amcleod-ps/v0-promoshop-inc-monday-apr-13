@@ -106,20 +106,26 @@ test("rejects malformed CSV quoting", () => {
   if (!trailing.ok) assert.equal(trailing.diagnostics[0].code, "characters_after_quote")
 })
 
-test("reports unknown SKU and product-name mismatch without writable sets", async () => {
-  const result = await dryRunPricingMatrixCsv(
-    csv(
-      "UNKNOWN,Unknown,12,12,1.00,n",
-      "SYN-001,Wrong Name,12,12,1.00,n",
-    ),
+test("rejects unknown SKUs but treats product names as reference-only", async () => {
+  const unknown = await dryRunPricingMatrixCsv(
+    csv("UNKNOWN,Unknown,12,12,1.00,n"),
     catalog,
   )
-  assert.equal(result.ok, false)
-  if (result.ok) return
-  assert.ok(result.diagnostics.some((d) => d.code === "unknown_sku"))
-  assert.ok(result.diagnostics.some((d) => d.code === "product_name_mismatch"))
-  assert.equal("sets" in result, false)
-  assert.equal("fingerprint" in result, false)
+  assert.equal(unknown.ok, false)
+  if (!unknown.ok) {
+    assert.ok(unknown.diagnostics.some((d) => d.code === "unknown_sku"))
+    assert.equal("sets" in unknown, false)
+    assert.equal("fingerprint" in unknown, false)
+  }
+
+  const referenceMismatch = await dryRunPricingMatrixCsv(
+    csv("SYN-001,Older Worksheet Name,12,12,1.00,n"),
+    catalog,
+  )
+  assert.equal(referenceMismatch.ok, true)
+  if (referenceMismatch.ok) {
+    assert.equal(referenceMismatch.sets[0]?.productName, "Synthetic Mug")
+  }
 })
 
 test("enforces catalogue MOQ and first-tier rules", async () => {

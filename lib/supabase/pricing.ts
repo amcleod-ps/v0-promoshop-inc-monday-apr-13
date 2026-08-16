@@ -74,6 +74,22 @@ async function pricingGatesOpen(
   return flag?.enabled === true ? "open" : "closed"
 }
 
+/**
+ * Reports whether customer pricing is released without exposing price data.
+ * Both server-controlled gates must be open. Any configuration or database
+ * fault fails closed so pricing-specific public copy cannot promise an
+ * estimate that the customer cannot see.
+ */
+export async function getCustomerPricingReleaseEnabled(): Promise<boolean> {
+  if (!isTieredPricingEnabled()) return false
+
+  try {
+    return (await pricingGatesOpen(createAdminClient())) === "open"
+  } catch {
+    return false
+  }
+}
+
 function parseTierRows(
   rows: readonly PriceTierRow[],
   requested: ReadonlySet<string>,

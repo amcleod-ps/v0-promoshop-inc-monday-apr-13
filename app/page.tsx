@@ -8,15 +8,17 @@ import { HeroSlideshow } from "@/components/home/hero-slideshow"
 import { HOME_CONTENT } from "@/lib/cms/home"
 import { getHeroSlides, getSupabaseBrands } from "@/lib/supabase/data"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+import { getCustomerPricingReleaseEnabled } from "@/lib/supabase/pricing"
 import { imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 import { textFallback } from "@/lib/cms/text-slots"
 
 export default async function HomePage() {
   // Fetch hero slides, brands, and editable text content from Supabase
-  const [heroSlides, supabaseBrands, content] = await Promise.all([
+  const [heroSlides, supabaseBrands, content, pricingReleased] = await Promise.all([
     getHeroSlides(),
     getSupabaseBrands(),
     getSiteContentMap(),
+    getCustomerPricingReleaseEnabled(),
   ])
 
   const heroBody = HOME_CONTENT.hero.body.map((paragraph, i) =>
@@ -130,23 +132,25 @@ export default async function HomePage() {
       {/* Brand Logo Scroll */}
       <BrandLogoScroll brands={brands} />
 
-      <section className="bg-[#ededed] px-6 py-14 text-[#111111] lg:px-8 lg:py-20" aria-labelledby="studio-works-heading">
-        <div className="mx-auto max-w-4xl">
-          <h2 id="studio-works-heading" className="mb-6 text-3xl font-extrabold uppercase tracking-tight lg:text-4xl">
-            {studioWorksHeading}
-          </h2>
-          <div className="space-y-5 text-base leading-relaxed text-[#333] lg:text-lg">
-            {studioWorksBody
-              .split(/\n{2,}/)
-              .filter(Boolean)
-              .map((paragraph, index) => (
-                <p key={index} className="whitespace-pre-line">
-                  {paragraph}
-                </p>
-              ))}
+      {pricingReleased ? (
+        <section className="bg-[#ededed] px-6 py-14 text-[#111111] lg:px-8 lg:py-20" aria-labelledby="studio-works-heading">
+          <div className="mx-auto max-w-4xl">
+            <h2 id="studio-works-heading" className="mb-6 text-3xl font-extrabold uppercase tracking-tight lg:text-4xl">
+              {studioWorksHeading}
+            </h2>
+            <div className="space-y-5 text-base leading-relaxed text-[#333] lg:text-lg">
+              {studioWorksBody
+                .split(/\n{2,}/)
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index} className="whitespace-pre-line">
+                    {paragraph}
+                  </p>
+                ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* "Meet Our Team" removed from the home page per client feedback
           (Apr 16): keep it on the About page only so visitors land directly on

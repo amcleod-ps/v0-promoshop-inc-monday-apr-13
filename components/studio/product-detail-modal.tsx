@@ -16,8 +16,11 @@ import {
   APPROXIMATE_PRICING_COPY,
   CANADIAN_PRICING_COPY,
   formatUsd,
+  LARGE_QUANTITY_COPY,
+  LARGE_QUANTITY_START,
   missingPricingKind,
   NO_PRICING_COPY,
+  tierPriceBasisLabel,
   tierRangeLabel,
 } from "@/lib/pricing/presentation"
 
@@ -315,6 +318,7 @@ export function ProductDetailModal({
                       <thead className="text-xs uppercase tracking-wide text-[#666]">
                         <tr>
                           <th scope="col" className="pb-2 pr-3">Quantity</th>
+                          <th scope="col" className="pb-2 pr-3">Price basis</th>
                           <th scope="col" className="pb-2 text-right">Unit price (USD)</th>
                         </tr>
                       </thead>
@@ -322,12 +326,18 @@ export function ProductDetailModal({
                         {tiers.map((tier, index) => (
                           <tr key={tier.tierStartQuantity} className="border-t border-[#eeeeee]">
                             <td className="py-2 pr-3">{tierRangeLabel(tiers, index)}</td>
+                            <td className="py-2 pr-3 text-[#555]">{tierPriceBasisLabel(tier.tierStartQuantity)}</td>
                             <td className="py-2 text-right font-semibold">{formatUsd(tier.unitPriceUsd)} USD</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  {tiers.some((tier) => tier.tierStartQuantity === LARGE_QUANTITY_START) ? (
+                    <p className="mt-3 text-sm font-semibold leading-relaxed text-[#333]">
+                      {LARGE_QUANTITY_COPY}
+                    </p>
+                  ) : null}
                   <p className="mt-3 text-xs leading-relaxed text-[#666]">{APPROXIMATE_PRICING_COPY}</p>
                 </section>
               ) : (

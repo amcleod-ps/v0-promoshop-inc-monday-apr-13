@@ -1,5 +1,6 @@
 import { aggregateQuantitiesBySku, calculateTieredPrice } from "./engine"
 import { sumSubtotalsUsd } from "./money"
+import { LARGE_QUANTITY_START } from "./presentation"
 import type { PricingTierMap } from "./types"
 
 export interface CustomerPricingLine {
@@ -27,6 +28,7 @@ export interface CustomerPricingSummary {
   readonly estimatedTotalUsd: string | null
   readonly hasPricedItems: boolean
   readonly hasUnpricedItems: boolean
+  readonly hasLargeQuantityItems: boolean
 }
 
 /**
@@ -43,6 +45,7 @@ export function buildCustomerPricingSummary(
     estimatedTotalUsd: null,
     hasPricedItems: false,
     hasUnpricedItems: false,
+    hasLargeQuantityItems: false,
   }
 
   const quantities = aggregateQuantitiesBySku(
@@ -53,6 +56,7 @@ export function buildCustomerPricingSummary(
   const bySku: Record<string, CustomerSkuPricing> = Object.create(null)
   const subtotals: string[] = []
   let hasUnpricedItems = false
+  let hasLargeQuantityItems = false
 
   for (const [sku, quantity] of quantities) {
     const tiers = tiersBySku[sku] ?? []
@@ -75,6 +79,7 @@ export function buildCustomerPricingSummary(
         subtotalUsd: calculation.subtotalUsd,
       }
       subtotals.push(calculation.subtotalUsd)
+      if (quantity >= LARGE_QUANTITY_START) hasLargeQuantityItems = true
     } else {
       bySku[sku] = { status: "unpriced", sku, quantity }
       hasUnpricedItems = true
@@ -89,5 +94,6 @@ export function buildCustomerPricingSummary(
     estimatedTotalUsd,
     hasPricedItems: subtotals.length > 0,
     hasUnpricedItems,
+    hasLargeQuantityItems,
   }
 }

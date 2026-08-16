@@ -18,7 +18,9 @@ import { calculateSubtotalUsd } from "@/lib/pricing/money"
 import {
   APPROXIMATE_PRICING_COPY,
   formatUsd,
+  LARGE_QUANTITY_COPY,
   missingPricingCopy,
+  tierPriceBasisLabel,
 } from "@/lib/pricing/presentation"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
@@ -384,7 +386,7 @@ export default function MyQuoteClient({
                           </div>
                           {pricing.enabled && skuPricing?.status === "priced" ? (
                             <p className="mt-2 text-xs leading-relaxed text-[#555]">
-                              Combined {item.productSku} quantity: {skuPricing.quantity} · {formatUsd(skuPricing.unitPriceUsd)} USD each at {skuPricing.tierStartQuantity}+ · This line: {lineSubtotal ? `${formatUsd(lineSubtotal)} USD` : "pricing unavailable"}
+                              Combined {item.productSku} quantity: {skuPricing.quantity} · {formatUsd(skuPricing.unitPriceUsd)} USD each at {skuPricing.tierStartQuantity}+ ({tierPriceBasisLabel(skuPricing.tierStartQuantity).toLowerCase()}) · This line: {lineSubtotal ? `${formatUsd(lineSubtotal)} USD` : "pricing unavailable"}
                             </p>
                           ) : pricing.enabled ? (
                             <p className="mt-2 text-xs leading-relaxed text-[#666]">
@@ -422,6 +424,11 @@ export default function MyQuoteClient({
                       {pricingSummary.hasUnpricedItems ? (
                         <p className="mt-2 text-sm leading-relaxed text-[#666]">
                           Some selected items do not contribute to this estimated subtotal. {missingPricingCopy("")}
+                        </p>
+                      ) : null}
+                      {pricingSummary.hasLargeQuantityItems ? (
+                        <p className="mt-2 text-sm font-semibold leading-relaxed text-[#333]">
+                          {LARGE_QUANTITY_COPY}
                         </p>
                       ) : null}
                       {pricingSummary.hasPricedItems ? (

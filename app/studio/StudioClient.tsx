@@ -78,7 +78,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const bannerHeading = useSiteText("studio.banner.heading", textFallback("studio.banner.heading"))
   const bannerBody = useSiteText(
     "studio.banner.body",
-    `Start a quote to unlock pricing, quantities, and full ${t("customization")} options.`,
+    `Start a quote to select quantities and full ${t("customization")} options for your project.`,
   )
   const bannerCta = useSiteText("studio.banner.cta", textFallback("studio.banner.cta"))
   const [searchTerm, setSearchTerm] = useState("")
