@@ -6,6 +6,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { CollectionProducts } from "@/components/collections/collection-products"
 import { getCollectionWithProducts } from "@/lib/supabase/collections"
+import { getCustomerPricingBySku } from "@/lib/supabase/pricing"
 
 export async function generateMetadata({
   params,
@@ -33,6 +34,7 @@ export default async function CollectionDetailPage({
   const data = await getCollectionWithProducts(slug)
   if (!data) notFound()
   const { collection, products } = data
+  const pricing = await getCustomerPricingBySku(products.map((product) => product.sku))
 
   return (
     <div className="min-h-screen bg-[#111111] text-white">
@@ -64,7 +66,7 @@ export default async function CollectionDetailPage({
         </section>
 
         <section className="mx-auto max-w-7xl px-6 lg:px-8 py-12 lg:py-16">
-          <CollectionProducts products={products} />
+          <CollectionProducts products={products} pricing={pricing} />
         </section>
       </main>
 

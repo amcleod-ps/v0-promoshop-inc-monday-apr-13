@@ -7,6 +7,7 @@ import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { useLocale } from "@/lib/locale-context"
 import type { Product } from "@/lib/products"
+import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
 // Brand page products grid — client-side so the detail modal can open in
 // place. Previously the grid wrapped each card in a <Link> to /studio which
@@ -14,9 +15,10 @@ import type { Product } from "@/lib/products"
 interface Props {
   products: Product[]
   brandName: string
+  pricing: CustomerPricingState
 }
 
-export function BrandProductsGrid({ products, brandName }: Props) {
+export function BrandProductsGrid({ products, brandName, pricing }: Props) {
   const { t } = useLocale()
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -69,6 +71,8 @@ export function BrandProductsGrid({ products, brandName }: Props) {
         product={selected}
         isOpen={isOpen}
         onClose={closeModal}
+        pricingEnabled={pricing.enabled}
+        tiers={selected ? pricing.tiersBySku[selected.sku] ?? [] : []}
       />
     </>
   )

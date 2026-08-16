@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getAllProducts } from "@/lib/supabase/products"
+import { getCustomerPricingBySku } from "@/lib/supabase/pricing"
 import { PRODUCTS } from "@/lib/products"
 import MyQuoteClient, { type PickerProduct } from "./my-quote-client"
 
@@ -15,16 +16,18 @@ export default async function MyQuotePage() {
   // the manual "Add Product" picker; the compiled-in catalog is only the
   // unreachable-DB fallback. An empty live list is a real answer.
   const live = await getAllProducts()
+  const catalog = live ?? PRODUCTS
+  const pricing = await getCustomerPricingBySku(catalog.map((product) => product.sku))
 
   // Slim projection: the picker needs names/sizes/colour names + one image —
   // serializing full products (every image of every colour, descriptions,
   // deco data) would bloat the RSC payload of the cart page.
-  const pickerProducts: PickerProduct[] = (live ?? PRODUCTS).map((p) => ({
+  const pickerProducts: PickerProduct[] = catalog.map((p) => ({
     sku: p.sku,
     name: p.name,
     sizes: p.sizes,
     colours: p.colours.map((c) => ({ name: c.name, image: c.images[0] ?? "" })),
   }))
 
-  return <MyQuoteClient products={pickerProducts} />
+  return <MyQuoteClient products={pickerProducts} pricing={pricing} />
 }

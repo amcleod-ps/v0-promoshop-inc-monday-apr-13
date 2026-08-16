@@ -480,8 +480,14 @@ export default async function AdminDashboardPage() {
     coloursBySku.set(c.product_sku, list)
   }
   const imagesByColour = new Map<string, ProductImageJoinedRow[]>()
+  const productLevelImagesBySku = new Map<string, ProductImageJoinedRow[]>()
   for (const img of activeProductImages) {
-    if (!img.colour_id) continue
+    if (!img.colour_id) {
+      const list = productLevelImagesBySku.get(img.product_sku) ?? []
+      list.push(img)
+      productLevelImagesBySku.set(img.product_sku, list)
+      continue
+    }
     const list = imagesByColour.get(img.colour_id) ?? []
     list.push(img)
     imagesByColour.set(img.colour_id, list)
@@ -517,6 +523,15 @@ export default async function AdminDashboardPage() {
       min_qty: p.min_qty,
       sort_order: p.sort_order,
       tags: productTagsBySku.get(p.sku) ?? [],
+      images: (productLevelImagesBySku.get(p.sku) ?? [])
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((img) => ({
+          id: img.id,
+          label: img.label,
+          url: img.url,
+          sort_order: img.sort_order,
+        })),
       colours,
     }
   })

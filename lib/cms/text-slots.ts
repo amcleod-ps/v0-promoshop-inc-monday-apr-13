@@ -31,6 +31,20 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
     fallback: "Get a Quote",
   },
 
+  // --- Home page ---------------------------------------------------------
+  {
+    key: "home.studio_works.heading",
+    label: "Home page 'How the Studio Works' heading",
+    fallback: "How the Studio Works",
+  },
+  {
+    key: "home.studio_works.body",
+    label: "Home page 'How the Studio Works' body",
+    fallback:
+      "PromoShop Studio isn't an online store—it's a smarter way to build your promotional merchandise quote.\n\nExplore our curated collection of premium, retail-inspired products designed to elevate your brand. As you browse, simply select your preferred colours, sizes, and approximate quantities, then click \"Add to Quote.\" Continue building your collection until you've found everything you need.\n\nWhen you're ready, you'll see an estimated total based on the products you've selected. Submit your quote request, and our team will review every detail—including decoration, artwork, shipping, and current supplier pricing—to prepare your official customized quote.\n\nHere's how it works:\n\nBrowse our curated collection of premium merchandise.\nSelect your preferred colours, sizes, and approximate quantities.\nClick \"Add to Quote\" and continue browsing.\nReview your estimated total and submit your request.\nA PromoShop specialist will contact you within 2–5 business days with your official quote and pricing.\n\nDon't see exactly what you're looking for?\n\nNo problem. We source thousands of promotional products beyond what's featured in Studio. Reach out to our team and we'll help you find—or create—the perfect branded merchandise for your project.",
+    multiline: true,
+  },
+
   // --- Studio page -------------------------------------------------------
   {
     key: "studio.page.eyebrow",

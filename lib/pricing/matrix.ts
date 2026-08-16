@@ -9,6 +9,27 @@ export const PRICING_MATRIX_HEADER = [
   "notes",
 ] as const
 
+/**
+ * Header of Nest Digital's derived, formatting-aware CSV from the August 7
+ * client workbook. The original workbook's highlight/strikethrough treatment
+ * has already been decoded into the two tier-list columns; raw client CSV
+ * exports must not be used because they lose that meaning.
+ */
+export const PROMOSHOP_EXTRACTED_PRICING_HEADER = [
+  "SKU",
+  "Title",
+  "Brand",
+  "Supplier",
+  "MOQ (internal)",
+  "Price qty 1 no decoration (USD)",
+  "Price qty 12 + decoration (USD)",
+  "Price qty 24 + decoration (USD)",
+  "Price qty 48 + decoration (USD)",
+  "Tiers offered (yellow)",
+  "Tiers NOT offered (crossed out)",
+  "Notes",
+] as const
+
 export const PRICING_MATRIX_LIMITS = {
   maxUtf8Bytes: 1_048_576,
   maxDataRows: 10_000,
@@ -55,6 +76,12 @@ export interface MatrixDiagnostic {
   field?: PricingMatrixField
   relatedRecord?: number
 }
+
+export type PricingImportSource = "canonical" | "promoshop_extracted"
+
+export type PricingImportNormalization =
+  | { ok: true; csv: string; source: PricingImportSource }
+  | { ok: false; diagnostics: MatrixDiagnostic[] }
 
 interface CsvRecord {
   fields: string[]
@@ -104,6 +131,17 @@ function diagnostic(
 
 function compareSku(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
+}
+
+function csvField(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+}
+
+function matchingHeader(
+  fields: readonly string[],
+  expected: readonly string[],
+): boolean {
+  return fields.length === expected.length && fields.every((value, index) => value === expected[index])
 }
 
 function isLineBreak(source: string, index: number): number {
@@ -327,6 +365,164 @@ function parsePositiveInt4(value: string): number | null {
   const parsed = Number(value)
   if (!Number.isSafeInteger(parsed) || parsed > MAX_INT4) return null
   return parsed
+}
+
+/**
+ * Converts the approved, formatting-aware PromoShop extraction into the
+ * generic six-column admin template before the normal validator runs. Its
+ * supplier MOQ is deliberately not copied into `min_order_quantity`: the
+ * client source says that supplier value is internal and that every offered
+ * public price starts at one unit.
+ */
+export function normalizePricingImportCsv(input: string): PricingImportNormalization {
+  const parsed = parseCsvRecords(input)
+  if (!parsed.ok) return parsed
+
+  if (parsed.records.length === 0) {
+    return { ok: true, csv: input, source: "canonical" }
+  }
+
+  const header = parsed.records[0]
+  if (matchingHeader(header.fields, PRICING_MATRIX_HEADER)) {
+    return { ok: true, csv: input, source: "canonical" }
+  }
+
+  if (!matchingHeader(header.fields, PROMOSHOP_EXTRACTED_PRICING_HEADER)) {
+    // Keep the established template diagnostics for unsupported formats.
+    return { ok: true, csv: input, source: "canonical" }
+  }
+
+  const diagnostics: MatrixDiagnostic[] = []
+  const normalizedRows: string[] = [PRICING_MATRIX_HEADER.join(",")]
+  const sourceTierColumns = [
+    { start: 1, priceIndex: 5 },
+    { start: 12, priceIndex: 6 },
+    { start: 24, priceIndex: 7 },
+    { start: 48, priceIndex: 8 },
+  ] as const
+  const allowedStarts = new Set<number>(sourceTierColumns.map((tier) => tier.start))
+
+  if (parsed.records.length === 1) {
+    diagnostics.push(
+      diagnostic("no_data_rows", "The CSV contains a header but no pricing rows.", {
+        record: header.record,
+        line: header.line,
+      }),
+    )
+  }
+
+  for (const sourceRow of parsed.records.slice(1)) {
+    if (sourceRow.fields.every((value) => value.trim() === "")) {
+      diagnostics.push(
+        diagnostic("blank_row", "Blank rows are not allowed in the pricing matrix.", {
+          record: sourceRow.record,
+          line: sourceRow.line,
+        }),
+      )
+      continue
+    }
+
+    if (sourceRow.fields.length !== PROMOSHOP_EXTRACTED_PRICING_HEADER.length) {
+      diagnostics.push(
+        diagnostic("wrong_column_count", "This extracted pricing row has the wrong number of columns.", {
+          record: sourceRow.record,
+          line: sourceRow.line,
+        }),
+      )
+      continue
+    }
+
+    const values = sourceRow.fields.map((value) => value.trim())
+    const sku = values[0]
+    const productName = values[1]
+    const offeredRaw = values[9]
+    const excludedRaw = values[10]
+    const notes = values[11]
+    let valid = true
+
+    if (!sku || !productName || !offeredRaw) {
+      diagnostics.push(
+        diagnostic("required", "SKU, title, and offered tiers are required in the extracted matrix.", {
+          record: sourceRow.record,
+          line: sourceRow.line,
+        }),
+      )
+      valid = false
+    }
+
+    const parseStarts = (raw: string, label: string): number[] => {
+      if (!raw) return []
+      const values = raw
+        .split("/")
+        .map((value) => value.trim())
+        .filter(Boolean)
+      const starts: number[] = []
+      for (const value of values) {
+        const parsedStart = parsePositiveInt4(value)
+        if (parsedStart === null || !allowedStarts.has(parsedStart)) {
+          diagnostics.push(
+            diagnostic("unsupported_source_tier", `${label} contains an unsupported tier start.`, {
+              record: sourceRow.record,
+              line: sourceRow.line,
+            }),
+          )
+          valid = false
+          continue
+        }
+        if (starts.includes(parsedStart)) {
+          diagnostics.push(
+            diagnostic("duplicate_source_tier", `${label} repeats a tier start.`, {
+              record: sourceRow.record,
+              line: sourceRow.line,
+            }),
+          )
+          valid = false
+          continue
+        }
+        starts.push(parsedStart)
+      }
+      return starts
+    }
+
+    const offeredStarts = parseStarts(offeredRaw, "Tiers offered")
+    const excludedStarts = parseStarts(excludedRaw, "Tiers not offered")
+    if (offeredStarts.some((start) => excludedStarts.includes(start))) {
+      diagnostics.push(
+        diagnostic("source_tier_conflict", "A tier cannot be both offered and crossed out.", {
+          record: sourceRow.record,
+          line: sourceRow.line,
+        }),
+      )
+      valid = false
+    }
+    if (offeredStarts.length === 0) valid = false
+
+    if (!valid) continue
+
+    for (const tier of sourceTierColumns) {
+      if (!offeredStarts.includes(tier.start)) continue
+      normalizedRows.push(
+        [
+          sku,
+          productName,
+          "1",
+          String(tier.start),
+          values[tier.priceIndex],
+          notes,
+        ]
+          .map(csvField)
+          .join(","),
+      )
+    }
+  }
+
+  if (diagnostics.length > 0) return { ok: false, diagnostics }
+
+  return {
+    ok: true,
+    csv: normalizedRows.join("\n"),
+    source: "promoshop_extracted",
+  }
 }
 
 function validateCatalog(

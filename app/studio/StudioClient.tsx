@@ -11,6 +11,7 @@ import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
 import type { Product } from "@/lib/products"
+import type { CustomerPricingState } from "@/lib/supabase/pricing"
 import { displayTag, regionTagForLocale, hasAnyRegionTag } from "@/lib/tags"
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
   brands: string[]
   /** Distinct team-managed filter tags across the catalog (canonical form). */
   tags: string[]
+  pricing: CustomerPricingState
   /** Pre-selected category (from /studio?category=… deep links). */
   initialCategory?: string
 }
@@ -66,7 +68,7 @@ function FilterOption({
   )
 }
 
-export default function StudioClient({ products, categories, brands, tags, initialCategory }: Props) {
+export default function StudioClient({ products, categories, brands, tags, pricing, initialCategory }: Props) {
   const { t, locale } = useLocale()
   const pageEyebrow = useSiteText(
     "studio.page.eyebrow",
@@ -340,6 +342,8 @@ export default function StudioClient({ products, categories, brands, tags, initi
         product={selectedProduct}
         isOpen={isModalOpen}
         onClose={closeProductDetail}
+        pricingEnabled={pricing.enabled}
+        tiers={selectedProduct ? pricing.tiersBySku[selectedProduct.sku] ?? [] : []}
       />
     </div>
   )

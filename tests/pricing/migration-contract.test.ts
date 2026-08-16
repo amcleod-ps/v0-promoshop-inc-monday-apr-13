@@ -12,6 +12,11 @@ const snapshotMigration = readFileSync(
   "utf8",
 )
 
+const publicPricingStartMigration = readFileSync(
+  "supabase/migrations/0015_public_pricing_start_quantity.sql",
+  "utf8",
+)
+
 test("catalogue lifecycle is protected at the database boundary", () => {
   assert.match(
     migration,
@@ -98,5 +103,32 @@ test("the public quote policy pins the pricing snapshot to NULL", () => {
     snapshotMigration,
     /grant[\s\S]*pricing_snapshot[\s\S]*to (anon|authenticated)/i,
     "browser roles must never be granted the verified snapshot column",
+  )
+})
+
+test("public pricing starts at one while supplier MOQ stays internal", () => {
+  assert.match(
+    publicPricingStartMigration,
+    /add column supplier_min_qty integer/i,
+  )
+  assert.match(
+    publicPricingStartMigration,
+    /set supplier_min_qty = min_qty/i,
+  )
+  assert.match(
+    publicPricingStartMigration,
+    /alter column supplier_min_qty set default 1/i,
+  )
+  assert.match(
+    publicPricingStartMigration,
+    /set min_qty = 1/i,
+  )
+  assert.match(
+    publicPricingStartMigration,
+    /requires no pricing tiers or tier-set history/i,
+  )
+  assert.match(
+    publicPricingStartMigration,
+    /never display it as a public quantity gate/i,
   )
 })

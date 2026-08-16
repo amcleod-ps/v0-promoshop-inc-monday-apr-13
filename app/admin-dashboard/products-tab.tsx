@@ -10,11 +10,11 @@ import {
   softDeleteProduct,
   updateProductColour,
   updateProductList,
-  updateProductMinQty,
   updateProductTags,
   updateProductText,
   updateSortOrder,
 } from "./create-actions"
+import { removeImage } from "./actions"
 import { TextRow } from "./text-row"
 import { parseRequiredNumber } from "./parse-required-number"
 import { MAX_IMAGE_BYTES } from "@/lib/upload-limits"
@@ -46,6 +46,8 @@ export interface ProductRow {
   tags: string[]
   min_qty: number
   sort_order: number
+  /** Product-level gallery images (`colour_id IS NULL`). */
+  images: ProductImage[]
   colours: ProductColour[]
 }
 
@@ -141,7 +143,6 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
   const [brandSlugs, setBrandSlugs] = useState<string[]>([])
   const [genders, setGenders] = useState("")
   const [sizes, setSizes] = useState("")
-  const [minQty, setMinQty] = useState("1")
   const router = useRouter()
   const [status, setStatus] = useState<{ kind: "idle" | "ok" | "err"; message: string }>({
     kind: "idle",
@@ -174,7 +175,6 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
-          minQty: Number(minQty) || 1,
         })
         if (result.ok) {
           setStatus({
@@ -189,7 +189,6 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
           setBrandSlugs([])
           setGenders("")
           setSizes("")
-          setMinQty("1")
         } else {
           setStatus({ kind: "err", message: result.error })
         }
@@ -278,16 +277,12 @@ function AddProductForm({ brands }: { brands: BrandOption[] }) {
               )}
             </div>
           </div>
-          <Field label="Minimum order qty">
-            <input
-              type="number"
-              min={1}
-              value={minQty}
-              onChange={(e) => setMinQty(e.target.value)}
-              disabled={isPending}
-              style={styles.input}
-            />
-          </Field>
+          <div style={styles.fieldWrap}>
+            <span style={styles.fieldLabel}>Public price starting quantity</span>
+            <p style={styles.publicQuantityHelp}>
+              1 unit. Supplier operating quantities are internal and do not restrict a customer estimate.
+            </p>
+          </div>
         </div>
         <div style={styles.formRow}>
           <Field label="Genders (comma-separated)">
@@ -455,13 +450,12 @@ function ProductCard({ product }: { product: ProductRow }) {
           currentValue={product.tags.join(", ")}
           onSave={(v) => updateProductTags(product.sku, parseTagInput(v))}
         />
-        <TextRow
-          source="custom"
-          idLabel={`product:${product.sku}:min_qty`}
-          label="Minimum order quantity"
-          currentValue={String(product.min_qty)}
-          onSave={(v) => updateProductMinQty(product.sku, parseRequiredNumber(v))}
-        />
+        <div style={styles.publicQuantityCard}>
+          <strong>Public price starting quantity: 1 unit</strong>
+          <p>
+            Supplier operating quantities are internal. They never restrict a customer estimate.
+          </p>
+        </div>
         <TextRow
           source="custom"
           idLabel={`product:${product.sku}:sort_order`}
@@ -469,6 +463,20 @@ function ProductCard({ product }: { product: ProductRow }) {
           currentValue={String(product.sort_order)}
           onSave={(v) => updateSortOrder("product", product.sku, parseRequiredNumber(v))}
         />
+
+        {product.images.length > 0 ? (
+          <section style={styles.gallerySection} aria-label={`${product.name} product gallery images`}>
+            <p style={styles.galleryHeading}>Product gallery images</p>
+            <p style={styles.galleryHelp}>
+              These images are shared by colours without their own image. Removing one detaches it from this product only; the original file stays in Storage for recovery.
+            </p>
+            <div style={styles.imagesGrid}>
+              {product.images.map((image) => (
+                <ProductImageTile key={image.id} image={image} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <div style={styles.coloursList}>
           {product.colours.map((c) => (
@@ -618,26 +626,82 @@ function ColourEditor({
 
       <div style={styles.imagesGrid}>
         {colour.images.map((img) => (
-          <div key={img.id} style={styles.imageTile}>
-            {img.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={img.url} alt={img.label} style={styles.imageThumb} />
-            ) : (
-              <div style={styles.imageEmpty}>—</div>
-            )}
-            <div style={styles.imageLabel}>{img.label}</div>
-            <SortOrderInline
-              label="Order"
-              entity="product_image"
-              id={img.id}
-              current={img.sort_order}
-              compact
-            />
-          </div>
+          <ProductImageTile key={img.id} image={img} />
         ))}
       </div>
 
       <AddImageToColourForm productSku={productSku} colourId={colour.id} colourName={savedName} />
+    </div>
+  )
+}
+
+/**
+ * A product image can appear in both the legacy Images tab and the product
+ * editor. Keep deletion here too: it is where an admin has the colour context
+ * that led them to add it. The server action deletes only the gallery row;
+ * it intentionally retains the Storage object for recovery and reattachment.
+ */
+function ProductImageTile({ image }: { image: ProductImage }) {
+  const router = useRouter()
+  const [removed, setRemoved] = useState(false)
+  const [status, setStatus] = useState("")
+  const [isPending, startTransition] = useTransition()
+
+  if (removed) return null
+
+  const remove = () => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Remove this product gallery image? It will disappear from the product, but its original file stays in Storage so it can be recovered or re-attached.",
+      )
+    ) {
+      return
+    }
+
+    setStatus("Removing…")
+    startTransition(async () => {
+      try {
+        const result = await removeImage("product_image", image.id)
+        if (result.ok) {
+          setRemoved(true)
+          router.refresh()
+        } else {
+          setStatus(result.error)
+        }
+      } catch {
+        setStatus("Something went wrong. Check your connection and try again.")
+      }
+    })
+  }
+
+  return (
+    <div style={styles.imageTile}>
+      {image.url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image.url} alt={image.label} style={styles.imageThumb} />
+      ) : (
+        <div style={styles.imageEmpty}>—</div>
+      )}
+      <div style={styles.imageLabel}>{image.label}</div>
+      <SortOrderInline
+        label="Order"
+        entity="product_image"
+        id={image.id}
+        current={image.sort_order}
+        compact
+      />
+      <button
+        type="button"
+        onClick={remove}
+        disabled={isPending}
+        style={styles.removeImageButton}
+      >
+        {isPending ? "Removing…" : "Remove image"}
+      </button>
+      {status && !isPending ? (
+        <p role="alert" style={styles.imageStatus}>{status}</p>
+      ) : null}
     </div>
   )
 }
@@ -1009,6 +1073,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   imagesGrid: { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10 },
+  gallerySection: { marginTop: 18, marginBottom: 18 },
+  galleryHeading: { margin: "0 0 4px", fontWeight: 700, fontSize: 13 },
+  galleryHelp: { margin: "0 0 10px", fontSize: 12, color: "#666", lineHeight: 1.45 },
+  publicQuantityHelp: { margin: "5px 0 0", fontSize: 12, color: "#666", lineHeight: 1.45 },
+  publicQuantityCard: {
+    margin: "14px 0",
+    padding: "10px 12px",
+    background: "#f7f7f7",
+    borderLeft: "3px solid #111",
+    fontSize: 13,
+    lineHeight: 1.45,
+  },
   // 168px (not 100): the per-tile "Order" input + Save button are ~160px
   // wide, so narrower tiles let neighbouring Save buttons overlap each
   // other — the overlapping-Save-buttons bug reported from the client call.
@@ -1040,6 +1116,19 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
     marginTop: 2,
   },
+  removeImageButton: {
+    marginTop: 8,
+    width: "100%",
+    border: "1px solid #c53030",
+    background: "#fff",
+    color: "#a02020",
+    borderRadius: 4,
+    padding: "6px 8px",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  imageStatus: { margin: "6px 0 0", fontSize: 11, color: "#b00020", lineHeight: 1.35 },
   addColourForm: {
     display: "flex",
     gap: 8,
