@@ -202,7 +202,7 @@ export function ProductDetailModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/55 backdrop-blur-sm z-50 flex items-center justify-center p-5"
+        className="fixed inset-0 bg-black/55 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-5"
         onClick={onClose}
       >
         <div
@@ -219,12 +219,12 @@ export function ProductDetailModal({
               ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close"
-              className="absolute top-3.5 right-3.5 w-10 h-10 rounded-full bg-black/15 flex items-center justify-center z-20 hover:bg-[#ef473f] hover:text-white transition-colors"
+              className="fixed top-4 right-4 md:absolute md:top-3.5 md:right-3.5 w-11 h-11 rounded-full bg-white/95 md:bg-black/15 flex items-center justify-center z-20 hover:bg-[#ef473f] hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="relative flex-1 min-h-[320px] md:min-h-[480px] bg-[#e0e0e0]">
+            <div className="relative h-[min(55vw,240px)] flex-none md:h-auto md:flex-1 md:min-h-[480px] bg-[#e0e0e0]">
               {images[displayIndex] && (
                 <button
                   type="button"
@@ -298,11 +298,11 @@ export function ProductDetailModal({
           </div>
 
           {/* Right - Info */}
-          <div className="p-7 md:p-11 flex flex-col bg-[#ededed] rounded-b-lg md:rounded-r-lg md:rounded-bl-none overflow-y-auto">
+          <div className="p-4 md:p-11 flex flex-col bg-[#ededed] rounded-b-lg md:rounded-r-lg md:rounded-bl-none md:overflow-y-auto">
             {/* Product Name */}
             <h2
               id="product-detail-title"
-              className="font-extrabold text-2xl md:text-3xl leading-tight uppercase text-black tracking-tight mb-7"
+              className="font-extrabold text-xl md:text-3xl leading-tight uppercase text-black tracking-tight mb-4 md:mb-7"
             >
               {product.name}
             </h2>
