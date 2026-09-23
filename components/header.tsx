@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Menu, X, ShoppingBag, Phone, User, LogOut } from "lucide-react"
 import { useLocale } from "@/lib/locale-context"
 import { HOME_CONTENT } from "@/lib/cms/home"
@@ -56,6 +56,7 @@ function LocaleToggle({ className = "" }: { className?: string }) {
 }
 
 export function Header() {
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
@@ -67,9 +68,9 @@ export function Header() {
   // reflows rather than overlapping.
   const logoSize = normalizeImageSize(useSiteContentMap()[imageSizeKey("site.logo")]?.value)
   const logoClass = pickBySize(logoSize, {
-    sm: "h-16 lg:h-20 w-auto",
-    md: "h-20 lg:h-24 w-auto",
-    lg: "h-24 lg:h-32 w-auto",
+    sm: "h-14 lg:h-20 w-auto",
+    md: "h-16 lg:h-24 w-auto",
+    lg: "h-20 lg:h-32 w-auto",
   })
 
   useEffect(() => {
@@ -91,7 +92,10 @@ export function Header() {
   useEffect(() => {
     if (!mobileMenuOpen) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileMenuOpen(false)
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false)
+        menuButtonRef.current?.focus()
+      }
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
@@ -140,7 +144,7 @@ export function Header() {
       </div>
 
       {/* Main nav */}
-      <nav className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
+      <nav className="mx-auto max-w-7xl flex items-center justify-between px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
           {/* Declared dimensions must match the real 3:2 file ratio or the
@@ -194,6 +198,7 @@ export function Header() {
           type="button"
           className="lg:hidden text-[#373a36] p-2.5 -mr-2.5 rounded-full hover:bg-[#f5f5f5] transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          ref={menuButtonRef}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-menu"
         >
@@ -208,7 +213,7 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div id="mobile-menu" className="lg:hidden bg-white border-t border-[#e5e5e5]">
+        <div id="mobile-menu" className="max-h-[calc(100dvh-120px)] overflow-y-auto lg:hidden bg-white border-t border-[#e5e5e5]">
           <div className="space-y-1 px-6 py-4">
             {navigation.map((item) => {
               const isActive = pathname === item.href
