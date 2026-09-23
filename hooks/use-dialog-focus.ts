@@ -20,7 +20,11 @@ export function useDialogFocus(
     if (!isOpen) return
     const previouslyFocused = document.activeElement as HTMLElement | null
     initialFocusRef.current?.focus()
-    return () => previouslyFocused?.focus()
+    // Restore after sibling effects remove `inert` from the background.
+    // Focusing the trigger while it is still inert is ignored by browsers.
+    return () => queueMicrotask(() => {
+      if (previouslyFocused?.isConnected) previouslyFocused.focus()
+    })
   }, [isOpen, initialFocusRef])
 }
 
