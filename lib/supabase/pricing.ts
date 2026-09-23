@@ -212,7 +212,9 @@ export async function getCustomerPricingBySku(
     return { enabled: false, tiersBySku: {} }
   }
 
-  return { enabled: true, tiersBySku }
+  // React Server Components require a plain object at the client boundary.
+  // Keep the null-prototype map inside the server-side pricing reader.
+  return { enabled: true, tiersBySku: { ...tiersBySku } }
 }
 
 export type QuotePricingContext =
