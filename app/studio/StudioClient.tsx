@@ -81,6 +81,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
     `Start a quote to select quantities and full ${t("customization")} options for your project.`,
   )
   const bannerCta = useSiteText("studio.banner.cta", textFallback("studio.banner.cta"))
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const [activeCategory, setActiveCategory] = useState(
@@ -102,6 +103,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const [activeTag, setActiveTag] = useState("All")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const activeFilterCount = [activeCategory, activeGender, activeBrand, activeTag].filter((value) => value !== "All").length
 
   const genders = ["All", "Men's", "Women's", "Unisex"]
 
@@ -207,6 +210,19 @@ export default function StudioClient({ products, categories, brands, tags, prici
             unreadable while scrolling. self-start is required for sticky to
             work inside a stretched flex row. */}
         <aside className="w-full lg:w-[180px] flex-shrink-0 lg:sticky lg:top-44 lg:self-start">
+          <button type="button" aria-expanded={filtersOpen} aria-controls="catalog-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="lg:hidden w-full min-h-11 flex items-center justify-between rounded border border-[#aaa] px-4 py-3 text-sm font-bold text-[#373a36]">
+            <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
+            <span aria-hidden="true">{filtersOpen ? "−" : "+"}</span>
+          </button>
+          <div id="catalog-filters" className={`${filtersOpen ? "block" : "hidden"} lg:block pt-4 lg:pt-0`}>
+          {activeFilterCount > 0 && (
+            <button type="button" className="min-h-11 mb-3 text-sm font-semibold underline text-[#373a36]"
+              onClick={() => { setActiveCategory("All"); setActiveGender("All"); setActiveBrand("All"); setActiveTag("All") }}>
+              Clear filters
+            </button>
+          )}
           {/* Category Filter */}
           <div className="mb-7">
             <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
@@ -279,6 +295,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
               </div>
             </div>
           )}
+          </div>
         </aside>
 
         {/* Main Content */}
