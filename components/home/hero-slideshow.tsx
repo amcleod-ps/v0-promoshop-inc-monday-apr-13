@@ -67,7 +67,7 @@ function Slide({
         <img
           src={src}
           alt={alt}
-          className={`w-full h-full ${slide.fit === "contain" ? "object-contain" : "object-cover"}`}
+          className={`w-full h-full object-contain ${slide.fit === "contain" ? "lg:object-contain" : "lg:object-cover"}`}
           fetchPriority={slideIndex === 1 ? "high" : undefined}
           loading={slideIndex === 1 ? undefined : "lazy"}
           decoding={slideIndex === 1 ? undefined : "async"}
@@ -143,7 +143,7 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured highlights"
-      className="relative h-72 lg:h-full lg:min-h-[500px] overflow-hidden"
+      className="relative lg:h-full lg:min-h-[500px]"
       onMouseEnter={() => setHoverPaused(true)}
       onMouseLeave={() => setHoverPaused(false)}
       onFocus={() => setFocusPaused(true)}
@@ -151,6 +151,8 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusPaused(false)
       }}
     >
+      {/* Current client artwork is square. Reserve its full mobile frame before load. */}
+      <div className="relative w-full aspect-square max-h-[70svh] lg:max-h-none lg:aspect-auto lg:absolute lg:inset-0 overflow-hidden">
       {slides.map((slide, i) => (
         <Slide
           key={`${i}-${slide.src || slide.alt}`}
@@ -159,22 +161,37 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
           slideIndex={i + 1}
         />
       ))}
+      </div>
 
       {slides.length > 1 && (
-        <>
+        <div className="flex flex-wrap items-center justify-center gap-1 py-2 lg:p-0">
           <button
             type="button"
             onClick={() => go(index - 1)}
             aria-label="Previous slide"
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
+            className="order-1 lg:absolute lg:left-3 lg:top-1/2 lg:-translate-y-1/2 w-11 h-11 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
           >
             <ChevronLeft className="w-5 h-5" aria-hidden="true" />
           </button>
+          <div className="order-2 lg:absolute lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 flex flex-wrap items-center justify-center gap-1">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => go(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                aria-current={i === index}
+                className="w-7 h-11 flex items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              >
+                <span className={`h-2 rounded-full transition-all ${i === index ? "bg-[#ef473f] w-6" : "bg-white/70 w-2"}`} />
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => go(index + 1)}
             aria-label="Next slide"
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
+            className="order-3 lg:absolute lg:right-3 lg:top-1/2 lg:-translate-y-1/2 w-11 h-11 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
           >
             <ChevronRight className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -184,26 +201,13 @@ export function HeroSlideshow({ slides, intervalMs = 5000 }: HeroSlideshowProps)
             onClick={() => setUserPaused((p) => !p)}
             aria-label={userPaused ? "Resume slideshow" : "Pause slideshow"}
             aria-pressed={userPaused}
-            className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
+            className="order-4 lg:absolute lg:bottom-3 lg:right-3 w-11 h-11 rounded-full bg-white/80 hover:bg-white text-[#373a36] flex items-center justify-center shadow-md transition-colors"
           >
             {userPaused ? <Play className="w-4 h-4" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
           </button>
 
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => go(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                aria-current={i === index}
-                className={`h-2 rounded-full transition-all ${
-                  i === index ? "bg-[#ef473f] w-6" : "bg-white/70 hover:bg-white w-2"
-                }`}
-              />
-            ))}
-          </div>
-        </>
+
+        </div>
       )}
     </div>
   )
