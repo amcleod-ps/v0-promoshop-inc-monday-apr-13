@@ -91,13 +91,13 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-center">
             {/* Text + Logo Side. The first hero statement is the page's h1
                 (the homepage previously had no heading at all). */}
-            <div className="py-16 lg:py-24 lg:pr-12">
+            <div className="py-10 lg:py-24 lg:pr-12">
               {heroBody.map((paragraph, i) => {
                 const Tag = i === 0 ? "h1" : "p"
                 return (
                   <Tag
                     key={i}
-                    className="text-5xl lg:text-6xl xl:text-7xl font-black text-[#e7e7e7] mb-6 last:mb-10 max-w-lg"
+                    className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-[#e7e7e7] mb-6 last:mb-10 max-w-lg"
                     style={{
                       lineHeight: "0.9em",
                       letterSpacing: "0.126em",

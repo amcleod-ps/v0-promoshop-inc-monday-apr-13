@@ -282,8 +282,8 @@ export default function MyQuoteClient({
 
   // focus ring on top of the border-colour swap: a 1px border change alone
   // is an invisible focus indicator on these light inputs.
-  const inputClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
-  const selectClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25"
+  const inputClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
+  const selectClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
   return (
@@ -305,9 +305,8 @@ export default function MyQuoteClient({
             </p>
           </div>
 
-          {/* Tabs — scrollable strip on phones: the three uppercase labels
-              total ~460px and forced page-level horizontal scroll. */}
-          <div role="tablist" aria-label="Quote builder steps" className="flex gap-1 sm:gap-2 mb-8 border-b border-[#e5e5e5] overflow-x-auto">
+          {/* Keep all three steps visible on phones; wrap labels within equal columns. */}
+          <div role="tablist" aria-label="Quote builder steps" className="grid grid-cols-3 gap-1 sm:gap-2 mb-8 border-b border-[#e5e5e5]">
             {[
               { id: "items", label: "Products", count: items.length },
               { id: "contact", label: "Contact Info" },
@@ -320,7 +319,7 @@ export default function MyQuoteClient({
                 aria-selected={activeTab === tab.id}
                 aria-controls={`panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-3 sm:px-6 py-3 font-bold text-xs sm:text-sm uppercase tracking-wider transition-colors relative whitespace-nowrap flex-shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
+                className={`min-w-0 px-1 sm:px-6 py-3 font-bold text-xs sm:text-sm uppercase tracking-wide transition-colors relative whitespace-normal rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
                   activeTab === tab.id
                     ? "text-[#1a1a1a]" 
                     : "text-[#6b6b6b] hover:text-[#1a1a1a]"
@@ -518,7 +517,7 @@ export default function MyQuoteClient({
                 <div><label htmlFor="quote-company" className={labelClass}>Company *</label><input id="quote-company" type="text" autoComplete="organization" maxLength={200} required value={contactInfo.company} onChange={(e) => setContactInfo({ company: e.target.value })} className={inputClass} placeholder="Acme Corp" /></div>
                 <div><label htmlFor="quote-job-title" className={labelClass}>Job Title</label><input id="quote-job-title" type="text" autoComplete="organization-title" maxLength={100} value={contactInfo.jobTitle} onChange={(e) => setContactInfo({ jobTitle: e.target.value })} className={inputClass} placeholder="Marketing Manager" /></div>
               </div>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-3">
                 <button onClick={() => setActiveTab("items")} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors">Back</button>
                 <button onClick={() => setActiveTab("project")} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">Continue <ArrowRight className="w-4 h-4" /></button>
               </div>
@@ -577,7 +576,7 @@ export default function MyQuoteClient({
                   To submit, please add: {missingRequirements.join(", ")}.
                 </p>
               )}
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={() => setActiveTab("contact")} disabled={submitting} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors disabled:opacity-50">Back</button>
                 <button type="submit" disabled={submitting || missingRequirements.length > 0} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                   {submitting ? "Submitting..." : <>Submit Quote Request <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
