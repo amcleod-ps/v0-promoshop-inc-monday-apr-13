@@ -1,22 +1,5 @@
-/**
- * Admin-dashboard access gate, shared by `proxy.ts` (edge runtime) and the
- * `/admin-dashboard` server actions (node runtime) — so it uses only Web
- * APIs (atob, TextDecoder, crypto.subtle) and no `next/*` imports.
- *
- * Behaviour is controlled by the ADMIN_DASHBOARD_PASSWORD env var:
- *   * unset  — gate is OPEN. This preserves the dashboard's historical
- *              URL-as-secret mode, which the client explicitly asked to keep
- *              (deferral on record in docs/hardening-status.md, 2026-06-01).
- *   * set    — every request to /admin-dashboard (page loads AND the server
- *              actions it posts) must carry HTTP Basic credentials whose
- *              password matches. The username is ignored.
- *
- * Server actions are NOT scoped to the page that renders them — a POST with
- * a valid Next-Action id executes from any route — so the proxy matcher on
- * /admin-dashboard alone is not enough. Each admin action therefore
- * re-verifies the same header via requireAdminAction() in
- * lib/admin-auth-action.ts.
- */
+/** Admin authorization is independent of the visitor gate and fails closed
+ * when the administrator password is unavailable. */
 
 export function adminGateEnabled(): boolean {
   return Boolean(process.env.ADMIN_DASHBOARD_PASSWORD)
@@ -51,7 +34,7 @@ export async function isAdminRequestAuthorized(
   authorizationHeader: string | null,
 ): Promise<boolean> {
   const password = process.env.ADMIN_DASHBOARD_PASSWORD
-  if (!password) return true
+  if (!password) return false
 
   if (!authorizationHeader?.startsWith("Basic ")) return false
   const decoded = decodeBase64Utf8(authorizationHeader.slice("Basic ".length).trim())
