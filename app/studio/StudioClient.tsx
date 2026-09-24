@@ -101,10 +101,11 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const [activeGender, setActiveGender] = useState("All")
   const [activeBrand, setActiveBrand] = useState("All")
   const [activeTag, setActiveTag] = useState("All")
+  const [canadianOnly, setCanadianOnly] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const activeFilterCount = [activeCategory, activeGender, activeBrand, activeTag].filter((value) => value !== "All").length
+  const activeFilterCount = [activeCategory, activeGender, activeBrand, activeTag].filter((value) => value !== "All").length + (canadianOnly && locale === "CAN" ? 1 : 0)
 
   const genders = ["All", "Men's", "Women's", "Unisex"]
 
@@ -138,7 +139,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
         product.category.toLowerCase().includes(searchLower) ||
         (product.tags ?? []).join(" ").includes(searchLower)
 
-      return catOk && genderOk && brandOk && tagOk && searchOk
+      return catOk && genderOk && brandOk && tagOk && searchOk &&
+        (!(canadianOnly && locale === "CAN") || (product.tags ?? []).includes("sourced from canada"))
     })
 
     // No region tags in the catalog yet → leave the seeded sort_order alone.
@@ -149,7 +151,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
       .map((p, i) => ({ p, i, region: (p.tags ?? []).includes(regionTag) ? 0 : 1 }))
       .sort((a, b) => a.region - b.region || a.i - b.i)
       .map((x) => x.p)
-  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags])
+  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags, canadianOnly, locale])
 
   const openProductDetail = (product: Product) => {
     setSelectedProduct(product)
@@ -219,9 +221,16 @@ export default function StudioClient({ products, categories, brands, tags, prici
           <div id="catalog-filters" className={`${filtersOpen ? "block" : "hidden"} lg:block pt-4 lg:pt-0`}>
           {activeFilterCount > 0 && (
             <button type="button" className="min-h-11 mb-3 text-sm font-semibold underline text-[#373a36]"
-              onClick={() => { setActiveCategory("All"); setActiveGender("All"); setActiveBrand("All"); setActiveTag("All") }}>
+              onClick={() => { setActiveCategory("All"); setActiveGender("All"); setActiveBrand("All"); setActiveTag("All"); setCanadianOnly(false) }}>
               Clear filters
             </button>
+          )}
+          {locale === "CAN" && (
+            <label className="flex items-center gap-2 min-h-11 mb-5 text-sm font-semibold cursor-pointer">
+              <input type="checkbox" checked={canadianOnly} onChange={(event) => setCanadianOnly(event.target.checked)}
+                className="h-5 w-5 accent-[#373a36]" />
+              Sourced from Canada
+            </label>
           )}
           {/* Category Filter */}
           <div className="mb-7">
@@ -284,7 +293,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
                 Tags
               </h2>
               <div className="flex flex-wrap lg:flex-col gap-1">
-                {["All", ...tags].map((tag) => (
+                {["All", ...tags.filter((tag) => tag !== "sourced from canada")].map((tag) => (
                   <FilterOption
                     key={tag}
                     label={tag === "All" ? "All" : displayTag(tag)}
