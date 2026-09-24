@@ -1,19 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { visitorGate } from "@/lib/visitor-access"
 import { isAdminRequestAuthorized } from "@/lib/admin-auth"
 
-/**
- * Gate for /admin-dashboard (the matcher below keeps every other route on
- * the zero-overhead path).
- *
- * When ADMIN_DASHBOARD_PASSWORD is set, the page and the server-action
- * POSTs it issues require HTTP Basic auth (any username + that password).
- * When unset, the gate stays open — the historical URL-as-secret mode the
- * client asked to keep (see docs/hardening-status.md).
- *
- * The X-Robots-Tag header replaces the old robots.txt Disallow line, which
- * advertised the dashboard URL to anyone who read /robots.txt.
- */
 export default async function proxy(request: NextRequest) {
+  const gate = await visitorGate(request)
+  if (gate) return gate
+  if (!request.nextUrl.pathname.startsWith("/admin-dashboard")) {
+    const response = NextResponse.next()
+    response.headers.set("Cache-Control", "private, no-store")
+    response.headers.set("X-Robots-Tag", "noindex, nofollow")
+    return response
+  }
   const authorized = await isAdminRequestAuthorized(request.headers.get("authorization"))
 
   if (!authorized) {
@@ -32,5 +29,5 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin-dashboard/:path*"],
+  matcher: ["/((?!_next/static/).*)"],
 }
