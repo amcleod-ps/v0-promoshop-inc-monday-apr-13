@@ -224,7 +224,7 @@ export function ProductDetailModal({
               <X className="w-4 h-4" />
             </button>
 
-            <div className="relative h-[min(55vw,240px)] flex-none md:h-auto md:flex-1 md:min-h-[480px] bg-[#e0e0e0]">
+            <div className="relative h-[min(55vw,240px)] flex-none md:h-[480px] bg-[#e0e0e0]">
               {images[displayIndex] && (
                 <button
                   type="button"
@@ -240,7 +240,7 @@ export function ProductDetailModal({
                     src={withMinImageWidth(images[displayIndex], 1500)}
                     alt={`${product.name} - ${previewColour?.name ?? ""} (${displayIndex + 1}/${images.length})`}
                     fill
-                    className="object-contain"
+                    className="object-contain object-top"
                     sizes="(max-width: 768px) 100vw, 55vw"
                   />
                   <span className="absolute top-3.5 left-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
