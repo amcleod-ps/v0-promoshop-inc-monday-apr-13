@@ -7,6 +7,7 @@ import type {
   PricingAdminProduct,
   PricingPanelState,
 } from "@/lib/pricing/admin-types"
+import { pricingStatusNotice } from "@/lib/pricing/admin-status"
 import type { MatrixDiagnostic, TierDraft } from "@/lib/pricing/matrix"
 import {
   applyPricingCsv,
@@ -89,19 +90,13 @@ function ReadyPricingTab({
     [needle, state.products],
   )
 
-  const inactive = !state.dbFlagEnabled && !state.serverFlagEnabled
+  const status = pricingStatusNotice(state)
 
   return (
     <div>
-      <Notice tone={inactive ? "safe" : "error"}>
-        <strong>
-          Public pricing is {inactive ? "inactive" : "not fully inactive"}.
-        </strong>
-        <p style={styles.noticeText}>
-          Database flag: <code>{String(state.dbFlagEnabled)}</code> · server
-          flag: <code>{String(state.serverFlagEnabled)}</code>. Stage 2 has no
-          activation control; both must remain false until the release stage.
-        </p>
+      <Notice tone={status.tone}>
+        <strong>{status.heading}</strong>
+        <p style={styles.noticeText}>{status.body}</p>
       </Notice>
 
       <CsvImporter />
@@ -673,7 +668,7 @@ function Notice({
   tone,
   children,
 }: {
-  tone: "safe" | "warning" | "error"
+  tone: "neutral" | "warning" | "error"
   children: React.ReactNode
 }) {
   return (
@@ -681,8 +676,8 @@ function Notice({
       role={tone === "error" ? "alert" : "status"}
       style={{
         ...styles.notice,
-        ...(tone === "safe"
-          ? styles.noticeSafe
+        ...(tone === "neutral"
+          ? styles.noticeNeutral
           : tone === "error"
             ? styles.noticeError
             : styles.noticeWarning),
@@ -722,10 +717,10 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 20,
     lineHeight: 1.45,
   },
-  noticeSafe: {
-    background: "#f1fbf5",
-    border: "1px solid #8ac7a0",
-    color: "#155d32",
+  noticeNeutral: {
+    background: "#f5f7fa",
+    border: "1px solid #c5ced9",
+    color: "#27313d",
   },
   noticeWarning: {
     background: "#fffaf0",

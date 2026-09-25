@@ -16,6 +16,8 @@
  * dashboard alike.
  */
 
+import { PRICING_NOTICE_SLOTS } from "@/lib/pricing/notices"
+
 export interface TextSlot {
   key: string
   label: string
@@ -158,6 +160,16 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
     fallback: "Thoughtfully grouped merchandise — ready to brief, gift, or build a campaign around.",
     multiline: true,
   },
+
+  // --- Pricing notices ------------------------------------------------------
+  // Keys, labels, and defaults live in lib/pricing/notices.ts, which is also
+  // the public read path — registered here so the Text tab offers them.
+  ...PRICING_NOTICE_SLOTS.map(({ key, label, fallback }) => ({
+    key,
+    label,
+    fallback,
+    multiline: true,
+  })),
 ]
 
 const SLOTS_BY_KEY = new Map(EXTRA_TEXT_SLOTS.map((slot) => [slot.key, slot]))

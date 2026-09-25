@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts tests/pricing/customer.test.ts tests/pricing/matrix.test.ts tests/pricing/snapshot.test.ts tests/pricing/migration-contract.test.ts tests/admin/image-removal-contract.test.ts tests/access/visitor.test.ts",
+    "test": "tsx --test tests/pricing/money.test.ts tests/pricing/feature.test.ts tests/pricing/engine.test.ts tests/pricing/customer.test.ts tests/pricing/matrix.test.ts tests/pricing/snapshot.test.ts tests/pricing/migration-contract.test.ts tests/pricing/notices.test.ts tests/admin/image-removal-contract.test.ts tests/admin/pricing-status.test.ts tests/access/visitor.test.ts",
     "check:sql": "node scripts/check-sql.mjs"
   },
   "dependencies": {

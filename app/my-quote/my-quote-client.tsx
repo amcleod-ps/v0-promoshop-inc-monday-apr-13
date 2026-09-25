@@ -15,13 +15,9 @@ import { submitQuoteRequest } from "@/app/actions/quotes"
 import { HoneypotField } from "@/components/honeypot-field"
 import { buildCustomerPricingSummary } from "@/lib/pricing/customer"
 import { calculateSubtotalUsd } from "@/lib/pricing/money"
-import {
-  APPROXIMATE_PRICING_COPY,
-  formatUsd,
-  LARGE_QUANTITY_COPY,
-  missingPricingCopy,
-  tierPriceBasisLabel,
-} from "@/lib/pricing/presentation"
+import { formatUsd, tierPriceBasisLabel } from "@/lib/pricing/presentation"
+import { missingPricingNotice } from "@/lib/pricing/notices"
+import { usePricingNotices } from "@/hooks/use-pricing-notices"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
 /**
@@ -73,6 +69,7 @@ export default function MyQuoteClient({
     textFallback("quote.success.heading"),
   )
   const successBody = useSiteText("quote.success.body", textFallback("quote.success.body"))
+  const pricingNotices = usePricingNotices()
 
   const [activeTab, setActiveTab] = useState<"items" | "contact" | "project">("items")
   const [submitted, setSubmitted] = useState(false)
@@ -389,7 +386,7 @@ export default function MyQuoteClient({
                             </p>
                           ) : pricing.enabled ? (
                             <p className="mt-2 text-xs leading-relaxed text-[#666]">
-                              {missingPricingCopy(item.productSku)}
+                              {missingPricingNotice(pricingNotices, item.productSku)}
                             </p>
                           ) : null}
                         </div>
@@ -422,16 +419,16 @@ export default function MyQuoteClient({
                       )}
                       {pricingSummary.hasUnpricedItems ? (
                         <p className="mt-2 text-sm leading-relaxed text-[#666]">
-                          Some selected items do not contribute to this estimated subtotal. {missingPricingCopy("")}
+                          Some selected items do not contribute to this estimated subtotal. {pricingNotices.noPricing}
                         </p>
                       ) : null}
                       {pricingSummary.hasLargeQuantityItems ? (
                         <p className="mt-2 text-sm font-semibold leading-relaxed text-[#333]">
-                          {LARGE_QUANTITY_COPY}
+                          {pricingNotices.largeQuantity}
                         </p>
                       ) : null}
                       {pricingSummary.hasPricedItems ? (
-                        <p className="mt-2 text-xs leading-relaxed text-[#666]">{APPROXIMATE_PRICING_COPY}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-[#666]">{pricingNotices.approximate}</p>
                       ) : null}
                     </section>
                   ) : null}

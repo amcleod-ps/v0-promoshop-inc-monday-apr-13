@@ -13,16 +13,14 @@ import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-d
 import { ProductLightbox } from "./product-lightbox"
 import type { PriceTier } from "@/lib/pricing/types"
 import {
-  APPROXIMATE_PRICING_COPY,
-  CANADIAN_PRICING_COPY,
   formatUsd,
-  LARGE_QUANTITY_COPY,
   LARGE_QUANTITY_START,
   missingPricingKind,
-  NO_PRICING_COPY,
   tierPriceBasisLabel,
   tierRangeLabel,
 } from "@/lib/pricing/presentation"
+import { missingPricingNotice } from "@/lib/pricing/notices"
+import { usePricingNotices } from "@/hooks/use-pricing-notices"
 
 interface ProductDetailModalProps {
   product: Product | null
@@ -56,6 +54,7 @@ export function ProductDetailModal({
   const { addItem } = useQuote()
   const { t } = useLocale()
   const { isAuthenticated } = useAuth()
+  const pricingNotices = usePricingNotices()
   const router = useRouter()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -335,10 +334,10 @@ export function ProductDetailModal({
                   </div>
                   {tiers.some((tier) => tier.tierStartQuantity === LARGE_QUANTITY_START) ? (
                     <p className="mt-3 text-sm font-semibold leading-relaxed text-[#333]">
-                      {LARGE_QUANTITY_COPY}
+                      {pricingNotices.largeQuantity}
                     </p>
                   ) : null}
-                  <p className="mt-3 text-xs leading-relaxed text-[#666]">{APPROXIMATE_PRICING_COPY}</p>
+                  <p className="mt-3 text-xs leading-relaxed text-[#666]">{pricingNotices.approximate}</p>
                 </section>
               ) : (
                 <section className="mb-7 rounded border border-[#d6d6d6] bg-white p-4" aria-labelledby="product-pricing-heading">
@@ -348,9 +347,7 @@ export function ProductDetailModal({
                       : "Pricing Available on Request"}
                   </h3>
                   <p className="text-sm leading-relaxed text-[#666]">
-                    {missingPricingKind(product.sku) === "canadian"
-                      ? CANADIAN_PRICING_COPY
-                      : NO_PRICING_COPY}
+                    {missingPricingNotice(pricingNotices, product.sku)}
                   </p>
                 </section>
               )
