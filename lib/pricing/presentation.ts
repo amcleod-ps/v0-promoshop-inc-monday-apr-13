@@ -1,6 +1,10 @@
 import type { PriceTier } from "./types"
 
-/** Exact public wording supplied in the August 7 pricing package. */
+/**
+ * Exact public wording supplied in the August 7 pricing package. These are
+ * the defaults for the admin-editable notices; components read the live
+ * values through lib/pricing/notices.ts, not these constants directly.
+ */
 export const APPROXIMATE_PRICING_COPY =
   "Pricing shown is for budgeting purposes only and is based on estimated U.S. costs. Final pricing may vary depending on decoration, artwork, quantities, shipping, and current supplier costs. Once you submit your quote request, a PromoShop specialist will review your selections and provide a customized quote with confirmed pricing."
 
@@ -47,12 +51,6 @@ export type MissingPricingKind = "canadian" | "unpriced"
 
 export function missingPricingKind(sku: string): MissingPricingKind {
   return CANADIAN_SKU_SET.has(sku.trim()) ? "canadian" : "unpriced"
-}
-
-export function missingPricingCopy(sku: string): string {
-  return missingPricingKind(sku) === "canadian"
-    ? CANADIAN_PRICING_COPY
-    : NO_PRICING_COPY
 }
 
 /**

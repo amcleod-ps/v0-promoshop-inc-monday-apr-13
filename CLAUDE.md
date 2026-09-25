@@ -91,7 +91,11 @@ Conventions when extending this:
   empty editors; saving upserts a real `site_content` row, and blank falls
   back to the compiled-in copy. Components read the same key with
   `textFallback(key)` as the fallback so registry and renderer can't drift —
-  add new always-editable strings there, not as bare literals.
+  add new always-editable strings there, not as bare literals. The four
+  public pricing notices (`pricing.notice.*`, Text tab → "Pricing notices")
+  register through the same list from `lib/pricing/notices.ts`; components
+  read them with `usePricingNotices()`, never the `*_COPY` defaults in
+  `lib/pricing/presentation.ts`, and blank/whitespace values show the default.
 - **Inline copy formatting**: `lib/rich-text.tsx` renders a SMALL, XSS-safe
   subset of Markdown — `**bold**`, `*italic*`/`_italic_`, `[text](url)` — to
   React nodes (never `dangerouslySetInnerHTML`; link targets gated through
