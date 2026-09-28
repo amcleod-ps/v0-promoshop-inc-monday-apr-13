@@ -38,8 +38,8 @@ export function PricingTab({ state }: { state: PricingPanelState }) {
         <strong>Pricing administration is locked.</strong>
         <p style={styles.noticeText}>
           {state.reason === "password_not_configured"
-            ? "Configure ADMIN_DASHBOARD_PASSWORD and redeploy before pricing data or controls can load. The other dashboard sections keep their historical access behaviour."
-            : "Reload the dashboard and complete the administrator sign-in prompt."}
+            ? "Administrator sign-in is not available. Contact the site administrator."
+            : "Open /admin and sign in again."}
         </p>
       </Notice>
     )
