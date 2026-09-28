@@ -56,7 +56,7 @@ function bumpCaches() {
   // Tell Next.js to rebuild every cached page so changes are visible
   // immediately on the live site, not just the dashboard.
   revalidatePath("/", "layout")
-  revalidatePath("/admin-dashboard")
+  revalidatePath("/admin")
 }
 
 /**

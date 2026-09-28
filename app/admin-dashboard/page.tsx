@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { adminGateEnabled } from "@/lib/admin-auth"
 import { getPricingAdminAccess } from "@/lib/pricing/admin-access"
 import type { PricingPanelState } from "@/lib/pricing/admin-types"
 import { loadPricingAdminPanel } from "@/lib/supabase/pricing-admin"
@@ -695,6 +694,8 @@ export default async function AdminDashboardPage() {
       `}</style>
       <h1 style={pageStyles.h1}>Image &amp; Content Dashboard</h1>
 
+      <p><a href="/admin/reset" style={pageStyles.resetLink}>Reset Password</a></p>
+
       <details style={pageStyles.help}>
         <summary style={pageStyles.helpSummary}>How to use this page</summary>
         <ol style={pageStyles.helpList}>
@@ -741,10 +742,9 @@ export default async function AdminDashboardPage() {
         </ol>
         <p style={pageStyles.helpNote}>
           Limits: 10 MB max per image upload (JPG, PNG, WebP, GIF, or AVIF —
-          SVG is blocked for security). 5,000 characters max per text field.{" "}
-          {adminGateEnabled()
-            ? "This dashboard is protected by the admin password (the browser sign-in prompt)."
-            : "The dashboard has no access control — anyone with this URL can edit everything here, so treat the URL as the secret."}
+          SVG is blocked for security). 5,000 characters max per text field.
+          This dashboard is protected by the administrator password.{" "}
+          <a href="/admin/reset" style={pageStyles.resetLink}>Reset Password</a>
         </p>
       </details>
 

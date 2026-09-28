@@ -223,7 +223,11 @@ export function ProductDetailModal({
               <X className="w-4 h-4" />
             </button>
 
-            <div className="relative h-[min(55vw,240px)] flex-none md:h-[480px] bg-[#e0e0e0]">
+            {/* Desktop: flex-1 + min-h (not a fixed height) lets the image
+                area absorb the leftover grey space in tall dialogs; the
+                480px floor keeps short dialogs looking exactly as before.
+                Mobile keeps the original compact fixed height. */}
+            <div className="relative h-[min(55vw,240px)] flex-none md:flex-1 md:h-auto md:min-h-[480px] bg-[#e0e0e0]">
               {images[displayIndex] && (
                 <button
                   type="button"
@@ -234,12 +238,14 @@ export function ProductDetailModal({
                   {/* object-contain (not cover): cover cropped the product
                       and upscaled low-format sources to fill the frame —
                       the whole shot letterboxed on the grey panel is both
-                      sharper and the standard product-viewer treatment. */}
+                      sharper and the standard product-viewer treatment.
+                      Desktop centers it so a stretched tall frame doesn't
+                      pin the product to the top with grey below it. */}
                   <SafeImage
                     src={withMinImageWidth(images[displayIndex], 1500)}
                     alt={`${product.name} - ${previewColour?.name ?? ""} (${displayIndex + 1}/${images.length})`}
                     fill
-                    className="object-contain object-top"
+                    className="object-contain object-top md:object-center"
                     sizes="(max-width: 768px) 100vw, 55vw"
                   />
                   <span className="absolute top-3.5 left-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">

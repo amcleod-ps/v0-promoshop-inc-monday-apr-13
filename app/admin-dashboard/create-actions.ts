@@ -39,7 +39,7 @@ const STALE_ROW_ERROR =
 
 function bumpCaches() {
   revalidatePath("/", "layout")
-  revalidatePath("/admin-dashboard")
+  revalidatePath("/admin")
 }
 
 async function adminOrError(): Promise<
@@ -47,7 +47,7 @@ async function adminOrError(): Promise<
   | { ok: false; error: string }
 > {
   // Every create/update/delete in this file goes through here, so the
-  // ADMIN_DASHBOARD_PASSWORD gate (when enabled) covers them all. Server
+  // The administrator session gate covers them all. Server
   // actions are invocable from any route via their Next-Action id, so the
   // proxy.ts matcher alone cannot protect them.
   const denied = await requireAdminAction()
