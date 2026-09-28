@@ -169,7 +169,7 @@ async function runMutation(
     return { ...masked, code: "server_error" }
   }
 
-  revalidatePath("/admin-dashboard")
+  revalidatePath("/admin")
   return {
     ok: true,
     message: successMessage,

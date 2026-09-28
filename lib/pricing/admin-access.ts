@@ -1,10 +1,11 @@
 import "server-only"
 
-import { headers } from "next/headers"
+import { cookies } from "next/headers"
 import {
-  adminGateEnabled,
-  isAdminRequestAuthorized,
-} from "@/lib/admin-auth"
+  ADMIN_SESSION_COOKIE,
+  getAdminPasswordState,
+  validateAdminSessionToken,
+} from "@/lib/admin-session"
 import type { PricingActionFailure } from "./admin-types"
 
 export type PricingAdminAccess =
@@ -15,17 +16,17 @@ export type PricingAdminAccess =
     }
 
 /**
- * Pricing administration is intentionally stricter than the legacy dashboard:
- * the shared admin password must exist and the current request must present it.
- * An unset password never grants access to prices or pricing mutations.
+ * Pricing administration requires the current administrator session.
+ * A missing password state never grants access to prices or mutations.
  */
 export async function getPricingAdminAccess(): Promise<PricingAdminAccess> {
-  if (!adminGateEnabled()) {
+  const state = await getAdminPasswordState()
+  if (state.source === "none") {
     return { allowed: false, reason: "password_not_configured" }
   }
 
-  const authorization = (await headers()).get("authorization")
-  if (!(await isAdminRequestAuthorized(authorization))) {
+  const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value
+  if (!validateAdminSessionToken(token, state).ok) {
     return { allowed: false, reason: "unauthorized" }
   }
 

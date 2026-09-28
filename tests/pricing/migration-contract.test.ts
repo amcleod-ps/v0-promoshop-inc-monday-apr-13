@@ -93,7 +93,7 @@ test("atomic mutation retains bounded resource and inactive-release guards", () 
   )
   assert.match(
     migration,
-    /pg_catalog\.jsonb_agg\(\s*pg_catalog\.jsonb_build_array\(\s*state\.product_sku,\s*state\.status,\s*state\.fingerprint/s,
+    /pg_catalog\.jsonb_agg\(\s*pg_catalog\.jsonb_build_array\(\s*state\.product_sku,\s*state\.status,\s*state\.fingerprint/,
   )
 })
 
