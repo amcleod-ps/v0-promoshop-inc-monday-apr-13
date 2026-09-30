@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { visitorGate } from "@/lib/visitor-access"
 import { adminGate } from "@/lib/admin-gate"
+import { isSiteIconRequest } from "@/lib/site-icons"
 
 export default async function proxy(request: NextRequest) {
+  if (isSiteIconRequest(request.nextUrl.pathname, request.method)) return NextResponse.next()
   const gate = await visitorGate(request)
   if (gate) return gate
 
