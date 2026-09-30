@@ -102,7 +102,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
   return (
     <>
       {/* Search Bar */}
-      <section className="py-8 px-6 lg:px-8 bg-[#f9f9f9]">
+      <section className="pb-6 px-6 lg:px-8 bg-[#f9f9f9]">
         <div className="mx-auto max-w-7xl">
           <div className="relative max-w-md mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#767676]" aria-hidden="true" />
@@ -125,10 +125,10 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
 
       {/* Featured Brands */}
       {displayBrands.length > 0 && (
-        <section className="py-12 px-6 lg:px-8">
+        <section className="pt-6 pb-12 px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             {featuredBrands.length > 0 && (
-              <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-8">
+              <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-6">
                 Featured Brands
               </h2>
             )}
