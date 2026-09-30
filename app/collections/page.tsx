@@ -31,7 +31,7 @@ export default async function CollectionsPage() {
         {/* Editorial hero */}
         <section className="relative overflow-hidden border-b border-white/10">
           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#ef473f]" aria-hidden="true" />
-          <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 lg:py-24">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8 pt-8 pb-4 lg:pt-10">
             <p className="text-xs font-bold tracking-[0.25em] text-[#ef473f] uppercase mb-4">
               {eyebrow}
             </p>
@@ -44,7 +44,7 @@ export default async function CollectionsPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 lg:px-8 py-14 lg:py-20">
+        <section className="mx-auto max-w-7xl px-6 lg:px-8 pt-8 pb-14 lg:pt-12 lg:pb-20">
           {previews.length === 0 ? (
             <div className="text-center py-20 text-[#888]">
               <p className="font-extrabold text-2xl tracking-wider uppercase text-white mb-2">
