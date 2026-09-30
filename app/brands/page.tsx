@@ -56,7 +56,7 @@ export default async function BrandsPage() {
 
       <main id="main-content">
       {/* Hero Section */}
-      <section className="py-12 lg:py-16 px-6 lg:px-8 bg-[#f9f9f9]">
+      <section className="pt-6 pb-4 px-6 lg:px-8 bg-[#f9f9f9]">
         <div className="mx-auto max-w-7xl">
           <div className="text-center max-w-3xl mx-auto">
             <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-4">
@@ -65,7 +65,7 @@ export default async function BrandsPage() {
             <h1 className="font-montserrat font-bold text-3xl lg:text-5xl text-[#1a1a1a] leading-tight mb-4 uppercase tracking-wide">
               {heading}
             </h1>
-            <p className="text-base text-[#666] leading-relaxed font-visby mb-8">
+            <p className="text-base text-[#666] leading-relaxed font-visby">
               {intro}
             </p>
           </div>
