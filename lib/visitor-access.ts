@@ -2,6 +2,7 @@ import "server-only"
 import { NextResponse, type NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { rateLimit } from "@/lib/rate-limit"
+import { siteIconLinks } from "@/lib/site-icons"
 import {
   PASSWORD_MAX_LENGTH,
   SESSION_SECONDS,
@@ -14,14 +15,14 @@ import {
 } from "./visitor-access-crypto"
 
 const privateHeaders = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" }
-const pageCsp = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+const pageCsp = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 // Bounded: three password fields plus form overhead must fit.
 const POST_BODY_MAX = 2048
 
 function pageShell(title: string, body: string, status: number) {
   const style = "body{margin:0;background:#ededed;color:#222;font:18px system-ui;display:grid;min-height:100svh;place-items:center}main{box-sizing:border-box;width:min(100%,460px);padding:32px}h1{font-size:32px}label,input,button{display:block}input,button{box-sizing:border-box;width:100%;min-height:48px;font:inherit;margin-top:12px;padding:12px}button{background:#373a36;color:white;border:0;cursor:pointer}input:focus,button:focus{outline:3px solid #b62d25;outline-offset:3px}.error{color:#a51f17}"
   return new NextResponse(
-    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title} | PromoShop Studio</title><style>${style}</style><main><p>PromoShop Studio</p>${body}</main></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title} | PromoShop Studio</title>${siteIconLinks}<style>${style}</style><main><p>PromoShop Studio</p>${body}</main></html>`,
     { status, headers: { ...privateHeaders, "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": pageCsp } },
   )
 }

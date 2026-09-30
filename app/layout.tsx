@@ -13,6 +13,7 @@ import { getSiteContentMap } from '@/lib/supabase/content'
 import { getTeamMembers } from '@/lib/supabase/team'
 import { getSiteThemeMap, themeOverrideCss } from '@/lib/supabase/theme'
 import { SITE_URL } from '@/lib/site-url'
+import { siteIcons } from '@/lib/site-icons'
 import './globals.css'
 
 // Force every page render to fetch fresh data so URL changes made in the
@@ -52,23 +53,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
   },
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  icons: siteIcons,
 }
 
 export default async function RootLayout({
