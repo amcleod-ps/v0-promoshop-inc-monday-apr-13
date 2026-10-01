@@ -68,7 +68,7 @@ function BrandCardMedia({ brand }: { brand: Brand }) {
     <div className="w-full h-20 bg-[#f5f5f5] rounded flex items-center justify-center mb-6 group-hover:bg-[#fef2f2] transition-colors overflow-hidden px-4">
       <BrandLogo
         brand={brand}
-        fallbackClassName="font-montserrat font-bold text-xl tracking-wider text-[#373a36]/60 group-hover:text-[#ef473f] transition-colors uppercase"
+        fallbackClassName="font-montserrat font-bold text-xl tracking-wider text-[#373a36]/60 group-hover:text-[#b8322c] transition-colors uppercase"
       />
     </div>
   )
@@ -112,7 +112,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
               placeholder="Search brands..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] pl-12 pr-4 py-3.5 rounded-lg text-sm font-visby tracking-wide outline-none placeholder:text-[#767676] focus:border-[#ef473f] focus-visible:ring-2 focus-visible:ring-[#ef473f] transition-colors shadow-sm"
+              className="w-full bg-white border border-[#767676] text-[#1a1a1a] pl-12 pr-4 py-3.5 rounded-lg text-sm font-visby tracking-wide outline-none placeholder:text-[#767676] focus:border-[#ef473f] focus-visible:ring-2 focus-visible:ring-[#ef473f] transition-colors shadow-sm"
             />
           </div>
         </div>
@@ -142,12 +142,12 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                 >
                   <BrandCardMedia brand={brand} />
 
-                  <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#ef473f] transition-colors">
+                  <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#b8322c] transition-colors">
                     {brand.name}
                   </h3>
 
                   {brand.categories[0] && (
-                    <p className="text-xs font-bold tracking-wider uppercase text-[#d93e36] mb-2">
+                    <p className="text-xs font-bold tracking-wider uppercase text-[#b8322c] mb-2">
                       {brand.categories[0]}
                     </p>
                   )}
@@ -158,7 +158,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-2 text-[#d93e36] text-sm font-semibold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-[#b8322c] text-sm font-semibold uppercase tracking-wider">
                     View Products
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -186,11 +186,11 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
                 >
                   <BrandCardMedia brand={brand} />
 
-                  <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#ef473f] transition-colors">
+                  <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#b8322c] transition-colors">
                     {brand.name}
                   </h3>
 
-                  <div className="flex items-center gap-2 text-[#d93e36] text-sm font-semibold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-[#b8322c] text-sm font-semibold uppercase tracking-wider">
                     View Products
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>

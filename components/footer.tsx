@@ -85,7 +85,7 @@ export function Footer() {
               </h3>
               <a
                 href={`mailto:${contactEmail}?subject=${encodeURIComponent("Newsletter signup")}`}
-                className="inline-flex items-center gap-2 text-sm font-visby text-[#555] hover:text-[#d93e36] transition-colors underline underline-offset-2"
+                className="inline-flex items-center gap-2 text-sm font-visby text-[#555] hover:text-[#b8322c] transition-colors underline underline-offset-2"
               >
                 <Mail className="w-4 h-4" aria-hidden="true" />
                 Email us to join our mailing list
@@ -109,7 +109,7 @@ export function Footer() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm font-visby text-[#555] hover:text-[#ef473f] transition-colors"
+                    className="text-sm font-visby text-[#555] hover:text-[#b8322c] transition-colors"
                   >
                     {label}
                   </Link>
@@ -129,7 +129,7 @@ export function Footer() {
                 <li key={item}>
                   <Link
                     href={`/studio?category=${encodeURIComponent(item)}`}
-                    className="text-sm font-visby text-[#555] hover:text-[#ef473f] transition-colors"
+                    className="text-sm font-visby text-[#555] hover:text-[#b8322c] transition-colors"
                   >
                     {item}
                   </Link>
@@ -147,13 +147,13 @@ export function Footer() {
               {config.allContacts.map((contact) => (
                 <li key={contact.phoneHref} className="text-sm text-[#555]">
                   <span className="block font-semibold text-[#222]">{contact.city}, {contact.region}</span>
-                  <a href={contact.phoneHref} className="hover:text-[#ef473f] transition-colors">
+                  <a href={contact.phoneHref} className="hover:text-[#b8322c] transition-colors">
                     {contact.phone}
                   </a>
                 </li>
               ))}
               <li className="text-sm text-[#555] pt-2">
-                <a href={`mailto:${contactEmail}`} className="hover:text-[#ef473f] transition-colors">
+                <a href={`mailto:${contactEmail}`} className="[overflow-wrap:anywhere] hover:text-[#b8322c] transition-colors">
                   {contactEmail}
                 </a>
               </li>

@@ -119,7 +119,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
           {/* Breadcrumb */}
           <Link
             href="/brands"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#6b6b6b] hover:text-[#d93e36] transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#6b6b6b] hover:text-[#b8322c] transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             All Brands
@@ -136,7 +136,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
             <Link
               href="/my-quote"
-              className="inline-flex items-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap self-start"
+              className="inline-flex items-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap self-start"
             >
               {quoteCta}
               <ArrowRight className="w-4 h-4" />
@@ -189,7 +189,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
             </div>
             <Link
               href="/brands"
-              className="inline-flex items-center gap-2.5 bg-[#ef473f] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="inline-flex items-center gap-2.5 bg-[#b8322c] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               {bannerCta}
               <ArrowRight className="w-4 h-4" />

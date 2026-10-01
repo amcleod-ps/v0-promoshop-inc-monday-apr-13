@@ -117,11 +117,11 @@ export function ContactSection() {
               <div className="w-12 h-12 rounded-full bg-[#ef473f]/20 flex items-center justify-center flex-shrink-0">
                 <Mail className="w-5 h-5 text-[#ef473f]" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-montserrat font-bold text-base text-white mb-2">Email</h3>
                 <a
                   href={`mailto:${emailAddress}`}
-                  className="text-[#888] hover:text-[#ef473f] transition-colors font-visby"
+                  className="[overflow-wrap:anywhere] text-[#888] hover:text-[#ef473f] transition-colors font-visby"
                 >
                   {emailAddress}
                 </a>
@@ -182,7 +182,7 @@ export function ContactSection() {
                       required
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="First name"
                     />
                   </div>
@@ -198,7 +198,7 @@ export function ContactSection() {
                       required
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="Last name"
                     />
                   </div>
@@ -216,7 +216,7 @@ export function ContactSection() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="you@company.com"
                     />
                   </div>
@@ -231,7 +231,7 @@ export function ContactSection() {
                       maxLength={50}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
+                      className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors placeholder:text-[#8a8a8a]"
                       placeholder="(555) 123-4567"
                     />
                   </div>
@@ -247,7 +247,7 @@ export function ContactSection() {
                     maxLength={200}
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors placeholder:text-[#8a8a8a]"
+                    className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors placeholder:text-[#8a8a8a]"
                     placeholder="Your company name"
                   />
                 </div>
@@ -262,14 +262,14 @@ export function ContactSection() {
                     rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full bg-[#111111] border border-[#333] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/35 transition-colors resize-none placeholder:text-[#8a8a8a]"
+                    className="w-full bg-[#111111] border border-[#767676] text-white px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f] transition-colors resize-none placeholder:text-[#8a8a8a]"
                     placeholder="Tell us about your project..."
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[#ef473f] text-white py-3.5 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="w-full bg-[#b8322c] text-white py-3.5 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {submitting ? "Sending..." : "Send Message"}
                 </button>

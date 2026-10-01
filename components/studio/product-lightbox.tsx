@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
@@ -23,14 +23,10 @@ export function ProductLightbox({
   onClose,
   onIndexChange,
 }: ProductLightboxProps) {
-  const [index, setIndex] = useState(initialIndex)
+  const index = images.length > 0 ? Math.min(initialIndex, images.length - 1) : 0
   const touchStartX = useRef<number | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (isOpen) setIndex(initialIndex)
-  }, [initialIndex, isOpen])
 
   // Dialog focus management: focus moves in on open, returns to the
   // trigger (the modal's zoom button) on close.
@@ -39,14 +35,9 @@ export function ProductLightbox({
   // it — so only the full-screen viewer is reachable while it is open.
   useInertBackground(isOpen, rootRef)
 
-  // Navigation computes the next index OUTSIDE the state updater and
-  // notifies the parent from the event handler. Do not sync via an effect
-  // keyed on `index`: on open it re-broadcasts this component's stale
-  // retained index while the reset effect pulls in `initialIndex`, and when
-  // the two differ each commit swaps them — an infinite update loop.
+  // The parent keeps the gallery position. Use it when the image view opens.
   const changeIndex = useCallback(
     (next: number) => {
-      setIndex(next)
       onIndexChange(next)
     },
     [onIndexChange],

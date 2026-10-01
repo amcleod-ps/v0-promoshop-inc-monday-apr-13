@@ -70,7 +70,7 @@ function SignInPageInner() {
           </p>
 
           {error && (
-            <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#d93e36] px-4 py-3 rounded mb-6 text-sm">
+            <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#b8322c] px-4 py-3 rounded mb-6 text-sm">
               {error}
             </div>
           )}
@@ -87,7 +87,7 @@ function SignInPageInner() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3.5 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
+                className="w-full bg-white border border-[#767676] text-[#1a1a1a] px-4 py-3.5 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#b8322c] transition-colors"
                 placeholder="you@company.com"
               />
             </div>
@@ -95,7 +95,7 @@ function SignInPageInner() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#ef473f] text-white py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-[#b8322c] text-white py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -114,7 +114,7 @@ function SignInPageInner() {
           <div className="mt-8 pt-8 border-t border-[#e5e5e5] text-center">
             <p className="text-[#666] font-visby">
               Need to save your details?{" "}
-              <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline font-semibold">Save a profile</Link>
+              <Link href="/sign-up" className="text-[#b8322c] underline hover:no-underline font-semibold">Save a profile</Link>
             </p>
           </div>
 
