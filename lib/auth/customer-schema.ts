@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const customerProfileSchema = z.object({
-  username: z.string().trim().toLowerCase().min(3, "Use at least 3 characters for the username.").max(40, "Use no more than 40 characters for the username.").regex(/^[a-z0-9_-]+$/, "Use letters, numbers, underscores or hyphens for the username."),
+  username: z.string().trim().toLowerCase().min(3, "Use 3 or more characters for the username.").max(40, "Use no more than 40 characters for the username.").regex(/^[a-z0-9_-]+$/, "Use letters, numbers, underscores or hyphens for the username."),
   firstName: z.string().trim().min(1, "Enter the first name.").max(100, "Use no more than 100 characters for the first name."),
   lastName: z.string().trim().min(1, "Enter the last name.").max(100, "Use no more than 100 characters for the last name."),
   company: z.string().trim().max(200, "Use no more than 200 characters for the company."),
@@ -9,8 +9,8 @@ export const customerProfileSchema = z.object({
   jobTitle: z.string().trim().max(100, "Use no more than 100 characters for the job title."),
 })
 export const customerSignUpSchema = customerProfileSchema.extend({
-  email: z.string().trim().email("Enter a valid email address.").max(254).transform(value => value.toLowerCase()),
-  password: z.string().min(12, "Use at least 12 characters for the password.").max(128, "Use no more than 128 characters for the password."),
+  email: z.string().trim().email("Enter the email address in the correct format.").max(254).transform(value => value.toLowerCase()),
+  password: z.string().min(12, "Use 12 or more characters for the password.").max(128, "Use no more than 128 characters for the password."),
 })
 export const customerSignInSchema = z.object({
   identifier: z.string().trim().min(1, "Enter the email address or username.").max(254).transform(value => value.toLowerCase()),

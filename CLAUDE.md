@@ -195,11 +195,13 @@ images with an opaque error.
 
 ## Customer accounts and quote requests
 
-Customer accounts use Supabase Auth and cookie sessions. Account creation confirms the email in the server action. Customers do not receive an email confirmation step or a two-factor step. The server key stays in server-only account actions. Usernames are unique. Customers can sign in with their email address or username and password.
+Customer accounts use Supabase Auth and cookie sessions. Account creation confirms the email in the server action. Customers do not receive an email confirmation step or a two-factor step. The server key stays in server-only account actions.
 
-Customer profiles persist in `customer_profiles`. Row-level security permits each customer to read and change only their own profile. New request ownership comes from the server session ID. Never use a typed email address to assign ownership or connect old requests. `customer_quote_requests` exposes safe request fields with row-level security. Staff notes stay private. Request items preserve the submitted product, colour, size and quantity.
+Usernames are unique. Customers can sign in with their email address or username and password.
 
-The quote cart remains in local browser storage. Profile fields load from the account for each session. Existing guest requests remain available. Quote notifications still use the existing server action.
+The database keeps customer profiles in `customer_profiles`. Row-level security limits access to the profile for each account. The server session ID identifies the customer for each new request. Never use a typed email address to assign ownership or connect guest requests. The `customer_quote_requests` view shows only customer fields with row-level security. Staff notes stay private. Request items preserve the submitted product, color, size and quantity.
+
+The quote cart remains in local browser storage. Profile fields load from the account for each session. Previous guest requests stay available. Quote notifications still use the existing server action.
 
 ## Conventions
 

@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 // this segment layout carries it instead.
 export const metadata: Metadata = {
   title: "Create an account",
-  description: "Create an account to save your profile and view your submitted quote requests.",
+  description: "Create an account to save your profile and see your sent quote requests.",
   // Thin utility page — keep it out of search results.
   robots: { index: false, follow: true },
 }

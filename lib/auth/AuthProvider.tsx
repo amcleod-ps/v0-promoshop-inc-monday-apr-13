@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   const signOut = useCallback(async () => {
     if (client) {
       const { error } = await client.auth.signOut()
-      if (error) throw new Error("The account could not sign out. Try again.")
+      if (error) throw new Error("The account service cannot close the session. Try again.")
     }
     setUser(null)
     try { window.localStorage.removeItem("promoshop_quote_contact") } catch {}
