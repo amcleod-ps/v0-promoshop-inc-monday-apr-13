@@ -355,7 +355,7 @@ export function ProductDetailModal({
                 coloured chips below list every selected colour. */}
             <div className="mb-7">
               <p className="text-sm text-[#111111] mb-3.5">
-                Select your {t("colors")}:{" "}
+                Select all desired colours:{" "}
                 <strong>
                   {selectedColours.length > 0
                     ? selectedColours.map((c) => c.name).join(", ")
@@ -392,7 +392,7 @@ export function ProductDetailModal({
             {/* Size Selection (multi-select). */}
             <div className="mb-7">
               <p className="text-sm text-[#111111] mb-3">
-                Select your sizes{selectedSizes.length > 0 ? <>: <strong>{selectedSizes.join(", ")}</strong></> : null}
+                Select all desired sizes:{selectedSizes.length > 0 ? <>{" "}<strong>{selectedSizes.join(", ")}</strong></> : null}
               </p>
               <div className="flex flex-wrap gap-2">
                 {sizeOptions.map((size, index) => {
