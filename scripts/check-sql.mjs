@@ -28,6 +28,18 @@ const SUPABASE_ROLES = `
     grant all on tables to anon, authenticated, service_role;
 `
 
+// Supabase owns this identity table and function. The fixture reads the
+// signed-user claim that the private request policies use.
+const SUPABASE_AUTH_STUB = `
+  create schema auth;
+  create table auth.users (id uuid primary key);
+  create function auth.uid() returns uuid language sql stable as $$
+    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  $$;
+  grant usage on schema auth to anon, authenticated, service_role;
+  grant execute on function auth.uid() to anon, authenticated, service_role;
+`
+
 /**
  * Minimal stand-in for the Supabase Storage schema, which the platform
  * provisions and no migration in this repository creates. Only the two tables
@@ -95,6 +107,7 @@ async function scalar(db, sql, params = []) {
 async function main() {
   const db = new PGlite()
   await db.exec(SUPABASE_ROLES)
+  await db.exec(SUPABASE_AUTH_STUB)
   await db.exec(SUPABASE_STORAGE_STUB)
 
   const files = migrationFiles()
