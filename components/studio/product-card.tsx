@@ -57,7 +57,7 @@ function ProductCardBase({ product, onClick, tone = "light" }: ProductCardProps)
             src={firstImage}
             alt=""
             fill
-            className="object-cover transition-transform duration-400 group-hover:scale-105"
+            className="object-contain"
             sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
           />
         )}
