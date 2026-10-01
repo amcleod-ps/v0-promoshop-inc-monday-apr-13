@@ -91,16 +91,16 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-center">
             {/* Text + Logo Side. The first hero statement is the page's h1
                 (the homepage previously had no heading at all). */}
-            <div className="py-10 lg:py-24 lg:pr-12">
+            <div className="py-12 sm:py-16 lg:py-20 lg:pr-12">
               {heroBody.map((paragraph, i) => {
                 const Tag = i === 0 ? "h1" : "p"
                 return (
                   <Tag
                     key={i}
-                    className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-[#e7e7e7] mb-6 last:mb-10 max-w-lg"
+                    className="text-[2.5rem] sm:text-6xl lg:text-[4rem] xl:text-7xl font-black text-[#e7e7e7] mb-8 last:mb-10 max-w-lg text-balance"
                     style={{
-                      lineHeight: "0.9em",
-                      letterSpacing: "0.126em",
+                      lineHeight: "1.04",
+                      letterSpacing: "-0.025em",
                     }}
                   >
                     {paragraph}
@@ -110,14 +110,14 @@ export default async function HomePage() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/brands"
-                  className="shimmer-cta inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-[#d93e36] transition-colors"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#ef473f] bg-[linear-gradient(#0002,#0002)] text-white px-7 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-[#d93e36] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#0d0d0d]"
                 >
                   {ctaPrimary}
                   <ArrowRight className="w-4 h-4 relative z-10" />
                 </Link>
                 <Link
                   href="/studio"
-                  className="inline-flex items-center gap-2 border-2 border-[#ccc] text-[#ccc] px-8 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-white hover:text-[#111111] transition-colors"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 border-2 border-[#ccc] text-[#ccc] px-7 py-3.5 font-bold uppercase tracking-wider text-sm rounded-full hover:bg-white hover:text-[#111111] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-[#0d0d0d]"
                 >
                   {ctaSecondary}
                 </Link>

@@ -50,7 +50,7 @@ function FilterOption({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex items-start gap-2 text-left text-xs font-semibold tracking-wide uppercase py-1.5 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] ${
+      className={`flex min-h-8 items-start gap-2 text-left text-[13px] font-semibold tracking-wide uppercase py-2 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed] ${
         active ? "text-black font-extrabold" : "text-[#6b6b6b] hover:text-black"
       }`}
     >
@@ -59,7 +59,7 @@ function FilterOption({
           text line when a long label wraps. */}
       <span
         aria-hidden="true"
-        className={`${FILTER_MARKER_SHAPE} mt-[5px] flex-shrink-0 ${
+        className={`${FILTER_MARKER_SHAPE} mt-[6px] flex-shrink-0 ${
           active ? "bg-[#ef473f]" : "bg-transparent"
         }`}
       />
@@ -171,12 +171,12 @@ export default function StudioClient({ products, categories, brands, tags, prici
 
       {/* Header Section */}
       <main id="main-content" className="contents">
-      <div className="px-6 lg:px-10 pt-10 pb-5 flex flex-wrap justify-between items-end gap-4">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 pt-10 sm:pt-12 pb-8 flex flex-wrap justify-between items-end gap-6">
         <div>
-          <p className="text-[10px] font-bold tracking-[0.3em] text-[#6b6b6b] uppercase mb-1.5">
+          <p className="text-[11px] font-bold tracking-[0.18em] text-[#6b6b6b] uppercase mb-2.5">
             {pageEyebrow}
           </p>
-          <h1 className="text-4xl lg:text-6xl font-extrabold uppercase tracking-tight text-black">
+          <h1 className="text-4xl sm:text-[2.75rem] xl:text-5xl font-extrabold uppercase tracking-tight leading-[1.08] text-black">
             {pageHeading}
           </h1>
         </div>
@@ -191,12 +191,12 @@ export default function StudioClient({ products, categories, brands, tags, prici
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-black text-white pl-10 pr-4 py-3 rounded text-xs font-bold tracking-wider uppercase w-full sm:w-[280px] outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed] placeholder:text-[#999]"
+              className="min-h-11 bg-black text-white pl-10 pr-4 py-3 rounded-md text-xs font-bold tracking-wider uppercase w-full sm:w-[260px] outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed] placeholder:text-[#aaa]"
             />
           </div>
           <Link
             href="/my-quote"
-            className="inline-flex items-center gap-2 bg-[#ef473f] text-white px-5 py-3 font-extrabold text-xs tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+            className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#ef473f] bg-[linear-gradient(#0002,#0002)] text-white px-5 py-3 font-extrabold text-xs tracking-wider uppercase rounded-md hover:bg-[#d93e36] transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed]"
           >
             Build a Quote
             <ArrowRight className="w-3.5 h-3.5" />
@@ -205,7 +205,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
       </div>
 
       {/* Body: Sidebar + Grid */}
-      <div className="flex flex-col lg:flex-row px-6 lg:px-10 pb-20 gap-6 lg:gap-10">
+      <div className="mx-auto max-w-7xl flex flex-col lg:flex-row px-6 lg:px-8 pb-20 gap-6 lg:gap-8">
         {/* Sidebar */}
         {/* top-44 clears the sticky site header (~165px tall on desktop) —
             with the old top-5 the filters pinned underneath it and were
@@ -214,7 +214,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
         <aside className="w-full lg:w-[180px] flex-shrink-0 lg:sticky lg:top-44 lg:self-start">
           <button type="button" aria-expanded={filtersOpen} aria-controls="catalog-filters"
             onClick={() => setFiltersOpen((open) => !open)}
-            className="lg:hidden w-full min-h-11 flex items-center justify-between rounded border border-[#aaa] px-4 py-3 text-sm font-bold text-[#373a36]">
+            className="lg:hidden w-full min-h-11 flex items-center justify-between rounded-md border border-[#aaa] bg-white px-4 py-3 text-sm font-bold text-[#373a36] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef473f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#ededed]">
             <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
             <span aria-hidden="true">{filtersOpen ? "−" : "+"}</span>
           </button>
@@ -234,7 +234,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
           )}
           {/* Category Filter */}
           <div className="mb-7">
-            <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
+            <h2 className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#555] mb-2.5 pb-2 border-b border-[#ccc]">
               Category
             </h2>
             <div className="flex flex-wrap lg:flex-col gap-1">
@@ -251,7 +251,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
 
           {/* Gender Filter */}
           <div className="mb-7">
-            <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
+            <h2 className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#555] mb-2.5 pb-2 border-b border-[#ccc]">
               Gender
             </h2>
             <div className="flex flex-wrap lg:flex-col gap-1">
@@ -269,7 +269,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
           {/* Brand Filter */}
           {brands.length > 1 && (
             <div className="mb-7">
-              <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
+              <h2 className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#555] mb-2.5 pb-2 border-b border-[#ccc]">
                 Brand
               </h2>
               <div className="flex flex-wrap lg:flex-col gap-1">
@@ -289,7 +289,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
               filter; the region soft-sort above is separate. */}
           {tags.length > 0 && (
             <div className="mb-7">
-              <h2 className="text-[9px] font-bold tracking-[0.2em] uppercase text-[#6b6b6b] mb-2.5 pb-1.5 border-b border-[#d0d0d0]">
+              <h2 className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#555] mb-2.5 pb-2 border-b border-[#ccc]">
                 Tags
               </h2>
               <div className="flex flex-wrap lg:flex-col gap-1">
@@ -309,8 +309,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
-          <p aria-live="polite" className="text-xs text-[#6b6b6b] tracking-wider uppercase font-semibold mb-4">
-            <span className="text-[#d93e36]">{filteredProducts.length}</span> product{filteredProducts.length !== 1 ? "s" : ""}
+          <p aria-live="polite" className="text-xs text-[#6b6b6b] tracking-wider uppercase font-semibold mb-5 pb-4 border-b border-[#ccc]">
+            <span className="text-[#111111] font-extrabold">{filteredProducts.length}</span> product{filteredProducts.length !== 1 ? "s" : ""}
           </p>
 
           {filteredProducts.length > 0 ? (
@@ -319,6 +319,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
                 <ProductCard
                   key={product.sku}
                   product={product}
+                  presentation="catalog"
                   onClick={() => openProductDetail(product)}
                 />
               ))}
@@ -343,7 +344,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
       </div>
 
       {/* Bottom Banner */}
-      <div className="mx-6 lg:mx-10 mb-10 bg-black rounded-lg p-8 lg:p-10 flex flex-wrap items-center justify-between gap-5">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 mb-10">
+      <div className="bg-black rounded-lg p-6 sm:p-8 lg:p-10 flex flex-wrap items-center justify-between gap-5">
         <div>
           <h2 className="font-extrabold text-xl lg:text-2xl uppercase text-white mb-1">
             {bannerHeading}
@@ -354,11 +356,12 @@ export default function StudioClient({ products, categories, brands, tags, prici
         </div>
         <Link
           href="/my-quote"
-          className="inline-flex items-center gap-2.5 bg-[#ef473f] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+          className="inline-flex min-h-12 items-center justify-center gap-2.5 bg-[#ef473f] bg-[linear-gradient(#0002,#0002)] text-white px-7 py-3.5 font-extrabold text-sm tracking-wider uppercase rounded-md hover:bg-[#d93e36] transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-black"
         >
           {bannerCta}
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Link>
+      </div>
       </div>
       </main>
 
