@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { X, ChevronLeft, ChevronRight, Maximize2, Check, Eye } from "lucide-react"
 import type { Product, ProductColour } from "@/lib/products"
 import { useQuote } from "@/lib/quote-context"
 import { useLocale } from "@/lib/locale-context"
-import { useAuth } from "@/lib/auth/AuthProvider"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
 import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-dialog-focus"
@@ -35,10 +34,7 @@ interface ProductDetailModalProps {
 // more sizes in a single action, then have the cross-product added to their
 // quote as individual line items. e.g. navy + (S,M,L,XL) → 4 line items.
 //
-// Guests without a saved profile still pass through the profile page on "Add to
-// quote" (client feedback Apr 16), but their selections are added to the
-// localStorage cart FIRST — the cart is not profile-gated, and discarding the
-// picks stranded every first-time visitor on an empty quote.
+// Keep the product open after an add. The visitor selects View quote to leave.
 export function ProductDetailModal({
   product,
   isOpen,
@@ -46,6 +42,8 @@ export function ProductDetailModal({
   pricingEnabled,
   tiers,
 }: ProductDetailModalProps) {
+  const [addedCount, setAddedCount] = useState(0)
+  const [addSequence, setAddSequence] = useState(0)
   const [selectedColours, setSelectedColours] = useState<ProductColour[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [galleryColour, setGalleryColour] = useState<ProductColour | null>(null)
@@ -66,9 +64,7 @@ export function ProductDetailModal({
   const pendingTouchPreview = useRef<{ colourName: string; wasActive: boolean } | null>(null)
   const { addItem } = useQuote()
   const { t } = useLocale()
-  const { isAuthenticated } = useAuth()
   const pricingNotices = usePricingNotices()
-  const router = useRouter()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -76,6 +72,8 @@ export function ProductDetailModal({
   // first colour so the image carousel has something to show immediately;
   // sizes start empty so the customer makes an explicit choice.
   useEffect(() => {
+    setAddedCount(0)
+    setAddSequence(0)
     setHoverColourName(null)
     setFocusColourName(null)
     setTouchColourName(null)
@@ -226,9 +224,7 @@ export function ProductDetailModal({
   const handleAddToQuote = () => {
     if (!canAdd) return
 
-    // Fan out the cartesian product as individual quote line items. This
-    // happens BEFORE any profile gate: the cart lives in localStorage and is
-    // not profile-gated, so the visitor's selections must never be discarded.
+    // Add each selected colour and size combination to the saved cart.
     for (const colour of selectedColours) {
       for (const size of selectedSizes) {
         addItem({
@@ -241,11 +237,8 @@ export function ProductDetailModal({
         })
       }
     }
-    onClose()
-
-    // Visitors without a saved profile pass through that profile form on
-    // their way to the quote; their items are already saved in the cart.
-    router.push(isAuthenticated ? "/my-quote" : "/sign-up?redirect=/my-quote")
+    setAddedCount(totalCombinations)
+    setAddSequence((current) => current + 1)
   }
 
   return (
@@ -558,6 +551,14 @@ export function ProductDetailModal({
                 ? `Add ${totalCombinations} item${totalCombinations === 1 ? "" : "s"} to Quote`
                 : "Add to Quote"}
             </button>
+            <div role="status" aria-live="polite" aria-atomic="true" className="text-sm text-[#111111]">
+              {addedCount > 0 ? <p key={addSequence}>{addedCount === 1 ? "Item added to quote." : `${addedCount} items added to quote.`}</p> : null}
+            </div>
+            {addedCount > 0 ? (
+              <Link href="/my-quote" className="my-3 flex min-h-11 items-center justify-center rounded border border-black px-4 py-2 font-bold text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                View quote
+              </Link>
+            ) : null}
             <p className={`text-xs text-[#666] mb-5 ${canAdd ? "invisible" : ""}`}>
               Pick at least one {t("color")} and one size. Each combination is added as its own line item.
             </p>

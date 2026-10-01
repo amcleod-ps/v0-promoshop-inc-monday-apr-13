@@ -6,6 +6,7 @@ import { QuoteProvider } from '@/lib/quote-context'
 import { LocaleProvider } from '@/lib/locale-context'
 import { getDomainLocale } from '@/lib/locale-routing'
 import { AuthProvider } from '@/lib/auth/AuthProvider'
+import { CustomerProfileSync } from '@/components/customer-profile-sync'
 import { SiteImagesProvider } from '@/components/site-images-provider'
 import { SiteContentProvider } from '@/components/site-content-provider'
 import { TeamMembersProvider } from '@/components/team-provider'
@@ -91,6 +92,7 @@ export default async function RootLayout({
         <AuthProvider>
           <LocaleProvider initialLocale={initialLocale}>
             <QuoteProvider>
+              <CustomerProfileSync />
               <SiteImagesProvider value={siteImages}>
                 <SiteContentProvider value={siteContent}>
                   <TeamMembersProvider value={teamMembers}>

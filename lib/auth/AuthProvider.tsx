@@ -1,134 +1,75 @@
 "use client"
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export interface AuthUser {
   id: string
   email: string
+  username: string
   firstName: string
   lastName: string
   company: string
+  phone: string
+  jobTitle: string
 }
-
 export interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
+  isLoaded: boolean
   signIn: () => Promise<void>
+  refreshUser: () => Promise<void>
   signOut: () => Promise<void>
 }
-
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-const USER_KEY = "promoshop_user"
-
-interface StoredUser {
-  email?: string
-  firstName?: string
-  lastName?: string
-  company?: string
-}
-
-function readStoredUser(): AuthUser | null {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = window.localStorage.getItem(USER_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as StoredUser
-    const email = typeof parsed.email === "string" ? parsed.email : ""
-    if (!email) return null
-    return {
-      id: email,
-      email,
-      firstName: typeof parsed.firstName === "string" ? parsed.firstName : "",
-      lastName: typeof parsed.lastName === "string" ? parsed.lastName : "",
-      company: typeof parsed.company === "string" ? parsed.company : "",
-    }
-  } catch {
-    return null
-  }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   const [user, setUser] = useState<AuthUser | null>(null)
-
-  useEffect(() => {
-    setUser(readStoredUser())
-    const sync = () => setUser(readStoredUser())
-    window.addEventListener("storage", sync)
-    return () => window.removeEventListener("storage", sync)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const client = useMemo(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null
+    return createClient()
   }, [])
-
-  const signIn = useCallback(async () => {
-    // The sign-in / sign-up pages render their own forms and call
-    // setFallbackUser() to persist the record. This stub exists so consumers
-    // that read useAuth().signIn don't crash.
-  }, [])
-
-  const signOut = useCallback(async () => {
-    if (typeof window === "undefined") return
+  const refreshUser = useCallback(async () => {
+    if (!client) { setUser(null); setIsLoaded(true); return }
     try {
-      window.localStorage.removeItem(USER_KEY)
-    } catch {
-      // Storage unavailable — the in-memory state still signs the user out.
+      const { data: { user: verified }, error } = await client.auth.getUser()
+      if (error || !verified) { setUser(null); return }
+      const { data: profile } = await client.from("customer_profiles").select("username,first_name,last_name,company,phone,job_title").eq("id", verified.id).single()
+      const metadata = verified.user_metadata
+      const fields: Record<string, unknown> | null = profile
+      const value = (field: string, fallback: string): string => {
+        const stored = fields?.[field]
+        const saved = metadata[fallback]
+        return typeof stored === "string" ? stored : typeof saved === "string" ? saved : ""
+      }
+      setUser({ id: verified.id, email: verified.email ?? "", username: value("username", "username"), firstName: value("first_name", "firstName"), lastName: value("last_name", "lastName"), company: value("company", "company"), phone: value("phone", "phone"), jobTitle: value("job_title", "jobTitle") })
+    } catch { setUser(null) } finally { setIsLoaded(true) }
+  }, [client])
+  useEffect(() => {
+    try { window.localStorage.removeItem("promoshop_user") } catch {}
+    void refreshUser()
+    if (!client) return
+    const { data: { subscription } } = client.auth.onAuthStateChange(() => {
+      // Read the verified identity after the Auth callback releases its lock.
+      setTimeout(() => { void refreshUser() }, 0)
+    })
+    return () => subscription.unsubscribe()
+  }, [client, refreshUser])
+  const signOut = useCallback(async () => {
+    if (client) {
+      const { error } = await client.auth.signOut()
+      if (error) throw new Error("The account could not sign out. Try again.")
     }
     setUser(null)
-  }, [])
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      isAuthenticated: user !== null,
-      signIn,
-      signOut,
-    }),
-    [user, signIn, signOut],
-  )
-
+    try { window.localStorage.removeItem("promoshop_quote_contact") } catch {}
+    window.location.assign("/")
+  }, [client])
+  const value = useMemo(() => ({ user, isAuthenticated: user !== null, isLoaded, signIn: refreshUser, refreshUser, signOut }), [user, isLoaded, refreshUser, signOut])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) {
-    return {
-      user: null,
-      isAuthenticated: false,
-      signIn: async () => {},
-      signOut: async () => {},
-    }
-  }
-  return ctx
-}
-
-export function setFallbackUser(user: {
-  email: string
-  firstName: string
-  lastName?: string
-  company?: string
-}): void {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.setItem(
-      USER_KEY,
-      JSON.stringify({
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName ?? "",
-        company: user.company ?? "",
-      }),
-    )
-  } catch (e) {
-    // Storage full/disabled: the session still proceeds, it just won't
-    // survive a reload. Never let this throw inside a submit handler.
-    console.error("Could not persist user to localStorage:", e)
-  }
-  window.dispatchEvent(new StorageEvent("storage", { key: USER_KEY }))
+  const value = useContext(AuthContext)
+  if (!value) throw new Error("AuthProvider is required")
+  return value
 }

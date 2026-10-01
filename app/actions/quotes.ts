@@ -188,7 +188,10 @@ export async function submitQuoteRequest(
     }
 
     const snapshot = pricing?.snapshot ?? null
+    const { data: { user } } = await supabase.auth.getUser()
     const row = {
+      customer_id: user?.id ?? null,
+      request_items: validated.items ?? [],
       first_name: validated.first_name,
       last_name: validated.last_name,
       email: validated.email,

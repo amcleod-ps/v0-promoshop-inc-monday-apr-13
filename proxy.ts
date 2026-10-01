@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { visitorGate } from "@/lib/visitor-access"
 import { adminGate } from "@/lib/admin-gate"
 import { isSiteIconRequest } from "@/lib/site-icons"
+import { createServerClient } from "@supabase/ssr"
 
 export default async function proxy(request: NextRequest) {
   if (isSiteIconRequest(request.nextUrl.pathname, request.method)) return NextResponse.next()
@@ -44,7 +45,22 @@ export default async function proxy(request: NextRequest) {
     return response
   }
 
-  const response = NextResponse.next()
+  let response = NextResponse.next({ request })
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (url && key) {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (values) => {
+          values.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          values.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    })
+    try { await supabase.auth.getUser() } catch {}
+  }
   response.headers.set("Cache-Control", "private, no-store")
   response.headers.set("X-Robots-Tag", "noindex, nofollow")
   return response
