@@ -4,8 +4,8 @@ import type { ReactNode } from "react"
 // The page itself is a client component and cannot export metadata;
 // this segment layout carries it instead.
 export const metadata: Metadata = {
-  title: "Continue with Saved Profile",
-  description: "Use a browser-saved PromoShop quote profile to auto-fill your information.",
+  title: "Sign in",
+  description: "Sign in to view your profile and submitted quote requests.",
   // Thin utility page — keep it out of search results.
   robots: { index: false, follow: true },
 }

@@ -161,7 +161,7 @@ match `hover:`/opacity variants and force elements into hover state at load.
 - `lib/supabase/server.ts` — Server Components, anon key, cookie-aware (`@supabase/ssr`). Default for reads.
 - `lib/supabase/client.ts` — browser, anon key.
 - `lib/supabase/admin.ts` — **service-role key, bypasses RLS, `server-only`**.
-  Use *only* in `/admin-dashboard` server actions. Never import it from a
+  Use in `/admin-dashboard` server actions and the validated customer account actions in `app/actions/customer-auth.ts`. Never import it from a
   `"use client"` file or anything reaching the browser bundle.
 
 ## `/admin-dashboard` — the live CMS
@@ -193,22 +193,13 @@ Server Actions accept up to 10 MB bodies (`serverActions.bodySizeLimit` in
 `next.config.mjs`) to match the uploader; the default 1 MB would reject larger
 images with an opaque error.
 
-## Client-only state (not real security)
+## Customer accounts and quote requests
 
-Customer "auth" (`lib/auth/AuthProvider.tsx`, `/sign-in`, `/sign-up`) is a
-browser-local quote profile only — no password is collected, no server account
-is created, and it must never be described as access control. The quote cart
-(`lib/quote-context.tsx`) is also **localStorage-only**. Locale (`lib/locale-context.tsx`, CAN/USA
-spelling via `t(key)`) is likewise localStorage-backed and hydrates after first
-render to keep SSR markup stable. The only data that actually persists server-
-side is quote-request submissions (`app/actions/quotes.ts` → `quote_requests`,
-Zod-validated with per-field length caps, a hidden honeypot field both public
-forms send, and a per-IP in-memory rate limit — migration 0007's CHECK
-constraints and migration 0011's forced ids + email throttle backstop direct
-PostgREST inserts). When the Resend env vars are set, each successful submission
-also fires a best-effort staff notification email
-(`lib/email/quote-notification.ts`, called via `after()` so it never blocks or
-fails the submission; with the vars unset it silently no-ops).
+Customer accounts use Supabase Auth and cookie sessions. Account creation confirms the email in the server action. Customers do not receive an email confirmation step or a two-factor step. The server key stays in server-only account actions. Usernames are unique. Customers can sign in with their email address or username and password.
+
+Customer profiles persist in `customer_profiles`. Row-level security permits each customer to read and change only their own profile. New request ownership comes from the server session ID. Never use a typed email address to assign ownership or connect old requests. `customer_quote_requests` exposes safe request fields with row-level security. Staff notes stay private. Request items preserve the submitted product, colour, size and quantity.
+
+The quote cart remains in local browser storage. Profile fields load from the account for each session. Existing guest requests remain available. Quote notifications still use the existing server action.
 
 ## Conventions
 
@@ -245,7 +236,7 @@ fails the submission; with the vars unset it silently no-ops).
 Copy `.env.example` → `.env.local`. `NEXT_PUBLIC_SUPABASE_URL` and
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required for the public site (the
 `NEXT_PUBLIC_` prefix is mandatory). `SUPABASE_SERVICE_ROLE_KEY` is server-only
-and required only for `/admin-dashboard` writes — never give it the
+and required for `/admin-dashboard` writes and customer account creation — never give it the
 `NEXT_PUBLIC_` prefix. Optional, server-only: `ADMIN_DASHBOARD_PASSWORD`
 enables the admin-dashboard Basic-auth gate (unset = open); `RESEND_API_KEY`,
 `QUOTE_NOTIFICATION_EMAIL`, `QUOTE_NOTIFICATION_FROM` enable quote-request

@@ -59,9 +59,14 @@ export function Header() {
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [accountError, setAccountError] = useState("")
   const pathname = usePathname()
   const { config } = useLocale()
   const { isAuthenticated, user, signOut } = useAuth()
+  const handleSignOut = async () => {
+    setAccountError("")
+    try { await signOut() } catch { setAccountError("The account could not sign out. Try again.") }
+  }
   const quoteCta = useSiteText("header.cta", textFallback("header.cta"))
   // Admin-chosen logo size (Images tab → Site logo → Display size). w-auto
   // keeps the 3:2 ratio; the nav row grows to the taller logo, so scaling up
@@ -116,13 +121,14 @@ export function Header() {
           <div className="hidden sm:flex items-center gap-4">
             {isAuthenticated ? (
               <>
-                <span className="flex items-center gap-1.5 text-xs font-visby">
+                <Link href="/account" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af]">
                   <User className="w-3 h-3" aria-hidden="true" />
                   {user?.firstName || user?.email}
-                </span>
+                </Link>
+                <Link href="/my-requests" className="text-xs font-visby underline">My quote requests</Link>
                 <button
                   type="button"
-                  onClick={() => signOut()}
+                  onClick={() => { void handleSignOut() }}
                   className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors"
                 >
                   <LogOut className="w-3 h-3" aria-hidden="true" />
@@ -130,9 +136,9 @@ export function Header() {
                 </button>
               </>
             ) : (
-              <Link href="/sign-up" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors">
+              <Link href="/sign-in" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors">
                 <User className="w-3 h-3" aria-hidden="true" />
-                Save Profile
+                Sign in
               </Link>
             )}
             <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors">
@@ -142,6 +148,7 @@ export function Header() {
           </div>
         </div>
       </div>
+      {accountError && <p role="alert" className="px-6 py-3 bg-red-50 text-[#b8322c]">{accountError}</p>}
 
       {/* Main nav */}
       <nav className="mx-auto max-w-7xl flex items-center justify-between px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
@@ -252,23 +259,27 @@ export function Header() {
                 {quoteCta}
               </Link>
               {isAuthenticated ? (
+                <>
+                <Link href="/account" className="block py-2 text-sm font-bold text-center">My account</Link>
+                <Link href="/my-requests" className="block py-2 text-sm font-bold text-center">My quote requests</Link>
                 <button
                   type="button"
                   onClick={() => {
-                    signOut()
+                    void handleSignOut()
                     setMobileMenuOpen(false)
                   }}
                   className="block w-full py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"
                 >
                   Sign out{user?.firstName ? ` (${user.firstName})` : ""}
                 </button>
+                </>
               ) : (
                 <Link
-                  href="/sign-up"
+                  href="/sign-in"
                   className="block py-2 text-sm font-bold uppercase tracking-wider text-[#373a36] text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Save Profile
+                  Sign in
                 </Link>
               )}
             </div>
