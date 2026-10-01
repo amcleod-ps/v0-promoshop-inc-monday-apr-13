@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { DEFAULT_LOCALE, LOCALES, type Locale, type LocaleConfig } from "@/lib/cms/locale"
+import { getDomainLocale, getLocaleSwitchUrl } from "@/lib/locale-routing"
 
 interface LocaleContextType {
   locale: Locale
@@ -17,20 +18,30 @@ const STORAGE_KEY = "promoshop-locale"
 export function LocaleProvider({ children, initialLocale = DEFAULT_LOCALE }: { children: ReactNode; initialLocale?: Locale }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale)
 
-  // Each new visit follows its country domain. An explicit choice lasts for
-  // this tab session; legacy localStorage cannot override the .ca default.
+  // Production domains control the country. Preview and local sites keep
+  // the saved choice for this tab session.
   useEffect(() => {
-    const host = window.location.hostname.toLowerCase()
-    const initial: Locale = host === "promoshopstudio.com" || host === "www.promoshopstudio.com" ? "USA" : "CAN"
+    const domainLocale = getDomainLocale(window.location.hostname)
+    if (domainLocale) {
+      setLocaleState(domainLocale)
+      return
+    }
+
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY)
-      setLocaleState(stored === "CAN" || stored === "USA" ? stored : initial)
+      setLocaleState(stored === "CAN" || stored === "USA" ? stored : initialLocale)
     } catch {
-      setLocaleState(initial)
+      setLocaleState(initialLocale)
     }
-  }, [])
+  }, [initialLocale])
 
   const setLocale = useCallback((next: Locale) => {
+    const destination = getLocaleSwitchUrl(window.location.href, next)
+    if (destination) {
+      window.location.assign(destination)
+      return
+    }
+
     setLocaleState(next)
     try {
       sessionStorage.setItem(STORAGE_KEY, next)

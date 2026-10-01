@@ -4,6 +4,7 @@ import { Montserrat, Bebas_Neue, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { QuoteProvider } from '@/lib/quote-context'
 import { LocaleProvider } from '@/lib/locale-context'
+import { getDomainLocale } from '@/lib/locale-routing'
 import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { SiteImagesProvider } from '@/components/site-images-provider'
 import { SiteContentProvider } from '@/components/site-content-provider'
@@ -69,8 +70,8 @@ export default async function RootLayout({
   ])
   const overrideCss = themeOverrideCss(siteTheme)
 
-  const host = (await headers()).get("host")?.split(":")[0].toLowerCase()
-  const initialLocale = host === "promoshopstudio.com" || host === "www.promoshopstudio.com" ? "USA" : "CAN"
+  const host = (await headers()).get("host")?.split(":")[0] ?? ""
+  const initialLocale = getDomainLocale(host) ?? "CAN"
 
   return (
     <html lang="en" className={`bg-background ${montserrat.variable} ${bebasNeue.variable} ${dmSans.variable}`}>
