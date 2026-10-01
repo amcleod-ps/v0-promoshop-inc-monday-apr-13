@@ -161,7 +161,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex lg:items-center lg:gap-1">
+        <div className="hidden lg:flex lg:items-center lg:gap-0 xl:gap-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -169,7 +169,7 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`text-sm font-bold uppercase tracking-wider px-4 py-2 rounded-full transition-colors ${
+                className={`text-sm font-bold uppercase tracking-wider px-1 xl:px-4 py-2 rounded-full transition-colors ${
                   isActive
                     ? "text-[#d93e36] bg-[#ef473f]/5 underline underline-offset-8"
                     : "text-[#373a36] hover:text-[#ef473f]"
