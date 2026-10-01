@@ -65,7 +65,7 @@ export function Header() {
   const { isAuthenticated, user, signOut } = useAuth()
   const handleSignOut = async () => {
     setAccountError("")
-    try { await signOut() } catch { setAccountError("The account could not sign out. Try again.") }
+    try { await signOut() } catch { setAccountError("The account service cannot close the session. Try again.") }
   }
   const quoteCta = useSiteText("header.cta", textFallback("header.cta"))
   // Admin-chosen logo size (Images tab → Site logo → Display size). w-auto

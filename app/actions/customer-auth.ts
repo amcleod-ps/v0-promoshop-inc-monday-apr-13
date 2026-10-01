@@ -24,18 +24,18 @@ export async function signUpCustomer(input: CustomerSignUpInput): Promise<Result
     const admin = createAdminClient()
     const { email, password, ...profile } = parsed.data
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: profile })
-    if (error || !data.user) return { ok: false, error: "The account could not be created. Use another email address or username, or sign in." }
+    if (error || !data.user) return { ok: false, error: "The account service cannot create the account. Use a different email address or username, or sign in." }
     const { error: profileError } = await admin.from("customer_profiles").insert(profileRow(profile, data.user.id))
     if (profileError) {
       await admin.auth.admin.deleteUser(data.user.id)
-      return { ok: false, error: "The account could not be created. Use another email address or username, or sign in." }
+      return { ok: false, error: "The account service cannot create the account. Use a different email address or username, or sign in." }
     }
     const client = await createClient()
     const { error: loginError } = await client.auth.signInWithPassword({ email, password })
     if (loginError) return { ok: false, error: "The account exists. Sign in with the email address and password." }
     revalidatePath("/", "layout")
     return { ok: true }
-  } catch { return { ok: false, error: "The account service is unavailable. Try again." } }
+  } catch { return { ok: false, error: "The account service is not available. Try again." } }
 }
 export async function signInCustomer(input: CustomerSignInInput): Promise<Result> {
   if (!await allowAttempt("signin", 10)) return { ok: false, error: "Too many sign-in requests. Wait 15 minutes and try again." }
@@ -55,7 +55,7 @@ export async function signInCustomer(input: CustomerSignInInput): Promise<Result
     if (error) return { ok: false, error: "The email address, username or password is incorrect." }
     revalidatePath("/", "layout")
     return { ok: true }
-  } catch { return { ok: false, error: "The account service is unavailable. Try again." } }
+  } catch { return { ok: false, error: "The account service is not available. Try again." } }
 }
 export async function saveCustomerProfile(input: CustomerProfileInput): Promise<Result> {
   const parsed = customerProfileSchema.safeParse(input)
@@ -65,10 +65,10 @@ export async function saveCustomerProfile(input: CustomerProfileInput): Promise<
     const { data: { user } } = await client.auth.getUser()
     if (!user) return { ok: false, error: "Sign in to save the profile." }
     const { error } = await client.from("customer_profiles").upsert(profileRow(parsed.data, user.id))
-    if (error) return { ok: false, error: "The profile could not be saved. Try another username." }
+    if (error) return { ok: false, error: "The account service cannot save the profile. Try a different username." }
     const { error: metadataError } = await client.auth.updateUser({ data: parsed.data })
-    if (metadataError) return { ok: false, error: "The profile is saved. The account service could not complete the update. Try again." }
+    if (metadataError) return { ok: false, error: "The profile is saved. The account service cannot complete the update. Try again." }
     revalidatePath("/account")
     return { ok: true }
-  } catch { return { ok: false, error: "The account service is unavailable. Try again." } }
+  } catch { return { ok: false, error: "The account service is not available. Try again." } }
 }

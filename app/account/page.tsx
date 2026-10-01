@@ -11,7 +11,7 @@ export default async function AccountPage() {
   const { data: profile, error } = await client.from("customer_profiles").select("username,first_name,last_name,company,phone,job_title").eq("id", user.id).maybeSingle()
   return <><Header /><main id="main-content" className="max-w-3xl mx-auto px-6 py-10">
     <h1 className="text-3xl font-bold mb-4">My account</h1>
-    <p className="mb-6"><Link href="/my-requests" className="text-[#b8322c] underline">View submitted quote requests</Link></p>
-    {error ? <p role="alert">The profile could not load. Try again.</p> : <CustomerProfileForm email={user.email ?? ""} initial={{ username: profile?.username ?? "", firstName: profile?.first_name ?? "", lastName: profile?.last_name ?? "", company: profile?.company ?? "", phone: profile?.phone ?? "", jobTitle: profile?.job_title ?? "" }} />}
+    <p className="mb-6"><Link href="/my-requests" className="text-[#b8322c] underline">See sent quote requests</Link></p>
+    {error ? <p role="alert">The site cannot load the profile. Try again.</p> : <CustomerProfileForm email={user.email ?? ""} initial={{ username: profile?.username ?? "", firstName: profile?.first_name ?? "", lastName: profile?.last_name ?? "", company: profile?.company ?? "", phone: profile?.phone ?? "", jobTitle: profile?.job_title ?? "" }} />}
   </main></>
 }
