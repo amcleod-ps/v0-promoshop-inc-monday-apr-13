@@ -10,7 +10,7 @@ export default function NotFound() {
       <Header />
       <main id="main-content" className="flex-1 flex items-center justify-center px-6 py-24">
         <div className="max-w-md text-center">
-          <p className="text-xs font-bold tracking-wider text-[#d93e36] uppercase mb-3">404 — Page Not Found</p>
+          <p className="text-xs font-bold tracking-wider text-[#b8322c] uppercase mb-3">404 — Page Not Found</p>
           <h1 className="font-montserrat font-bold text-3xl lg:text-4xl mb-4">
             We couldn&apos;t find that page
           </h1>
@@ -20,7 +20,7 @@ export default function NotFound() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
+              className="inline-flex items-center justify-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
             >
               Back to Home
             </Link>

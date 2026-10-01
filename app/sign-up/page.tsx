@@ -59,7 +59,7 @@ function SignUpPageInner() {
     setIsLoading(false)
   }
 
-  const inputClass = "w-full bg-white border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
+  const inputClass = "w-full bg-white border border-[#767676] text-[#1a1a1a] px-4 py-3 rounded text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#b8322c] transition-colors"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
   return (
@@ -88,7 +88,7 @@ function SignUpPageInner() {
             ].map((feature, index) => (
               <div key={index} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#ef473f]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Check className="w-3 h-3 text-[#ef473f]" aria-hidden="true" />
+                  <Check className="w-3 h-3 text-[#b8322c]" aria-hidden="true" />
                 </div>
                 <p className="text-[#666] text-sm font-visby">{feature}</p>
               </div>
@@ -117,7 +117,7 @@ function SignUpPageInner() {
           </p>
 
           {error && (
-            <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#d93e36] px-4 py-3 rounded mb-6 text-sm">{error}</div>
+            <div role="alert" className="bg-[#ef473f]/10 border border-[#ef473f]/30 text-[#b8322c] px-4 py-3 rounded mb-6 text-sm">{error}</div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -129,13 +129,13 @@ function SignUpPageInner() {
             <div><label htmlFor="signup-company" className={labelClass}>Company *</label><input id="signup-company" type="text" name="company" autoComplete="organization" required value={formData.company} onChange={handleChange} className={inputClass} placeholder="Acme Corp" /></div>
             <div><label htmlFor="signup-phone" className={labelClass}>Phone</label><input id="signup-phone" type="tel" name="phone" autoComplete="tel" value={formData.phone} onChange={handleChange} className={inputClass} placeholder="(555) 123-4567" /></div>
 
-            <button type="submit" disabled={isLoading} className="w-full bg-[#ef473f] text-white py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 mt-6">
+            <button type="submit" disabled={isLoading} className="w-full bg-[#b8322c] text-white py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 mt-6">
               {isLoading ? (<><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />Saving Profile...</>) : (<>Save Profile <ArrowRight className="w-4 h-4" aria-hidden="true" /></>)}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-[#666] font-visby">Already saved a profile? <Link href="/sign-in" className="text-[#d93e36] underline hover:no-underline font-semibold">Continue</Link></p>
+            <p className="text-[#666] font-visby">Already saved a profile? <Link href="/sign-in" className="text-[#b8322c] underline hover:no-underline font-semibold">Continue</Link></p>
           </div>
           <div className="mt-6 text-center">
             <Link href="/" className="text-sm text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors font-visby">Back to Home</Link>

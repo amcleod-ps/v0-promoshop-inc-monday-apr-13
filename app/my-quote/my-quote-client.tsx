@@ -258,7 +258,7 @@ export default function MyQuoteClient({
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/studio"
-                className="inline-flex items-center justify-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
+                className="inline-flex items-center justify-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
               >
                 Continue Shopping
               </Link>
@@ -279,8 +279,8 @@ export default function MyQuoteClient({
 
   // focus ring on top of the border-colour swap: a 1px border change alone
   // is an invisible focus indicator on these light inputs.
-  const inputClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25 transition-colors"
-  const selectClass = "w-full bg-[#f9f9f9] border border-[#e5e5e5] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#ef473f]/25"
+  const inputClass = "w-full bg-[#f9f9f9] border border-[#767676] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#b8322c] transition-colors"
+  const selectClass = "w-full bg-[#f9f9f9] border border-[#767676] text-[#1a1a1a] px-4 py-3 rounded text-base lg:text-sm font-visby focus:border-[#ef473f] focus:outline-none focus:ring-2 focus:ring-[#b8322c]"
   const labelClass = "block text-xs font-bold tracking-wider text-[#6b6b6b] uppercase mb-2"
 
   return (
@@ -291,7 +291,7 @@ export default function MyQuoteClient({
         <div className="max-w-5xl mx-auto">
           {/* Page Header */}
           <div className="mb-10">
-            <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-2">
+            <p className="text-xs font-bold tracking-wider text-[#b8322c] uppercase mb-2">
               {pageEyebrow}
             </p>
             <h1 className="font-montserrat font-bold text-3xl lg:text-4xl text-[#1a1a1a]">
@@ -324,7 +324,7 @@ export default function MyQuoteClient({
               >
                 {tab.label}
                 {"count" in tab && typeof tab.count === "number" && tab.count > 0 && (
-                  <span className="ml-2 bg-[#ef473f] text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-2 bg-[#b8322c] text-white text-xs px-2 py-0.5 rounded-full">
                     {tab.count}
                   </span>
                 )}
@@ -346,7 +346,7 @@ export default function MyQuoteClient({
                     Add products from our Studio to start building your quote.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Link href="/studio" className="inline-flex items-center justify-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">
+                    <Link href="/studio" className="inline-flex items-center justify-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">
                       Browse Products <ArrowRight className="w-4 h-4" />
                     </Link>
                     <button onClick={() => setShowAddProduct(true)} className="inline-flex items-center justify-center gap-2 border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors">
@@ -398,7 +398,7 @@ export default function MyQuoteClient({
                           <button onClick={() => updateItem(item.id, { quantity: clampQuantity(item.quantity + 1) })} aria-label={`Increase quantity of ${item.productName}`} className="w-9 h-9 flex items-center justify-center border border-[#e5e5e5] rounded hover:border-[#ef473f] transition-colors">
                             <Plus className="w-3 h-3" aria-hidden="true" />
                           </button>
-                          <button onClick={() => removeItem(item.id)} aria-label={`Remove ${item.productName} from quote`} className="p-2 text-[#8a8a8a] hover:text-[#ef473f] transition-colors">
+                          <button onClick={() => removeItem(item.id)} aria-label={`Remove ${item.productName} from quote`} className="p-2 text-[#8a8a8a] hover:text-[#b8322c] transition-colors">
                             <Trash2 className="w-5 h-5" aria-hidden="true" />
                           </button>
                         </div>
@@ -473,7 +473,7 @@ export default function MyQuoteClient({
                         )}
                       </div>
                       <div className="flex gap-3">
-                        <button onClick={handleAddProduct} disabled={!selectedProduct} className="bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">Add to Quote</button>
+                        <button onClick={handleAddProduct} disabled={!selectedProduct} className="bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">Add to Quote</button>
                         <button onClick={() => setShowAddProduct(false)} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors">Cancel</button>
                       </div>
                     </div>
@@ -489,7 +489,7 @@ export default function MyQuoteClient({
                       Browse More Products
                     </Link>
                     {items.length > 0 && (
-                      <button onClick={() => setActiveTab("contact")} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">
+                      <button onClick={() => setActiveTab("contact")} className="ml-auto inline-flex items-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">
                         Continue <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
@@ -504,7 +504,7 @@ export default function MyQuoteClient({
             <div role="tabpanel" id="panel-contact" aria-labelledby="tab-contact" className="bg-white border border-[#e5e5e5] rounded-lg p-6 lg:p-8 shadow-sm">
               <h2 className="font-montserrat font-bold text-xl text-[#1a1a1a] mb-4">Your Contact Information</h2>
               <p className="text-[#666] text-sm mb-6 font-visby">
-                Saved profiles can auto-fill this information. <Link href="/sign-up" className="text-[#d93e36] underline hover:no-underline">Save a profile</Link> to save time.
+                Saved profiles can auto-fill this information. <Link href="/sign-up" className="text-[#b8322c] underline hover:no-underline">Save a profile</Link> to save time.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div><label htmlFor="quote-first-name" className={labelClass}>First Name *</label><input id="quote-first-name" type="text" autoComplete="given-name" maxLength={100} required value={contactInfo.firstName} onChange={(e) => setContactInfo({ firstName: e.target.value })} className={inputClass} placeholder="John" /></div>
@@ -516,7 +516,7 @@ export default function MyQuoteClient({
               </div>
               <div className="flex flex-wrap gap-3">
                 <button onClick={() => setActiveTab("items")} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors">Back</button>
-                <button onClick={() => setActiveTab("project")} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">Continue <ArrowRight className="w-4 h-4" /></button>
+                <button onClick={() => setActiveTab("project")} className="ml-auto inline-flex items-center gap-2 bg-[#b8322c] text-white px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity">Continue <ArrowRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
@@ -564,7 +564,7 @@ export default function MyQuoteClient({
               </div>
 
               {submitError && (
-                <div className="mb-4 p-3 bg-[#ef473f]/10 border border-[#ef473f]/30 rounded text-[#d93e36] text-sm" role="alert">
+                <div className="mb-4 p-3 bg-[#ef473f]/10 border border-[#ef473f]/30 rounded text-[#b8322c] text-sm" role="alert">
                   {submitError}
                 </div>
               )}
@@ -575,7 +575,7 @@ export default function MyQuoteClient({
               )}
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={() => setActiveTab("contact")} disabled={submitting} className="border border-[#e5e5e5] text-[#1a1a1a] px-6 py-3 font-bold uppercase tracking-wider text-sm rounded hover:border-[#ef473f] transition-colors disabled:opacity-50">Back</button>
-                <button type="submit" disabled={submitting || missingRequirements.length > 0} className="ml-auto inline-flex items-center gap-2 bg-[#ef473f] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" disabled={submitting || missingRequirements.length > 0} className="ml-auto inline-flex items-center gap-2 bg-[#b8322c] text-white px-8 py-3 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                   {submitting ? "Submitting..." : <>Submit Quote Request <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
                 </button>
               </div>

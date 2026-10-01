@@ -33,8 +33,8 @@ function LocaleToggle({ className = "" }: { className?: string }) {
         aria-pressed={locale === "CAN"}
         className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full transition-colors ${
           locale === "CAN"
-            ? "bg-[#ef473f] text-white"
-            : "text-[#373a36] hover:text-[#ef473f]"
+            ? "bg-[#b8322c] text-white"
+            : "text-[#373a36] hover:text-[#b8322c]"
         }`}
       >
         CAN
@@ -45,8 +45,8 @@ function LocaleToggle({ className = "" }: { className?: string }) {
         aria-pressed={locale === "USA"}
         className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full transition-colors ${
           locale === "USA"
-            ? "bg-[#ef473f] text-white"
-            : "text-[#373a36] hover:text-[#ef473f]"
+            ? "bg-[#b8322c] text-white"
+            : "text-[#373a36] hover:text-[#b8322c]"
         }`}
       >
         USA
@@ -123,19 +123,19 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => signOut()}
-                  className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors"
                 >
                   <LogOut className="w-3 h-3" aria-hidden="true" />
                   Sign out
                 </button>
               </>
             ) : (
-              <Link href="/sign-up" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
+              <Link href="/sign-up" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors">
                 <User className="w-3 h-3" aria-hidden="true" />
                 Save Profile
               </Link>
             )}
-            <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ef473f] transition-colors">
+            <Link href="/my-quote" className="flex items-center gap-1.5 text-xs font-visby hover:text-[#ffb4af] transition-colors">
               <ShoppingBag className="w-3 h-3" aria-hidden="true" />
               My Quote
             </Link>
@@ -171,8 +171,8 @@ export function Header() {
                 aria-current={isActive ? "page" : undefined}
                 className={`text-sm font-bold uppercase tracking-wider px-1 xl:px-4 py-2 rounded-full transition-colors ${
                   isActive
-                    ? "text-[#d93e36] bg-[#ef473f]/5 underline underline-offset-8"
-                    : "text-[#373a36] hover:text-[#ef473f]"
+                    ? "text-[#b8322c] bg-[#ef473f]/5 underline underline-offset-8"
+                    : "text-[#373a36] hover:text-[#b8322c]"
                 }`}
               >
                 {item.name}
@@ -186,7 +186,7 @@ export function Header() {
           <LocaleToggle />
           <Link
             href="/my-quote"
-            className="shimmer-cta relative flex items-center gap-2 bg-[#ef473f] text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#d93e36] transition-colors"
+            className="shimmer-cta relative flex items-center gap-2 bg-[#b8322c] text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#a62d27] transition-colors"
           >
             <ShoppingBag className="w-4 h-4 relative z-10" />
             <span className="relative z-10">{quoteCta}</span>
@@ -223,7 +223,7 @@ export function Header() {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={`block py-3 text-base font-bold uppercase tracking-wider transition-colors ${
-                    isActive ? "text-[#d93e36] underline underline-offset-4" : "text-[#373a36] hover:text-[#ef473f]"
+                    isActive ? "text-[#b8322c] underline underline-offset-4" : "text-[#373a36] hover:text-[#b8322c]"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -245,7 +245,7 @@ export function Header() {
               </a>
               <Link
                 href="/my-quote"
-                className="flex items-center justify-center gap-2 bg-[#ef473f] text-white py-3 font-bold uppercase tracking-wider text-sm rounded-full"
+                className="flex items-center justify-center gap-2 bg-[#b8322c] text-white py-3 font-bold uppercase tracking-wider text-sm rounded-full"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <ShoppingBag className="w-4 h-4" />

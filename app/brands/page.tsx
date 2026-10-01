@@ -59,7 +59,7 @@ export default async function BrandsPage() {
       <section className="pt-6 pb-4 px-6 lg:px-8 bg-[#f9f9f9]">
         <div className="mx-auto max-w-7xl">
           <div className="text-center max-w-3xl mx-auto">
-            <p className="text-xs font-bold tracking-wider text-[#ef473f] uppercase mb-4">
+            <p className="text-xs font-bold tracking-wider text-[#b8322c] uppercase mb-4">
               {eyebrow}
             </p>
             <h1 className="font-montserrat font-bold text-3xl lg:text-5xl text-[#1a1a1a] leading-tight mb-4 uppercase tracking-wide">
@@ -86,7 +86,7 @@ export default async function BrandsPage() {
           </p>
           <Link
             href="/#contact"
-            className="inline-flex items-center gap-2 bg-[#ef473f] text-white px-10 py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 bg-[#b8322c] text-white px-10 py-4 font-bold uppercase tracking-wider text-sm rounded hover:opacity-90 transition-opacity"
           >
             Contact Us
             <ArrowRight className="w-4 h-4" />
