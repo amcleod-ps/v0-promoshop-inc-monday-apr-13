@@ -209,11 +209,11 @@ export function ProductDetailModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="product-detail-title"
-          className="bg-[#ededed] rounded-lg w-full max-w-[1060px] max-h-[94vh] overflow-y-auto grid grid-cols-1 md:grid-cols-[55fr_45fr] shadow-2xl"
+          className="bg-[#ededed] rounded-lg w-full max-w-[1060px] max-h-[94dvh] overflow-y-auto grid grid-cols-1 md:h-[min(820px,94dvh)] md:grid-cols-[55fr_45fr] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left - Image carousel */}
-          <div className="relative bg-[#ddd] rounded-t-lg md:rounded-l-lg md:rounded-tr-none overflow-hidden flex flex-col">
+          <div className="relative min-w-0 min-h-0 bg-[#ddd] rounded-t-lg md:rounded-l-lg md:rounded-tr-none overflow-hidden flex flex-col">
             <button
               ref={closeButtonRef}
               onClick={onClose}
@@ -223,11 +223,9 @@ export function ProductDetailModal({
               <X className="w-4 h-4" />
             </button>
 
-            {/* Desktop: flex-1 + min-h (not a fixed height) lets the image
-                area absorb the leftover grey space in tall dialogs; the
-                480px floor keeps short dialogs looking exactly as before.
-                Mobile keeps the original compact fixed height. */}
-            <div className="relative h-[min(55vw,240px)] flex-none md:flex-1 md:h-auto md:min-h-[480px] bg-[#e0e0e0]">
+            {/* Keep the desktop image and thumbnails in the dialog.
+                The product details scroll in a different panel. */}
+            <div className="relative h-[min(55vw,240px)] flex-none md:flex-1 md:h-auto md:min-h-0 bg-[#e0e0e0]">
               {images[displayIndex] && (
                 <button
                   type="button"
@@ -235,17 +233,11 @@ export function ProductDetailModal({
                   aria-label="Open full-screen view"
                   className="absolute inset-0 cursor-zoom-in group"
                 >
-                  {/* object-contain (not cover): cover cropped the product
-                      and upscaled low-format sources to fill the frame —
-                      the whole shot letterboxed on the grey panel is both
-                      sharper and the standard product-viewer treatment.
-                      Desktop centers it so a stretched tall frame doesn't
-                      pin the product to the top with grey below it. */}
                   <SafeImage
                     src={withMinImageWidth(images[displayIndex], 1500)}
                     alt={`${product.name} - ${previewColour?.name ?? ""} (${displayIndex + 1}/${images.length})`}
                     fill
-                    className="object-contain object-top md:object-center"
+                    className="object-contain object-center"
                     sizes="(max-width: 768px) 100vw, 55vw"
                   />
                   <span className="absolute top-3.5 left-3.5 w-8 h-8 rounded-full bg-black/15 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -283,7 +275,7 @@ export function ProductDetailModal({
 
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div className="flex gap-2 p-3 bg-[#d4d4d4] overflow-x-auto">
+              <div className="flex shrink-0 gap-2 p-3 bg-[#d4d4d4] overflow-x-auto">
                 {images.map((img, i) => (
                   <button
                     key={`${img}-${i}`}
@@ -295,7 +287,7 @@ export function ProductDetailModal({
                       i === displayIndex ? "border-[#ef473f]" : "border-transparent hover:border-[#999]"
                     }`}
                   >
-                    <SafeImage src={img} alt="" fill className="object-cover" sizes="64px" />
+                    <SafeImage src={img} alt="" fill className="object-contain" sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -303,7 +295,7 @@ export function ProductDetailModal({
           </div>
 
           {/* Right - Info */}
-          <div className="p-4 md:p-11 flex flex-col bg-[#ededed] rounded-b-lg md:rounded-r-lg md:rounded-bl-none md:overflow-y-auto">
+          <div className="min-w-0 min-h-0 p-4 md:p-11 flex flex-col bg-[#ededed] rounded-b-lg md:rounded-r-lg md:rounded-bl-none md:overflow-y-auto">
             {/* Product Name */}
             <h2
               id="product-detail-title"
