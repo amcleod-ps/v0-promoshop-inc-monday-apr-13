@@ -9,7 +9,7 @@ import { sendQuoteNotification } from "@/lib/email/quote-notification"
 import { rateLimit } from "@/lib/rate-limit"
 import {
   buildQuotePricingSnapshot,
-  displayedTotalMatches,
+  displayedTotalsMatch,
   MAX_SNAPSHOT_LINES,
 } from "@/lib/pricing/snapshot"
 import type { QuotePricingSnapshot } from "@/lib/pricing/types"
@@ -56,6 +56,10 @@ const quoteRequestSchema = z.object({
   // What the browser last showed the customer. Used only to detect that the
   // price moved underneath them; it never becomes the stored figure.
   displayed_total_usd: z.string().trim().max(32).optional(),
+  displayed_totals: z.object({
+    CAD: z.string().trim().max(32).optional(),
+    USD: z.string().trim().max(32).optional(),
+  }).strict().optional(),
 })
 
 export type QuoteRequestInput = z.infer<typeof quoteRequestSchema>
@@ -127,8 +131,11 @@ async function recalculatePricing(
   // Nothing priced means there is no estimate to disagree about, so an
   // unpriced cart is never held back for review.
   const reviewRequired =
-    snapshot.estimatedTotalUsd !== null &&
-    !displayedTotalMatches(snapshot, validated.displayed_total_usd)
+    snapshot.pricedSkuCount > 0 &&
+    !displayedTotalsMatch(
+      snapshot,
+      validated.displayed_totals ?? { USD: validated.displayed_total_usd },
+    )
 
   return { snapshot, reviewRequired }
 }
