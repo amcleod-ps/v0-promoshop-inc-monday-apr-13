@@ -1,5 +1,6 @@
 import { calculateTieredPrice, aggregateQuantitiesBySku } from "./engine"
 import { sumSubtotalsUsd } from "./money"
+import { productPriceCurrency, pricingTotalEntries, type PricingCurrency, type PricingTotals } from "./source"
 import type {
   PricingTierMap,
   QuoteLineInput,
@@ -94,7 +95,7 @@ export function buildQuotePricingSnapshot(
   }
 
   const snapshotSkus: SnapshotSku[] = []
-  const pricedSubtotals: string[] = []
+  const pricedSubtotals: Record<PricingCurrency, string[]> = { CAD: [], USD: [] }
 
   // Sorted so the stored record is stable regardless of the order the
   // customer happened to add items to the cart.
@@ -102,6 +103,8 @@ export function buildQuotePricingSnapshot(
     const aggregatedQuantity = aggregated.get(sku) as number
     const variantLines = variantsBySku.get(sku) ?? []
     const product = products.get(sku)
+    // Currency comes from the approved catalogue mapping, never a cart field.
+    const currency = productPriceCurrency(product?.sku ?? sku)
 
     let status: SnapshotSkuStatus
     let tierStartQuantity: number | null = null
@@ -125,7 +128,7 @@ export function buildQuotePricingSnapshot(
           tierStartQuantity = calculation.tierStartQuantity
           unitPriceUsd = calculation.unitPriceUsd
           subtotalUsd = calculation.subtotalUsd
-          pricedSubtotals.push(calculation.subtotalUsd)
+          pricedSubtotals[currency].push(calculation.subtotalUsd)
           break
         case "below_moq":
           status = "below_moq"
@@ -149,30 +152,37 @@ export function buildQuotePricingSnapshot(
       aggregatedQuantity,
       minimumQuantity: product?.minimumQuantity ?? null,
       tierStartQuantity,
-      unitPriceUsd,
-      subtotalUsd,
+      currency,
+      unitPrice: unitPriceUsd,
+      subtotal: subtotalUsd,
+      unitPriceUsd: currency === "USD" ? unitPriceUsd : null,
+      subtotalUsd: currency === "USD" ? subtotalUsd : null,
       lines: variantLines,
     })
   }
 
-  const pricedSkuCount = pricedSubtotals.length
-  let estimatedTotalUsd: string | null = null
-
-  if (pricedSkuCount > 0) {
-    estimatedTotalUsd = sumSubtotalsUsd(pricedSubtotals)
-    if (estimatedTotalUsd === null) {
+  const pricedSkuCount = pricedSubtotals.CAD.length + pricedSubtotals.USD.length
+  const estimatedTotalsByCurrency: PricingTotals = {}
+  for (const currency of ["CAD", "USD"] as const) {
+    if (pricedSubtotals[currency].length === 0) continue
+    const total = sumSubtotalsUsd(pricedSubtotals[currency])
+    if (total === null) {
       return { status: "failed", reason: "total_arithmetic_failed" }
     }
+    estimatedTotalsByCurrency[currency] = total
   }
 
   const snapshot: QuotePricingSnapshot = {
-    version: 1,
-    currency: "USD",
+    version: 2,
+    currency: estimatedTotalsByCurrency.CAD
+      ? estimatedTotalsByCurrency.USD ? "MIXED" : "CAD"
+      : "USD",
     calculatedAt,
     skus: snapshotSkus,
     pricedSkuCount,
     unpricedSkuCount: snapshotSkus.length - pricedSkuCount,
-    estimatedTotalUsd,
+    estimatedTotalUsd: estimatedTotalsByCurrency.USD ?? null,
+    estimatedTotalsByCurrency,
   }
 
   return { status: "built", snapshot }
@@ -193,10 +203,35 @@ export function displayedTotalMatches(
   snapshot: QuotePricingSnapshot,
   displayedTotalUsd: string | undefined,
 ): boolean {
-  if (typeof displayedTotalUsd !== "string") return false
+  return displayedTotalsMatch(snapshot, { USD: displayedTotalUsd })
+}
 
-  const normalizedDisplayed = sumSubtotalsUsd([displayedTotalUsd.trim()])
-  if (normalizedDisplayed === null) return false
+/** Legacy saved snapshots continue to use their original USD evidence. */
+export function snapshotPricingTotals(snapshot: QuotePricingSnapshot): PricingTotals {
+  if (snapshot.version === 2) return snapshot.estimatedTotalsByCurrency ?? {}
+  return snapshot.estimatedTotalUsd === null ? {} : { USD: snapshot.estimatedTotalUsd }
+}
 
-  return normalizedDisplayed === snapshot.estimatedTotalUsd
+/** Compare every currency separately. Omitted and extra totals need review. */
+export function displayedTotalsMatch(
+  snapshot: QuotePricingSnapshot,
+  displayedTotals: Partial<Record<PricingCurrency, string | undefined>> | undefined,
+): boolean {
+  if (!displayedTotals) return false
+  const expected = snapshotPricingTotals(snapshot)
+  const entries = pricingTotalEntries(expected)
+  if (entries.length === 0) return false
+
+  for (const currency of ["CAD", "USD"] as const) {
+    const displayed = displayedTotals[currency]
+    if (expected[currency] === undefined) {
+      if (displayed !== undefined) return false
+    } else if (
+      typeof displayed !== "string" ||
+      sumSubtotalsUsd([displayed.trim()]) !== expected[currency]
+    ) {
+      return false
+    }
+  }
+  return true
 }

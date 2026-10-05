@@ -1,18 +1,28 @@
 import type { PriceTier } from "./types"
+import type { PricingCurrency } from "./source"
 
 /**
- * Exact public wording supplied in the August 7 pricing package. These are
- * the defaults for the admin-editable notices; components read the live
- * values through lib/pricing/notices.ts, not these constants directly.
+ * Regional notice text supplied by the client on September 30. Public
+ * components read the editable values through lib/pricing/notices.ts.
+ * The generic estimate applies when the product source is unknown.
  */
 export const APPROXIMATE_PRICING_COPY =
-  "Pricing shown is for budgeting purposes only and is based on estimated U.S. costs. Final pricing may vary depending on decoration, artwork, quantities, shipping, and current supplier costs. Once you submit your quote request, a PromoShop specialist will review your selections and provide a customized quote with confirmed pricing."
+  "Final pricing may vary depending on decoration, artwork, quantities, shipping, and current supplier costs. Once you submit your quote request, a PromoShop specialist will review your selections and provide a customized quote with confirmed pricing."
 
-export const CANADIAN_PRICING_COPY =
-  "We're currently finalizing Canadian pricing for these products. In the meantime, please reference the U.S. pricing for a general budget estimate. Final Canadian pricing will vary based on decoration, shipping, exchange rates, and supplier availability. Submit your quote request and our team will provide accurate Canadian pricing."
+export const CANADA_CANADIAN_PRICING_COPY =
+  "Final pricing may vary depending on decoration, artwork, quantities, shipping, and provincial taxes. Once you submit your quote request, a PromoShop specialist will review your selections and provide a customized quote with confirmed pricing."
+
+export const CANADA_USA_PRICING_COPY =
+  "Product sourced from USA. PromoShop team will convert pricing to CAD based on exchange rates, duties, taxes, and shipping."
+
+export const USA_CANADIAN_PRICING_COPY =
+  "Product sourced from Canada. PromoShop team will convert pricing to USD based on exchange rates, duties, taxes, and shipping."
+
+export const USA_USA_PRICING_COPY =
+  "Final pricing may vary depending on decoration, artwork, quantities, shipping, and state taxes. Once you submit your quote request, a PromoShop specialist will review your selections and provide a customized quote with confirmed pricing."
 
 export const NO_PRICING_COPY =
-  "Add this product to your quote and our team will reach out with accurate pricing. Please note: your subtotal will not reflect this item when you submit your quote."
+  "Pricing unavailable at this time"
 
 export const LARGE_QUANTITY_START = 48
 
@@ -24,36 +34,6 @@ export function tierPriceBasisLabel(tierStartQuantity: number): string {
 }
 
 /**
- * The source sheet places these SKUs in its Canadian-pricing section. Every
- * other SKU without an enabled USD tier set follows the supplied no-pricing
- * copy. This is a presentation classification, not a price or currency rule.
- */
-export const CANADIAN_PRICING_SKUS = [
-  "BAG 109",
-  "BAG 110",
-  "SWE 105",
-  "TOP 105",
-  "TOP 106",
-  "TUM 103",
-  "TUM 104",
-  "BAG 129",
-  "TUM 105",
-  "TUM 106",
-  "TUM 107",
-  "VEST 001",
-  "TOP 103",
-  "SWE 103",
-] as const
-
-const CANADIAN_SKU_SET = new Set<string>(CANADIAN_PRICING_SKUS)
-
-export type MissingPricingKind = "canadian" | "unpriced"
-
-export function missingPricingKind(sku: string): MissingPricingKind {
-  return CANADIAN_SKU_SET.has(sku.trim()) ? "canadian" : "unpriced"
-}
-
-/**
  * Currency rendering is presentation-only. Calculations stay in the exact
  * string/BigInt helpers in money.ts, so this function is never an input to a
  * price calculation or submission decision.
@@ -62,12 +42,20 @@ export function formatUsd(
   value: string,
   options: { minimumFractionDigits?: number; maximumFractionDigits?: number } = {},
 ): string {
+  return formatPrice(value, "USD", options)
+}
+
+export function formatPrice(
+  value: string,
+  currency: PricingCurrency,
+  options: { minimumFractionDigits?: number; maximumFractionDigits?: number } = {},
+): string {
   const amount = Number(value)
-  if (!Number.isFinite(amount)) return "USD pricing unavailable"
+  if (!Number.isFinite(amount)) return `${currency} pricing unavailable`
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency,
     minimumFractionDigits: options.minimumFractionDigits ?? 2,
     maximumFractionDigits: options.maximumFractionDigits ?? 4,
   }).format(amount)

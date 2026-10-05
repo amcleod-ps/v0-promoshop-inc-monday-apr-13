@@ -1,83 +1,101 @@
+import type { Locale } from "@/lib/cms/locale"
 import { resolveSiteText } from "@/lib/site-text"
 import {
   APPROXIMATE_PRICING_COPY,
-  CANADIAN_PRICING_COPY,
+  CANADA_CANADIAN_PRICING_COPY,
+  CANADA_USA_PRICING_COPY,
   LARGE_QUANTITY_COPY,
-  missingPricingKind,
   NO_PRICING_COPY,
+  USA_CANADIAN_PRICING_COPY,
+  USA_USA_PRICING_COPY,
 } from "./presentation"
 
-/**
- * Admin-editable public pricing notices. They ride the existing Text content
- * mechanism: each notice is a `site_content` key registered in
- * lib/cms/text-slots.ts (so the dashboard's Text tab offers it under
- * "Pricing notices" and saves through `updateSiteContent`), and the public
- * components read it through `usePricingNotices()`. The compiled-in copy in
- * presentation.ts stays the default. Values render as plain React text —
- * never through the rich-text renderer — so markup shows exactly as typed.
- */
+/** Public notices use the Text content controls and render as plain text. */
 export interface PricingNotices {
-  approximate: string
-  canadian: string
+  canadaCanadian: string
+  canadaUsa: string
+  usaCanadian: string
+  usaUsa: string
   noPricing: string
   largeQuantity: string
+  approximate: string
 }
 
 export interface PricingNoticeSlot {
-  notice: keyof PricingNotices
+  notice: Exclude<keyof PricingNotices, "approximate">
   key: string
   label: string
   fallback: string
+  legacyKey?: string
 }
 
 export const PRICING_NOTICE_SLOTS: readonly PricingNoticeSlot[] = [
   {
-    notice: "approximate",
-    key: "pricing.notice.approximate",
-    label: "Estimate notice (shown below prices)",
-    fallback: APPROXIMATE_PRICING_COPY,
+    notice: "canadaCanadian",
+    key: "pricing.notice.canada_canadian",
+    label: "Canada site (.ca): products sourced from Canada",
+    fallback: CANADA_CANADIAN_PRICING_COPY,
   },
   {
-    notice: "canadian",
-    key: "pricing.notice.canadian",
-    label: "Canadian pricing notice (products that wait for Canadian prices)",
-    fallback: CANADIAN_PRICING_COPY,
+    notice: "canadaUsa",
+    key: "pricing.notice.canada_usa",
+    label: "Canada site (.ca): products sourced from USA",
+    fallback: CANADA_USA_PRICING_COPY,
+  },
+  {
+    notice: "usaCanadian",
+    key: "pricing.notice.usa_canadian",
+    label: "USA site (.com): products sourced from Canada",
+    fallback: USA_CANADIAN_PRICING_COPY,
+  },
+  {
+    notice: "usaUsa",
+    key: "pricing.notice.usa_usa",
+    label: "USA site (.com): products sourced from USA",
+    fallback: USA_USA_PRICING_COPY,
+    legacyKey: "pricing.notice.approximate",
   },
   {
     notice: "noPricing",
     key: "pricing.notice.no_pricing",
-    label: "No-price notice (products without a price)",
+    label: "Both sites: products without a price",
     fallback: NO_PRICING_COPY,
   },
   {
     notice: "largeQuantity",
     key: "pricing.notice.large_quantity",
-    label: "Large quantity notice (48 or more units)",
+    label: "Both sites: orders of 48 units or more",
     fallback: LARGE_QUANTITY_COPY,
   },
 ]
 
-/**
- * Resolves every notice against a `site_content` map. A saved value wins
- * only when it has visible text; empty or whitespace-only values show the
- * default, so a cleared field can never blank a pricing disclaimer.
- */
+/** A cleared field restores its default. Old estimate text remains available. */
 export function resolvePricingNotices(
   map: Record<string, { value: string } | undefined>,
 ): PricingNotices {
-  const notices = {} as PricingNotices
+  const notices = { approximate: APPROXIMATE_PRICING_COPY } as PricingNotices
   for (const slot of PRICING_NOTICE_SLOTS) {
-    const value = resolveSiteText(map, slot.key, slot.fallback)
+    const key = !map[slot.key] && slot.legacyKey ? slot.legacyKey : slot.key
+    const value = resolveSiteText(map, key, slot.fallback)
     notices[slot.notice] = value.trim() ? value : slot.fallback
   }
   return notices
 }
 
-export function missingPricingNotice(
+/** The site country and product source select the notice independently. */
+export function productPricingNotice(
   notices: PricingNotices,
-  sku: string,
+  siteLocale: Locale,
+  productSource: Locale | null,
 ): string {
-  return missingPricingKind(sku) === "canadian"
-    ? notices.canadian
-    : notices.noPricing
+  if (!productSource) return notices.approximate
+  if (siteLocale === "CAN") {
+    return productSource === "CAN" ? notices.canadaCanadian : notices.canadaUsa
+  }
+  return productSource === "CAN" ? notices.usaCanadian : notices.usaUsa
+}
+
+/** Every product without a price uses the same notice on both sites. */
+export function missingPricingNotice(notices: PricingNotices): string {
+  return notices.noPricing
 }

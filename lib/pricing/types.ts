@@ -1,3 +1,5 @@
+import type { PricingCurrency, PricingTotals } from "./source"
+
 export interface PriceTier {
   readonly tierStartQuantity: number
   readonly unitPriceUsd: string
@@ -72,20 +74,27 @@ export interface SnapshotSku {
   readonly aggregatedQuantity: number
   readonly minimumQuantity: number | null
   readonly tierStartQuantity: number | null
+  /** Version 2 uses these fields. Version 1 remains readable as USD. */
+  readonly currency?: PricingCurrency
+  readonly unitPrice?: string | null
+  readonly subtotal?: string | null
+  /** Legacy fields contain USD amounts only, never CAD amounts. */
   readonly unitPriceUsd: string | null
   readonly subtotalUsd: string | null
   readonly lines: readonly SnapshotVariantLine[]
 }
 
 export interface QuotePricingSnapshot {
-  readonly version: 1
-  readonly currency: "USD"
+  readonly version: 1 | 2
+  readonly currency: PricingCurrency | "MIXED"
   readonly calculatedAt: string
   readonly skus: readonly SnapshotSku[]
   readonly pricedSkuCount: number
   readonly unpricedSkuCount: number
-  /** Null when no SKU priced, so an empty estimate is never shown as 0.00. */
+  /** USD subtotal only; null when no USD SKU priced. */
   readonly estimatedTotalUsd: string | null
+  /** Version 2 keeps each currency separate. There is no exchange conversion. */
+  readonly estimatedTotalsByCurrency?: PricingTotals
 }
 
 export type SnapshotFailureReason =

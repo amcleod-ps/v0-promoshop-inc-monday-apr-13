@@ -2,6 +2,7 @@ import { aggregateQuantitiesBySku, calculateTieredPrice } from "./engine"
 import { sumSubtotalsUsd } from "./money"
 import { LARGE_QUANTITY_START } from "./presentation"
 import type { PricingTierMap } from "./types"
+import { productPriceCurrency, type PricingCurrency, type PricingTotals } from "./source"
 
 export interface CustomerPricingLine {
   readonly productSku: string
@@ -14,8 +15,11 @@ export type CustomerSkuPricing =
       readonly sku: string
       readonly quantity: number
       readonly tierStartQuantity: number
-      readonly unitPriceUsd: string
-      readonly subtotalUsd: string
+      readonly currency: PricingCurrency
+      readonly unitPrice: string
+      readonly subtotal: string
+      readonly unitPriceUsd: string | null
+      readonly subtotalUsd: string | null
     }
   | {
       readonly status: "unpriced"
@@ -26,6 +30,7 @@ export type CustomerSkuPricing =
 export interface CustomerPricingSummary {
   readonly bySku: Readonly<Record<string, CustomerSkuPricing>>
   readonly estimatedTotalUsd: string | null
+  readonly estimatedTotalsByCurrency: PricingTotals
   readonly hasPricedItems: boolean
   readonly hasUnpricedItems: boolean
   readonly hasLargeQuantityItems: boolean
@@ -43,6 +48,7 @@ export function buildCustomerPricingSummary(
   const empty: CustomerPricingSummary = {
     bySku: {},
     estimatedTotalUsd: null,
+    estimatedTotalsByCurrency: {},
     hasPricedItems: false,
     hasUnpricedItems: false,
     hasLargeQuantityItems: false,
@@ -54,7 +60,7 @@ export function buildCustomerPricingSummary(
   if (quantities === null) return empty
 
   const bySku: Record<string, CustomerSkuPricing> = Object.create(null)
-  const subtotals: string[] = []
+  const subtotals: Record<PricingCurrency, string[]> = { CAD: [], USD: [] }
   let hasUnpricedItems = false
   let hasLargeQuantityItems = false
 
@@ -70,15 +76,19 @@ export function buildCustomerPricingSummary(
       : null
 
     if (calculation?.status === "priced") {
+      const currency = productPriceCurrency(sku)
       bySku[sku] = {
         status: "priced",
         sku,
         quantity,
         tierStartQuantity: calculation.tierStartQuantity,
-        unitPriceUsd: calculation.unitPriceUsd,
-        subtotalUsd: calculation.subtotalUsd,
+        currency,
+        unitPrice: calculation.unitPriceUsd,
+        subtotal: calculation.subtotalUsd,
+        unitPriceUsd: currency === "USD" ? calculation.unitPriceUsd : null,
+        subtotalUsd: currency === "USD" ? calculation.subtotalUsd : null,
       }
-      subtotals.push(calculation.subtotalUsd)
+      subtotals[currency].push(calculation.subtotalUsd)
       if (quantity >= LARGE_QUANTITY_START) hasLargeQuantityItems = true
     } else {
       bySku[sku] = { status: "unpriced", sku, quantity }
@@ -86,13 +96,19 @@ export function buildCustomerPricingSummary(
     }
   }
 
-  const estimatedTotalUsd = subtotals.length > 0 ? sumSubtotalsUsd(subtotals) : null
-  if (subtotals.length > 0 && estimatedTotalUsd === null) return empty
+  const estimatedTotalsByCurrency: PricingTotals = {}
+  for (const currency of ["CAD", "USD"] as const) {
+    if (subtotals[currency].length === 0) continue
+    const total = sumSubtotalsUsd(subtotals[currency])
+    if (total === null) return empty
+    estimatedTotalsByCurrency[currency] = total
+  }
 
   return {
     bySku,
-    estimatedTotalUsd,
-    hasPricedItems: subtotals.length > 0,
+    estimatedTotalUsd: estimatedTotalsByCurrency.USD ?? null,
+    estimatedTotalsByCurrency,
+    hasPricedItems: Object.keys(estimatedTotalsByCurrency).length > 0,
     hasUnpricedItems,
     hasLargeQuantityItems,
   }

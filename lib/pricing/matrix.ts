@@ -767,7 +767,7 @@ function validateRows(
       diagnostics.push(
         diagnostic(
           "invalid_price",
-          "Unit price must be a positive USD decimal with one to four decimal places.",
+          "Unit price must be a positive number with one to four decimal places.",
           {
             record: sourceRow.record,
             line: sourceRow.line,
@@ -1062,7 +1062,7 @@ export async function validateTierSetDraft(
       diagnostics.push(
         diagnostic(
           "invalid_price",
-          "Unit price must be a positive USD decimal with one to four decimal places.",
+          "Unit price must be a positive number with one to four decimal places.",
           { record, field: "unit_price_usd" },
         ),
       )
