@@ -15,8 +15,9 @@ import { submitQuoteRequest } from "@/app/actions/quotes"
 import { HoneypotField } from "@/components/honeypot-field"
 import { buildCustomerPricingSummary } from "@/lib/pricing/customer"
 import { calculateSubtotalUsd } from "@/lib/pricing/money"
-import { formatUsd, tierPriceBasisLabel } from "@/lib/pricing/presentation"
-import { missingPricingNotice } from "@/lib/pricing/notices"
+import { formatPrice, tierPriceBasisLabel } from "@/lib/pricing/presentation"
+import { missingPricingNotice, productPricingNotice } from "@/lib/pricing/notices"
+import { pricingTotalEntries, productPricingSource } from "@/lib/pricing/source"
 import { usePricingNotices } from "@/hooks/use-pricing-notices"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
@@ -56,7 +57,7 @@ export default function MyQuoteClient({
     addItem,
     isLoaded 
   } = useQuote()
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const router = useRouter()
   const pageEyebrow = useSiteText("quote.page.eyebrow", textFallback("quote.page.eyebrow"))
   const pageHeading = useSiteText("quote.page.heading", textFallback("quote.page.heading"))
@@ -96,6 +97,18 @@ export default function MyQuoteClient({
           )
         : null,
     [items, pricing],
+  )
+  const selectedPricingNotices = useMemo(
+    () => [...new Set(
+      Object.values(pricingSummary?.bySku ?? {})
+        .filter((skuPricing) => skuPricing.status === "priced")
+        .map((skuPricing) => productPricingNotice(
+          pricingNotices,
+          locale,
+          productPricingSource({ sku: skuPricing.sku }),
+        )),
+    )],
+    [pricingSummary, pricingNotices, locale],
   )
 
   const handleAddProduct = () => {
@@ -184,6 +197,7 @@ export default function MyQuoteClient({
           quantity: item.quantity,
         })),
         displayed_total_usd: pricingSummary?.estimatedTotalUsd ?? undefined,
+        displayed_totals: pricingSummary?.estimatedTotalsByCurrency,
       })
 
       if (result.success) {
@@ -361,7 +375,7 @@ export default function MyQuoteClient({
                       const skuPricing = pricingSummary?.bySku[item.productSku]
                       const lineSubtotal =
                         skuPricing?.status === "priced"
-                          ? calculateSubtotalUsd(skuPricing.unitPriceUsd, item.quantity)
+                          ? calculateSubtotalUsd(skuPricing.unitPrice, item.quantity)
                           : null
                       return (
                       // flex-wrap: on narrow phones the qty/remove cluster
@@ -382,11 +396,11 @@ export default function MyQuoteClient({
                           </div>
                           {pricing.enabled && skuPricing?.status === "priced" ? (
                             <p className="mt-2 text-xs leading-relaxed text-[#555]">
-                              Combined {item.productSku} quantity: {skuPricing.quantity} · {formatUsd(skuPricing.unitPriceUsd)} USD each at {skuPricing.tierStartQuantity}+ ({tierPriceBasisLabel(skuPricing.tierStartQuantity).toLowerCase()}) · This line: {lineSubtotal ? `${formatUsd(lineSubtotal)} USD` : "pricing unavailable"}
+                              Combined {item.productSku} quantity: {skuPricing.quantity} · {formatPrice(skuPricing.unitPrice, skuPricing.currency)} {skuPricing.currency} each at {skuPricing.tierStartQuantity}+ ({tierPriceBasisLabel(skuPricing.tierStartQuantity).toLowerCase()}) · This line: {lineSubtotal ? `${formatPrice(lineSubtotal, skuPricing.currency)} ${skuPricing.currency}` : "pricing unavailable"}
                             </p>
                           ) : pricing.enabled ? (
                             <p className="mt-2 text-xs leading-relaxed text-[#666]">
-                              {missingPricingNotice(pricingNotices, item.productSku)}
+                              {missingPricingNotice(pricingNotices)}
                             </p>
                           ) : null}
                         </div>
@@ -410,10 +424,12 @@ export default function MyQuoteClient({
                   {pricing.enabled && pricingSummary ? (
                     <section className="mb-6 rounded-lg border border-[#e5e5e5] bg-white p-4" aria-live="polite" aria-label="Estimated product pricing">
                       <h2 className="mb-2 font-montserrat text-base font-bold text-[#1a1a1a]">Estimated Product Pricing</h2>
-                      {pricingSummary.estimatedTotalUsd ? (
-                        <p className="text-lg font-bold text-[#1a1a1a]">
-                          Estimated product subtotal: {formatUsd(pricingSummary.estimatedTotalUsd)} USD
-                        </p>
+                      {pricingSummary.hasPricedItems ? (
+                        pricingTotalEntries(pricingSummary.estimatedTotalsByCurrency).map(([currency, total]) => (
+                          <p key={currency} className="text-lg font-bold text-[#1a1a1a]">
+                            Estimated product subtotal ({currency}): {formatPrice(total, currency)} {currency}
+                          </p>
+                        ))
                       ) : (
                         <p className="text-sm text-[#666]">Pricing will be confirmed by a PromoShop specialist.</p>
                       )}
@@ -427,9 +443,9 @@ export default function MyQuoteClient({
                           {pricingNotices.largeQuantity}
                         </p>
                       ) : null}
-                      {pricingSummary.hasPricedItems ? (
-                        <p className="mt-2 text-xs leading-relaxed text-[#666]">{pricingNotices.approximate}</p>
-                      ) : null}
+                      {selectedPricingNotices.map((notice) => (
+                        <p key={notice} className="mt-2 text-xs leading-relaxed text-[#666]">{notice}</p>
+                      ))}
                     </section>
                   ) : null}
 
@@ -555,8 +571,10 @@ export default function MyQuoteClient({
                 <div className="space-y-2 text-sm font-visby">
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Products:</span><span className="text-[#1a1a1a]">{items.length} item{items.length !== 1 ? "s" : ""}</span></div>
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Total Units:</span><span className="text-[#1a1a1a]">{items.reduce((sum, item) => sum + item.quantity, 0)}</span></div>
-                  {pricing.enabled && pricingSummary?.estimatedTotalUsd ? (
-                    <div className="flex justify-between"><span className="text-[#6b6b6b]">Estimated product subtotal:</span><span className="text-[#1a1a1a]">{formatUsd(pricingSummary.estimatedTotalUsd)} USD</span></div>
+                  {pricing.enabled && pricingSummary?.hasPricedItems ? (
+                    pricingTotalEntries(pricingSummary.estimatedTotalsByCurrency).map(([currency, total]) => (
+                      <div key={currency} className="flex justify-between"><span className="text-[#6b6b6b]">Estimated product subtotal ({currency}):</span><span className="text-[#1a1a1a]">{formatPrice(total, currency)} {currency}</span></div>
+                    ))
                   ) : null}
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Contact:</span><span className="text-[#1a1a1a]">{contactInfo.firstName} {contactInfo.lastName}</span></div>
                   <div className="flex justify-between"><span className="text-[#6b6b6b]">Company:</span><span className="text-[#1a1a1a]">{contactInfo.company || "Not specified"}</span></div>

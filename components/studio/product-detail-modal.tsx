@@ -12,13 +12,13 @@ import { useDialogFocus, useInertBackground, trapDialogTab } from "@/hooks/use-d
 import { ProductLightbox } from "./product-lightbox"
 import type { PriceTier } from "@/lib/pricing/types"
 import {
-  formatUsd,
+  formatPrice,
   LARGE_QUANTITY_START,
-  missingPricingKind,
   tierPriceBasisLabel,
   tierRangeLabel,
 } from "@/lib/pricing/presentation"
-import { missingPricingNotice } from "@/lib/pricing/notices"
+import { missingPricingNotice, productPricingNotice } from "@/lib/pricing/notices"
+import { productPriceCurrency, productPricingSource } from "@/lib/pricing/source"
 import { usePricingNotices } from "@/hooks/use-pricing-notices"
 
 interface ProductDetailModalProps {
@@ -63,7 +63,7 @@ export function ProductDetailModal({
   const cancelledLightboxPointer = useRef(false)
   const pendingTouchPreview = useRef<{ colourName: string; wasActive: boolean } | null>(null)
   const { addItem } = useQuote()
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const pricingNotices = usePricingNotices()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -206,6 +206,8 @@ export function ProductDetailModal({
   const canAdd = totalCombinations > 0
 
   if (!product || !isOpen) return null
+  const productCurrency = productPriceCurrency(product.sku)
+  const pricingNotice = productPricingNotice(pricingNotices, locale, productPricingSource(product))
 
   // Products created without explicit sizes (the dashboard allows it) are
   // sold as one-size — otherwise "Add to Quote" could never be enabled.
@@ -389,7 +391,7 @@ export function ProductDetailModal({
                         <tr>
                           <th scope="col" className="pb-2 pr-3">Quantity</th>
                           <th scope="col" className="pb-2 pr-3">Price basis</th>
-                          <th scope="col" className="pb-2 text-right">Unit price (USD)</th>
+                          <th scope="col" className="pb-2 text-right">Unit price ({productCurrency})</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -397,7 +399,7 @@ export function ProductDetailModal({
                           <tr key={tier.tierStartQuantity} className="border-t border-[#eeeeee]">
                             <td className="py-2 pr-3">{tierRangeLabel(tiers, index)}</td>
                             <td className="py-2 pr-3 text-[#555]">{tierPriceBasisLabel(tier.tierStartQuantity)}</td>
-                            <td className="py-2 text-right font-semibold">{formatUsd(tier.unitPriceUsd)} USD</td>
+                            <td className="py-2 text-right font-semibold">{formatPrice(tier.unitPriceUsd, productCurrency)} {productCurrency}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -408,17 +410,17 @@ export function ProductDetailModal({
                       {pricingNotices.largeQuantity}
                     </p>
                   ) : null}
-                  <p className="mt-3 text-xs leading-relaxed text-[#666]">{pricingNotices.approximate}</p>
+                  <p className="mt-3 text-xs leading-relaxed text-[#666]">
+                    {pricingNotice}
+                  </p>
                 </section>
               ) : (
                 <section className="mb-7 rounded border border-[#d6d6d6] bg-white p-4" aria-labelledby="product-pricing-heading">
                   <h3 id="product-pricing-heading" className="mb-2 text-sm font-extrabold uppercase tracking-wider text-black">
-                    {missingPricingKind(product.sku) === "canadian"
-                      ? "Canadian Pricing Coming Soon"
-                      : "Pricing Available on Request"}
+                    Pricing
                   </h3>
                   <p className="text-sm leading-relaxed text-[#666]">
-                    {missingPricingNotice(pricingNotices, product.sku)}
+                    {missingPricingNotice(pricingNotices)}
                   </p>
                 </section>
               )

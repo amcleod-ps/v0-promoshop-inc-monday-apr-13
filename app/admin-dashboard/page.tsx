@@ -435,7 +435,8 @@ export default async function AdminDashboardPage() {
   // typo can't bypass the selectors' validation.
   const textContentRaw = siteContentRaw.filter(
     (row) =>
-      !row.key.startsWith(IMAGE_FIT_PREFIX) && !row.key.startsWith(IMAGE_SIZE_PREFIX),
+      !row.key.startsWith(IMAGE_FIT_PREFIX) && !row.key.startsWith(IMAGE_SIZE_PREFIX) &&
+      row.key !== "pricing.notice.approximate" && row.key !== "pricing.notice.canadian",
   )
 
   const filteredSiteContentRaw = teamTableLive
@@ -595,7 +596,7 @@ export default async function AdminDashboardPage() {
       const slot = registrySlotByKey.get(row.key)
       return {
         key: row.key,
-        label: row.label,
+        label: row.key.startsWith("pricing.notice.") ? slot?.label ?? row.label : row.label,
         value: row.value ?? "",
         group,
         multiline: slot?.multiline ?? multiline,

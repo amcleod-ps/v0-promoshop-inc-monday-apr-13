@@ -8,6 +8,7 @@ import type {
   PricingPanelState,
 } from "@/lib/pricing/admin-types"
 import { pricingStatusNotice } from "@/lib/pricing/admin-status"
+import { productPriceCurrency } from "@/lib/pricing/source"
 import type { MatrixDiagnostic, TierDraft } from "@/lib/pricing/matrix"
 import {
   applyPricingCsv,
@@ -285,11 +286,16 @@ function CsvImporter() {
       </h2>
       <p style={styles.help}>
         Uses either the exact six-column pricing matrix template or the
-        formatting-aware PromoShop USD pricing extract. A dry run reports
+        formatting-aware PromoShop pricing extract. A dry run reports
         every detectable row error. Apply is enabled only after the same file
         passes, and the server validates it again before one atomic write.
         Raw source exports are not accepted because they lose tier formatting.
         SKUs omitted from the file remain unchanged.
+      </p>
+      <p style={styles.help}>
+        Prices are in CAD for the approved Canadian product list and USD for other
+        products. The site does not convert prices. To edit pricing notices,
+        open Text content. Find Pricing notices.
       </p>
 
       <div style={styles.importControls}>
@@ -451,7 +457,7 @@ function ProductPricingEditor({
           <strong>{product.sku}</strong> · {product.name}
         </span>
         <span style={styles.summaryMeta}>
-          Public price starts at {product.minimumQuantity} · {product.isActive ? "catalogue active" : "catalogue inactive"} · {product.status} · rev{" "}
+          {productPriceCurrency(product.sku)} · Public price starts at {product.minimumQuantity} · {product.isActive ? "catalogue active" : "catalogue inactive"} · {product.status} · rev{" "}
           {product.revision}
         </span>
       </summary>
@@ -496,7 +502,7 @@ function ProductPricingEditor({
                   />
                 </label>
                 <label style={styles.fieldLabel}>
-                  <span>Unit price (USD)</span>
+                  <span>Unit price ({productPriceCurrency(product.sku)})</span>
                   <input
                     type="text"
                     inputMode="decimal"

@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   buildQuotePricingSnapshot,
   displayedTotalMatches,
+  displayedTotalsMatch,
+  snapshotPricingTotals,
   MAX_SNAPSHOT_LINES,
 } from "../../lib/pricing/snapshot"
 import { sumSubtotalsUsd } from "../../lib/pricing/money"
@@ -13,6 +15,13 @@ import type {
   QuotePricingSnapshot,
   SnapshotProduct,
 } from "../../lib/pricing/types"
+import { pricingNotificationLines } from "../../lib/pricing/notification"
+import {
+  AMERICAN_PRICE_SKUS,
+  CANADIAN_PRICE_SKUS,
+  productPriceCurrency,
+  productPricingSource,
+} from "../../lib/pricing/source"
 
 const AT = "2026-08-06T18:00:00.000Z"
 
@@ -40,6 +49,80 @@ const TIERS: PricingTierMap = {
   ],
   "SKU-B": [{ tierStartQuantity: 25, unitPriceUsd: "3.3333" }],
 }
+
+test("approved Canadian source rows control currency without an exchange conversion", () => {
+  assert.equal(productPriceCurrency(" TUM   106 "), "CAD")
+  assert.equal(productPriceCurrency("PUL 005"), "USD")
+  assert.equal(productPricingSource({ sku: "TUM 106", tags: ["canada", "usa"] }), "CAN")
+  assert.equal(productPricingSource({ sku: "NEW SKU", tags: [] }), null)
+  assert.equal(productPricingSource({ sku: "NEW SKU", tags: ["canada", "usa"] }), null)
+  assert.equal(productPricingSource({ sku: "NEW SKU", tags: ["usa"] }), null)
+  assert.equal(productPricingSource({ sku: "BAG 105", tags: ["canada", "usa"] }), "USA")
+  assert.equal(CANADIAN_PRICE_SKUS.length, 9)
+  assert.equal(AMERICAN_PRICE_SKUS.length, 90)
+  assert.equal(new Set([...CANADIAN_PRICE_SKUS, ...AMERICAN_PRICE_SKUS]).size, 99)
+})
+
+test("mixed snapshots retain exact separate totals and reject missing, stale or combined figures", () => {
+  const snapshot = built(buildQuotePricingSnapshot(
+    [{ sku: "TUM 106", quantity: 3 }, { sku: "SKU-A", quantity: 12 }],
+    products(["TUM 106", 1], ["SKU-A", 12]),
+    { ...TIERS, "TUM 106": [{ tierStartQuantity: 1, unitPriceUsd: "39.9900" }] },
+    AT,
+  ))
+  assert.equal(snapshot.version, 2)
+  assert.equal(snapshot.currency, "MIXED")
+  assert.deepEqual(snapshotPricingTotals(snapshot), { CAD: "119.97", USD: "120.00" })
+  assert.equal(snapshot.estimatedTotalUsd, "120.00")
+  const canadian = snapshot.skus.find((sku) => sku.sku === "TUM 106")!
+  assert.equal(canadian.currency, "CAD")
+  assert.equal(canadian.unitPrice, "39.9900")
+  assert.equal(canadian.subtotal, "119.97")
+  assert.equal(canadian.unitPriceUsd, null)
+  assert.equal(canadian.subtotalUsd, null)
+  assert.equal(displayedTotalsMatch(snapshot, { CAD: "119.97", USD: "120.00" }), true)
+  assert.equal(displayedTotalsMatch(snapshot, { USD: "120.00" }), false)
+  assert.equal(displayedTotalsMatch(snapshot, { CAD: "119.96", USD: "120.00" }), false)
+  assert.equal(displayedTotalsMatch(snapshot, { USD: "239.97" }), false)
+  const email = pricingNotificationLines(snapshot).join("\n")
+  assert.match(email, /CAD 39\.9900 = CAD 119\.97/)
+  assert.match(email, /subtotal: CAD 119\.97/)
+  assert.match(email, /subtotal: USD 120\.00/)
+  assert.doesNotMatch(email, /USD 239\.97|USD 39\.9900/)
+})
+
+test("Canadian snapshots ignore a forged currency and amount in the cart", () => {
+  const lines = [{
+    sku: "TUM 106", quantity: 1, currency: "USD", unitPrice: "0.01", subtotal: "0.01",
+  }] as unknown as QuoteLineInput[]
+  const snapshot = built(buildQuotePricingSnapshot(
+    lines, products(["TUM 106", 1]),
+    { "TUM 106": [{ tierStartQuantity: 1, unitPriceUsd: "39.9900" }] }, AT,
+  ))
+  assert.equal(snapshot.currency, "CAD")
+  assert.deepEqual(snapshotPricingTotals(snapshot), { CAD: "39.99" })
+  assert.equal(displayedTotalsMatch(snapshot, { CAD: "39.99" }), true)
+  assert.equal(displayedTotalMatches(snapshot, "39.99"), false)
+  assert.equal(displayedTotalsMatch(snapshot, { CAD: "39.99", USD: "0.00" }), false)
+  assert.doesNotMatch(JSON.stringify(snapshot), /0\.01/)
+})
+
+test("saved version 1 estimates remain USD when their product is now classified Canadian", () => {
+  const legacy: QuotePricingSnapshot = {
+    version: 1, currency: "USD", calculatedAt: AT,
+    skus: [{
+      sku: "TUM 106", productName: "Legacy saved product", status: "priced",
+      aggregatedQuantity: 1, minimumQuantity: 1, tierStartQuantity: 1,
+      unitPriceUsd: "39.9900", subtotalUsd: "39.99",
+      lines: [{ colour: null, size: null, quantity: 1 }],
+    }],
+    pricedSkuCount: 1, unpricedSkuCount: 0, estimatedTotalUsd: "39.99",
+  }
+  assert.deepEqual(snapshotPricingTotals(legacy), { USD: "39.99" })
+  assert.equal(displayedTotalMatches(legacy, "39.99"), true)
+  assert.match(pricingNotificationLines(legacy).join("\n"), /USD 39\.9900 = USD 39\.99/)
+  assert.doesNotMatch(pricingNotificationLines(legacy).join("\n"), /CAD/)
+})
 
 test("tiers are selected on the quantity aggregated across variants", () => {
   // 20 + 20 + 20 = 60, which reaches the 48 tier even though no single

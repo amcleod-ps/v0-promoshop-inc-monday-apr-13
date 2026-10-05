@@ -814,7 +814,7 @@ function describeContentGroup(group: string): string {
     case "Home page":
       return "Headlines and CTA labels shown on the homepage hero."
     case "Pricing notices":
-      return "Notices shown with prices in the Studio product window and on the My Quote page. Customers see them only when public pricing is live. Plain text only. Clear a field and save to show the default text again."
+      return "The website and product source select the notice. Each field changes only its notice. Price values and currencies stay the same. To use the default text, clear the field. Then save."
     case "About page":
       return "Eyebrow, heading, and body paragraphs on the About page."
     case "Team section":
