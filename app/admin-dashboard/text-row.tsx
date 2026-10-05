@@ -111,6 +111,7 @@ export function TextRow(props: TextRowProps) {
 
       {props.multiline ? (
         <textarea
+          aria-label={props.label}
           value={value}
           onChange={(e) => {
             setValue(e.target.value)
@@ -122,6 +123,7 @@ export function TextRow(props: TextRowProps) {
         />
       ) : (
         <input
+          aria-label={props.label}
           type="text"
           value={value}
           onChange={(e) => {
