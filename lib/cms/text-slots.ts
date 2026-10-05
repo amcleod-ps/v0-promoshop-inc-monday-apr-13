@@ -162,8 +162,8 @@ export const EXTRA_TEXT_SLOTS: TextSlot[] = [
   },
 
   // --- Pricing notices ------------------------------------------------------
-  // Keys, labels, and defaults live in lib/pricing/notices.ts, which is also
-  // the public read path — registered here so the Text tab offers them.
+  // Register the four regional controls and two shared controls. The public
+  // notice resolver uses these same keys and defaults.
   ...PRICING_NOTICE_SLOTS.map(({ key, label, fallback }) => ({
     key,
     label,
