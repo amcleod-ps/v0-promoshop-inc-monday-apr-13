@@ -51,3 +51,6 @@ jobs:
 
       - name: Production build
         run: pnpm build
+
+      - name: Dashboard save and access checks
+        run: pnpm check:admin-actions

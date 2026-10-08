@@ -82,7 +82,8 @@ function denyOverlongPost(request: NextRequest, page: (error: string, status: nu
 export async function adminGate(request: NextRequest): Promise<NextResponse | null> {
   try {
     const { pathname } = request.nextUrl
-    const isSignInPost = pathname === "/admin" && request.method === "POST"
+    // Dashboard actions also post to /admin. Check their session below.
+    const isSignInPost = pathname === "/admin" && request.method === "POST" && !request.headers.has("next-action")
     const isReset = pathname === "/admin/reset"
     // No cache: read the state on every request so a rotation invalidates
     // sessions signed with the old secret immediately, on every instance.

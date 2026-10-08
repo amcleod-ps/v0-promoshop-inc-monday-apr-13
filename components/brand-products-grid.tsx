@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
+import { ProductSort } from "@/components/studio/product-sort"
+import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
 import { useLocale } from "@/lib/locale-context"
 import type { Product } from "@/lib/products"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
@@ -22,6 +24,11 @@ export function BrandProductsGrid({ products, brandName, pricing }: Props) {
   const { t } = useLocale()
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")
+  const sortedProducts = useMemo(
+    () => sortOrder === "price-asc" && pricing.enabled ? sortProductsByPrice(products, pricing.tiersBySku) : products,
+    [products, pricing, sortOrder],
+  )
 
   const openModal = (product: Product) => {
     setSelected(product)
@@ -57,8 +64,9 @@ export function BrandProductsGrid({ products, brandName, pricing }: Props) {
 
   return (
     <>
+      <ProductSort value={sortOrder} onChange={setSortOrder} pricingEnabled={pricing.enabled} />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-        {products.map((product) => (
+        {sortedProducts.map((product) => (
           <ProductCard
             key={product.sku}
             product={product}
