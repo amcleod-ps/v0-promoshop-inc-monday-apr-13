@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { Menu, X, ShoppingBag, Phone, User, LogOut } from "lucide-react"
@@ -30,26 +31,30 @@ function LocaleToggle({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => setLocale("CAN")}
+        aria-label="Canada"
+        title="Canada"
         aria-pressed={locale === "CAN"}
-        className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full transition-colors ${
+        className={`flex min-h-11 min-w-11 items-center justify-center px-2 py-1 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b8322c] focus-visible:ring-offset-2 ${
           locale === "CAN"
             ? "bg-[#b8322c] text-white"
             : "text-[#373a36] hover:text-[#b8322c]"
         }`}
       >
-        CAN
+        <Image src="/images/flags/ca.svg" alt="" width={28} height={21} className="rounded-sm" />
       </button>
       <button
         type="button"
         onClick={() => setLocale("USA")}
+        aria-label="United States"
+        title="United States"
         aria-pressed={locale === "USA"}
-        className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full transition-colors ${
+        className={`flex min-h-11 min-w-11 items-center justify-center px-2 py-1 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b8322c] focus-visible:ring-offset-2 ${
           locale === "USA"
             ? "bg-[#b8322c] text-white"
             : "text-[#373a36] hover:text-[#b8322c]"
         }`}
       >
-        USA
+        <Image src="/images/flags/us.svg" alt="" width={28} height={21} className="rounded-sm" />
       </button>
     </div>
   )

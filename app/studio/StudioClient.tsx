@@ -7,6 +7,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
+import { ProductSort } from "@/components/studio/product-sort"
+import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
 import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
@@ -83,6 +85,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const bannerCta = useSiteText("studio.banner.cta", textFallback("studio.banner.cta"))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const [activeCategory, setActiveCategory] = useState(
     initialCategory && categories.includes(initialCategory) ? initialCategory : "All",
@@ -143,6 +146,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
         (!(canadianOnly && locale === "CAN") || (product.tags ?? []).includes("sourced from canada"))
     })
 
+    if (sortOrder === "price-asc" && pricing.enabled) return sortProductsByPrice(matched, pricing.tiersBySku)
+
     // No region tags in the catalog yet → leave the seeded sort_order alone.
     if (!catalogHasRegionTags) return matched
     // Stable partition: region-tagged first, original order kept within each
@@ -151,7 +156,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
       .map((p, i) => ({ p, i, region: (p.tags ?? []).includes(regionTag) ? 0 : 1 }))
       .sort((a, b) => a.region - b.region || a.i - b.i)
       .map((x) => x.p)
-  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags, canadianOnly, locale])
+  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags, canadianOnly, locale, sortOrder, pricing])
 
   const openProductDetail = (product: Product) => {
     setSelectedProduct(product)
@@ -309,6 +314,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
+          <ProductSort value={sortOrder} onChange={setSortOrder} pricingEnabled={pricing.enabled} />
           <p aria-live="polite" className="text-xs text-[#6b6b6b] tracking-wider uppercase font-semibold mb-5 pb-4 border-b border-[#ccc]">
             <span className="text-[#111111] font-extrabold">{filteredProducts.length}</span> product{filteredProducts.length !== 1 ? "s" : ""}
           </p>

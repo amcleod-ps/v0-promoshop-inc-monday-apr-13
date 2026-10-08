@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
+import { ProductSort } from "@/components/studio/product-sort"
+import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
 import type { Product } from "@/lib/products"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
@@ -20,6 +22,11 @@ export function CollectionProducts({
 }) {
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")
+  const sortedProducts = useMemo(
+    () => sortOrder === "price-asc" && pricing.enabled ? sortProductsByPrice(products, pricing.tiersBySku) : products,
+    [products, pricing, sortOrder],
+  )
 
   const open = (p: Product) => {
     setSelected(p)
@@ -40,10 +47,11 @@ export function CollectionProducts({
 
   return (
     <>
+      <ProductSort value={sortOrder} onChange={setSortOrder} pricingEnabled={pricing.enabled} tone="dark" />
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
         {/* tone="dark": this grid sits on the collection page's #111111
             background, where the card's default black name was unreadable. */}
-        {products.map((product) => (
+        {sortedProducts.map((product) => (
           <ProductCard key={product.sku} product={product} tone="dark" onClick={() => open(product)} />
         ))}
       </div>
