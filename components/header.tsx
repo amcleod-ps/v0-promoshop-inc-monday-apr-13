@@ -157,7 +157,7 @@ export function Header() {
       {accountError && <p role="alert" className="px-6 py-3 bg-red-50 text-[#b8322c]">{accountError}</p>}
 
       {/* Main nav */}
-      <nav className="mx-auto max-w-7xl flex items-center justify-between px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
+      <nav className="mx-auto max-w-7xl flex items-center justify-between gap-3 px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
           {/* Declared dimensions must match the real 3:2 file ratio or the
@@ -182,7 +182,7 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`text-sm font-bold uppercase tracking-wider px-1 xl:px-4 py-2 rounded-full transition-colors ${
+                className={`whitespace-nowrap text-xs xl:text-sm font-bold uppercase tracking-wide xl:tracking-wider px-1 xl:px-3 py-2 rounded-full transition-colors ${
                   isActive
                     ? "text-[#b8322c] bg-[#ef473f]/5 underline underline-offset-8"
                     : "text-[#373a36] hover:text-[#b8322c]"
@@ -199,9 +199,9 @@ export function Header() {
           <LocaleToggle />
           <Link
             href="/my-quote"
-            className="shimmer-cta relative flex items-center gap-2 bg-[#b8322c] text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#a62d27] transition-colors"
+            className="shimmer-cta relative flex items-center gap-2 whitespace-nowrap bg-[#b8322c] text-white px-4 xl:px-6 py-2.5 text-xs font-bold uppercase tracking-wide xl:tracking-wider rounded-full hover:bg-[#a62d27] transition-colors"
           >
-            <ShoppingBag className="w-4 h-4 relative z-10" />
+            <ShoppingBag className="w-4 h-4 shrink-0 relative z-10" />
             <span className="relative z-10">{quoteCta}</span>
           </Link>
         </div>
