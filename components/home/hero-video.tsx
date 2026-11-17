@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Pause, Play, Volume2, VolumeX } from "lucide-react"
+import { useEffect, useRef } from "react"
 
 interface HeroVideoProps {
   src: string
@@ -9,78 +8,43 @@ interface HeroVideoProps {
   label: string
 }
 
-// Homepage hero video (replaces the image slideshow). Autoplay only works
-// muted, so it starts muted with a sound toggle. The pause button covers
-// WCAG 2.2.2 (auto-playing content longer than 5s), and reduced-motion
-// visitors get the poster frame until they press play.
+// Homepage hero video (replaces the image slideshow). Silent, autoplaying,
+// endlessly looping background-style video with no controls. On desktop it
+// fills the whole right half of the hero section, edge to edge; on mobile it
+// runs full-width below the text.
+//
+// Reduced-motion visitors get the poster frame instead of playback.
 export function HeroVideo({ src, poster, label }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [playing, setPlaying] = useState(false)
-  const [muted, setMuted] = useState(true)
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    video.play().catch(() => {
-      // Autoplay blocked (e.g. low-power mode): leave the poster showing.
-    })
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      video.pause()
+      return
+    }
+    // Some browsers skip the autoplay attribute after hydration; nudge it.
+    video.play().catch(() => {})
   }, [])
 
-  const togglePlay = () => {
-    const video = videoRef.current
-    if (!video) return
-    if (video.paused) video.play().catch(() => {})
-    else video.pause()
-  }
-
-  const toggleMute = () => {
-    const video = videoRef.current
-    if (!video) return
-    video.muted = !video.muted
-    setMuted(video.muted)
-  }
-
-  const buttonClass =
-    "w-11 h-11 rounded-full bg-black/45 hover:bg-black/70 text-white backdrop-blur-sm flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-
   return (
-    <div className="relative pb-10 lg:py-12">
-      <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black">
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          src={src}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          preload="auto"
-          aria-label={label}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
-        {/* Bottom-left: the video's brand logos sit bottom-right. */}
-        <div className="absolute bottom-3 left-3 flex gap-2">
-          <button
-            type="button"
-            onClick={toggleMute}
-            className={buttonClass}
-            aria-label={muted ? "Turn sound on" : "Turn sound off"}
-            aria-pressed={!muted}
-          >
-            {muted ? <VolumeX className="w-4 h-4" aria-hidden="true" /> : <Volume2 className="w-4 h-4" aria-hidden="true" />}
-          </button>
-          <button
-            type="button"
-            onClick={togglePlay}
-            className={buttonClass}
-            aria-label={playing ? "Pause video" : "Play video"}
-          >
-            {playing ? <Pause className="w-4 h-4" aria-hidden="true" /> : <Play className="w-4 h-4" aria-hidden="true" />}
-          </button>
-        </div>
-      </div>
+    <div className="relative -mx-6 aspect-video overflow-hidden bg-black lg:mx-0 lg:aspect-auto lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
+      <video
+        ref={videoRef}
+        // Bias the crop right so the brand logos (bottom-right of each
+        // scene) stay in frame when the panel is narrower than 16:9.
+        className="absolute inset-0 h-full w-full object-cover object-[85%_50%]"
+        src={src}
+        poster={poster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        disablePictureInPicture
+        aria-label={label}
+      />
     </div>
   )
 }
