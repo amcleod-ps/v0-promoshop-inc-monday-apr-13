@@ -4,18 +4,17 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { BrandLogoScroll } from "@/components/brand-logo-scroll"
 import { ContactSection } from "@/components/contact-section"
-import { HeroSlideshow } from "@/components/home/hero-slideshow"
+import { HeroVideo } from "@/components/home/hero-video"
 import { HOME_CONTENT } from "@/lib/cms/home"
-import { getHeroSlides, getSupabaseBrands } from "@/lib/supabase/data"
+import { getSupabaseBrands } from "@/lib/supabase/data"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
 import { getCustomerPricingReleaseEnabled } from "@/lib/supabase/pricing"
-import { imageFitKey, normalizeImageFit } from "@/lib/image-fit"
 import { textFallback } from "@/lib/cms/text-slots"
 
 export default async function HomePage() {
-  // Fetch hero slides, brands, and editable text content from Supabase
-  const [heroSlides, supabaseBrands, content, pricingReleased] = await Promise.all([
-    getHeroSlides(),
+  // Fetch brands and editable text content from Supabase. The hero now plays
+  // a fixed video (public/videos), so hero slides are no longer fetched.
+  const [supabaseBrands, content, pricingReleased] = await Promise.all([
     getSupabaseBrands(),
     getSiteContentMap(),
     getCustomerPricingReleaseEnabled(),
@@ -36,34 +35,6 @@ export default async function HomePage() {
     "home.studio_works.body",
     textFallback("home.studio_works.body"),
   )
-
-  // Image URLs from Supabase already have ?v=<updated_at> cache-busting
-  // appended by lib/supabase/data.ts so swapping a row instantly busts the
-  // browser, CDN, and next/image caches.
-  //
-  // `null` = Supabase unreachable → static fallback. An empty list is a real
-  // answer (admin deactivated everything) and renders no slideshow. Slides
-  // with neither an image nor a background colour are skipped so a
-  // just-created slide doesn't rotate in as a blank frame before its image
-  // is uploaded.
-  const slides =
-    heroSlides === null
-      ? HOME_CONTENT.slideshow
-      : heroSlides
-          .filter((slide) => slide.image_url || slide.bg_color)
-          .map((slide) => ({
-            src: slide.image_url || "",
-            alt: slide.title,
-            title: slide.title,
-            subtitle: slide.subtitle,
-            cta_text: slide.cta_text,
-            cta_url: slide.cta_url,
-            bg_color: slide.bg_color,
-            // Admin-chosen display mode (cover vs contain) per slide.
-            fit: normalizeImageFit(
-              resolveSiteText(content, imageFitKey(`hero_slide.${slide.id}`), "cover"),
-            ),
-          }))
 
   // Transform Supabase brands for the logo scroll. `null` (unreachable) makes
   // the component fall back to the static BRANDS; an empty list renders no
@@ -123,8 +94,12 @@ export default async function HomePage() {
                 </Link>
               </div>
             </div>
-            {/* Slideshow Side */}
-            <HeroSlideshow slides={slides} />
+            {/* Video Side (replaced the image slideshow) */}
+            <HeroVideo
+              src="/videos/home-hero.mp4"
+              poster="/videos/home-hero-poster.jpg"
+              label="PromoShop brand apparel in everyday settings, featuring Johnnie-O, Peter Millar and Rhone"
+            />
           </div>
         </div>
       </section>
