@@ -148,9 +148,21 @@
   font-family: var(--font-dm-sans), sans-serif;
 }
 
+/* Case studies: product stages bob gently, like they're on display. */
+@keyframes case-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.case-float {
+  animation: case-float 6s ease-in-out infinite;
+}
+
 /* WCAG 2.3.3 / 2.2.2: stop decorative motion for users who ask for it. */
 @media (prefers-reduced-motion: reduce) {
   .animate-scroll {
+    animation: none;
+  }
+  .case-float {
     animation: none;
   }
   .shimmer-cta::after {

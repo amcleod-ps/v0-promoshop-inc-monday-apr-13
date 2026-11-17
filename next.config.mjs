@@ -18,7 +18,9 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com",
+  // blob: lets the /case-studies 3D viewer (<model-viewer>) decode the
+  // textures embedded in its same-origin GLB files; it opens no remote host.
+  "connect-src 'self' blob: https://*.supabase.co https://va.vercel-scripts.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
