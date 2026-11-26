@@ -17,7 +17,7 @@ import {
   tierPriceBasisLabel,
   tierRangeLabel,
 } from "@/lib/pricing/presentation"
-import { missingPricingNotice, productPricingNotice } from "@/lib/pricing/notices"
+import { missingPricingNotice, productPricingNotice, isCurrencyConversionNotice, CONVERSION_NOTICE_CLASS } from "@/lib/pricing/notices"
 import { productPriceCurrency, productPricingSource } from "@/lib/pricing/source"
 import { usePricingNotices } from "@/hooks/use-pricing-notices"
 
@@ -207,7 +207,9 @@ export function ProductDetailModal({
 
   if (!product || !isOpen) return null
   const productCurrency = productPriceCurrency(product.sku)
-  const pricingNotice = productPricingNotice(pricingNotices, locale, productPricingSource(product))
+  const pricingSource = productPricingSource(product)
+  const pricingNotice = productPricingNotice(pricingNotices, locale, pricingSource)
+  const conversionNotice = isCurrencyConversionNotice(locale, pricingSource)
 
   // Products created without explicit sizes (the dashboard allows it) are
   // sold as one-size — otherwise "Add to Quote" could never be enabled.
@@ -410,7 +412,7 @@ export function ProductDetailModal({
                       {pricingNotices.largeQuantity}
                     </p>
                   ) : null}
-                  <p className="mt-3 text-xs leading-relaxed text-[#666]">
+                  <p className={`mt-3 text-xs leading-relaxed ${conversionNotice ? CONVERSION_NOTICE_CLASS : "text-[#666]"}`}>
                     {pricingNotice}
                   </p>
                 </section>

@@ -16,7 +16,7 @@ import { HoneypotField } from "@/components/honeypot-field"
 import { buildCustomerPricingSummary } from "@/lib/pricing/customer"
 import { calculateSubtotalUsd } from "@/lib/pricing/money"
 import { formatPrice, tierPriceBasisLabel } from "@/lib/pricing/presentation"
-import { missingPricingNotice, productPricingNotice } from "@/lib/pricing/notices"
+import { missingPricingNotice, productPricingNotice, isCurrencyConversionNotice, CONVERSION_NOTICE_CLASS } from "@/lib/pricing/notices"
 import { pricingTotalEntries, productPricingSource } from "@/lib/pricing/source"
 import { usePricingNotices } from "@/hooks/use-pricing-notices"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
@@ -98,16 +98,19 @@ export default function MyQuoteClient({
         : null,
     [items, pricing],
   )
+  // One entry per distinct notice; currency-conversion notices are flagged
+  // so they render highlighted in red.
   const selectedPricingNotices = useMemo(
-    () => [...new Set(
-      Object.values(pricingSummary?.bySku ?? {})
-        .filter((skuPricing) => skuPricing.status === "priced")
-        .map((skuPricing) => productPricingNotice(
-          pricingNotices,
-          locale,
-          productPricingSource({ sku: skuPricing.sku }),
-        )),
-    )],
+    () => {
+      const byText = new Map<string, boolean>()
+      for (const skuPricing of Object.values(pricingSummary?.bySku ?? {})) {
+        if (skuPricing.status !== "priced") continue
+        const source = productPricingSource({ sku: skuPricing.sku })
+        const text = productPricingNotice(pricingNotices, locale, source)
+        byText.set(text, (byText.get(text) ?? false) || isCurrencyConversionNotice(locale, source))
+      }
+      return [...byText].map(([text, conversion]) => ({ text, conversion }))
+    },
     [pricingSummary, pricingNotices, locale],
   )
 
@@ -444,7 +447,7 @@ export default function MyQuoteClient({
                         </p>
                       ) : null}
                       {selectedPricingNotices.map((notice) => (
-                        <p key={notice} className="mt-2 text-xs leading-relaxed text-[#666]">{notice}</p>
+                        <p key={notice.text} className={`mt-2 text-xs leading-relaxed ${notice.conversion ? CONVERSION_NOTICE_CLASS : "text-[#666]"}`}>{notice.text}</p>
                       ))}
                     </section>
                   ) : null}

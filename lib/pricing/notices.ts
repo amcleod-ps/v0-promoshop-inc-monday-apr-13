@@ -95,6 +95,19 @@ export function productPricingNotice(
   return productSource === "CAN" ? notices.usaCanadian : notices.usaUsa
 }
 
+/**
+ * True when the product is sourced from the other country, so its notice says
+ * PromoShop will convert the price (e.g. a USA product on the Canadian site).
+ * Those notices are shown highlighted in red.
+ */
+export function isCurrencyConversionNotice(siteLocale: Locale, productSource: Locale | null): boolean {
+  return productSource !== null && productSource !== siteLocale
+}
+
+/** Tailwind classes for a highlighted currency-conversion notice. */
+export const CONVERSION_NOTICE_CLASS =
+  "rounded-md border-l-4 border-[#ef473f] bg-[#ef473f]/10 px-3 py-2 font-semibold text-[#b8322c]"
+
 /** Every product without a price uses the same notice on both sites. */
 export function missingPricingNotice(notices: PricingNotices): string {
   return notices.noPricing
