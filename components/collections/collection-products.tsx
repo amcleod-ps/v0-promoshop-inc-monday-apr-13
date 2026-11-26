@@ -5,6 +5,8 @@ import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { ProductSort } from "@/components/studio/product-sort"
 import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
+import { productsForLocale } from "@/lib/pricing/source"
+import { useLocale } from "@/lib/locale-context"
 import type { Product } from "@/lib/products"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
@@ -14,12 +16,18 @@ import type { CustomerPricingState } from "@/lib/supabase/pricing"
  * like the catalog (pick colours/sizes, add to quote).
  */
 export function CollectionProducts({
-  products,
+  products: allProducts,
   pricing,
 }: {
   products: Product[]
   pricing: CustomerPricingState
 }) {
+  const { locale } = useLocale()
+  // The Canadian site hides USD-priced products.
+  const products = useMemo(
+    () => productsForLocale(allProducts, locale, pricing.tiersBySku),
+    [allProducts, locale, pricing.tiersBySku],
+  )
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")
