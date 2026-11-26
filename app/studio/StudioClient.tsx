@@ -10,6 +10,8 @@ import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { ProductSort } from "@/components/studio/product-sort"
 import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
 import { useLocale } from "@/lib/locale-context"
+import { MapleLeaf } from "@/components/maple-leaf"
+import { CANADIAN_SOURCED_CATEGORY, isCanadianSourced } from "@/lib/canadian-sourced"
 import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
 import type { Product } from "@/lib/products"
@@ -25,6 +27,9 @@ interface Props {
   pricing: CustomerPricingState
   /** Pre-selected category (from /studio?category=… deep links). */
   initialCategory?: string
+  /** "canadian" renders the /canadian-sourced page: same catalog, opened on
+   *  the Canadian Sourced category with its own heading. */
+  view?: "studio" | "canadian"
 }
 
 /**
@@ -42,10 +47,12 @@ function FilterOption({
   label,
   active,
   onClick,
+  icon,
 }: {
   label: string
   active: boolean
   onClick: () => void
+  icon?: React.ReactNode
 }) {
   return (
     <button
@@ -65,18 +72,37 @@ function FilterOption({
           active ? "bg-[#ef473f]" : "bg-transparent"
         }`}
       />
-      <span>{label}</span>
+      {icon ? (
+        <span className="flex items-center gap-1.5">
+          {icon}
+          <span>{label}</span>
+        </span>
+      ) : (
+        <span>{label}</span>
+      )}
     </button>
   )
 }
 
-export default function StudioClient({ products, categories, brands, tags, pricing, initialCategory }: Props) {
+export default function StudioClient({ products, categories: baseCategories, brands, tags, pricing, initialCategory, view = "studio" }: Props) {
   const { t, locale } = useLocale()
+  const canadianView = view === "canadian"
+  // The Canadian site (and the Canadian Sourced page) adds a "Canadian
+  // Sourced" category right after "All", shown with a maple leaf.
+  const showCanadianCategory = locale === "CAN" || canadianView
+  const categories = useMemo(
+    () =>
+      showCanadianCategory
+        ? [baseCategories[0], CANADIAN_SOURCED_CATEGORY, ...baseCategories.slice(1)]
+        : baseCategories,
+    [baseCategories, showCanadianCategory],
+  )
   const pageEyebrow = useSiteText(
     "studio.page.eyebrow",
     `PromoShop Studio — Product ${t("Catalog")}`,
   )
-  const pageHeading = useSiteText("studio.page.heading", textFallback("studio.page.heading"))
+  const studioHeading = useSiteText("studio.page.heading", textFallback("studio.page.heading"))
+  const pageHeading = canadianView ? CANADIAN_SOURCED_CATEGORY : studioHeading
   const bannerHeading = useSiteText("studio.banner.heading", textFallback("studio.banner.heading"))
   const bannerBody = useSiteText(
     "studio.banner.body",
@@ -88,7 +114,11 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const [activeCategory, setActiveCategory] = useState(
-    initialCategory && categories.includes(initialCategory) ? initialCategory : "All",
+    canadianView
+      ? CANADIAN_SOURCED_CATEGORY
+      : initialCategory && categories.includes(initialCategory)
+        ? initialCategory
+        : "All",
   )
 
   // Same-route navigations (the footer's Collections links render on
@@ -104,11 +134,10 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const [activeGender, setActiveGender] = useState("All")
   const [activeBrand, setActiveBrand] = useState("All")
   const [activeTag, setActiveTag] = useState("All")
-  const [canadianOnly, setCanadianOnly] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const activeFilterCount = [activeCategory, activeGender, activeBrand, activeTag].filter((value) => value !== "All").length + (canadianOnly && locale === "CAN" ? 1 : 0)
+  const activeFilterCount = [activeCategory, activeGender, activeBrand, activeTag].filter((value) => value !== "All").length
 
   const genders = ["All", "Men's", "Women's", "Unisex"]
 
@@ -124,7 +153,9 @@ export default function StudioClient({ products, categories, brands, tags, prici
   const filteredProducts = useMemo(() => {
     const searchLower = deferredSearchTerm.toLowerCase()
     const matched = products.filter((product) => {
-      const catOk = activeCategory === "All" || product.category === activeCategory
+      const catOk =
+        activeCategory === "All" ||
+        (activeCategory === CANADIAN_SOURCED_CATEGORY ? isCanadianSourced(product) : product.category === activeCategory)
 
       let genderOk = activeGender === "All"
       if (activeGender === "Men's") genderOk = product.gender.includes("Mens")
@@ -142,8 +173,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
         product.category.toLowerCase().includes(searchLower) ||
         (product.tags ?? []).join(" ").includes(searchLower)
 
-      return catOk && genderOk && brandOk && tagOk && searchOk &&
-        (!(canadianOnly && locale === "CAN") || (product.tags ?? []).includes("sourced from canada"))
+      return catOk && genderOk && brandOk && tagOk && searchOk
     })
 
     if (sortOrder === "price-asc" && pricing.enabled) return sortProductsByPrice(matched, pricing.tiersBySku)
@@ -156,7 +186,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
       .map((p, i) => ({ p, i, region: (p.tags ?? []).includes(regionTag) ? 0 : 1 }))
       .sort((a, b) => a.region - b.region || a.i - b.i)
       .map((x) => x.p)
-  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags, canadianOnly, locale, sortOrder, pricing])
+  }, [products, activeCategory, activeGender, activeBrand, activeTag, deferredSearchTerm, regionTag, catalogHasRegionTags, sortOrder, pricing])
 
   const openProductDetail = (product: Product) => {
     setSelectedProduct(product)
@@ -181,7 +211,8 @@ export default function StudioClient({ products, categories, brands, tags, prici
           <p className="text-[11px] font-bold tracking-[0.18em] text-[#6b6b6b] uppercase mb-2.5">
             {pageEyebrow}
           </p>
-          <h1 className="text-4xl sm:text-[2.75rem] xl:text-5xl font-extrabold uppercase tracking-tight leading-[1.08] text-black">
+          <h1 className="flex items-center gap-3 text-4xl sm:text-[2.75rem] xl:text-5xl font-extrabold uppercase tracking-tight leading-[1.08] text-black">
+            {canadianView && <MapleLeaf className="h-9 w-9 sm:h-11 sm:w-11" />}
             {pageHeading}
           </h1>
         </div>
@@ -226,16 +257,9 @@ export default function StudioClient({ products, categories, brands, tags, prici
           <div id="catalog-filters" className={`${filtersOpen ? "block" : "hidden"} lg:block pt-4 lg:pt-0`}>
           {activeFilterCount > 0 && (
             <button type="button" className="min-h-11 mb-3 text-sm font-semibold underline text-[#373a36]"
-              onClick={() => { setActiveCategory("All"); setActiveGender("All"); setActiveBrand("All"); setActiveTag("All"); setCanadianOnly(false) }}>
+              onClick={() => { setActiveCategory("All"); setActiveGender("All"); setActiveBrand("All"); setActiveTag("All") }}>
               Clear filters
             </button>
-          )}
-          {locale === "CAN" && (
-            <label className="flex items-center gap-2 min-h-11 mb-5 text-sm font-semibold cursor-pointer">
-              <input type="checkbox" checked={canadianOnly} onChange={(event) => setCanadianOnly(event.target.checked)}
-                className="h-5 w-5 accent-[#373a36]" />
-              Sourced from Canada
-            </label>
           )}
           {/* Category Filter */}
           <div className="mb-7">
@@ -249,6 +273,7 @@ export default function StudioClient({ products, categories, brands, tags, prici
                   label={cat}
                   active={activeCategory === cat}
                   onClick={() => setActiveCategory(cat)}
+                  icon={cat === CANADIAN_SOURCED_CATEGORY ? <MapleLeaf className="h-4 w-4" /> : undefined}
                 />
               ))}
             </div>

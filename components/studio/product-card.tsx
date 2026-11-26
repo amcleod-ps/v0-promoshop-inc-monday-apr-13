@@ -4,6 +4,9 @@ import { memo, useEffect, useState } from "react"
 import type { Product } from "@/lib/products"
 import { SafeImage } from "@/components/safe-image"
 import { withMinImageWidth } from "@/lib/image-resolution"
+import { useLocale } from "@/lib/locale-context"
+import { isCanadianSourced } from "@/lib/canadian-sourced"
+import { MapleLeaf } from "@/components/maple-leaf"
 
 interface ProductCardProps {
   product: Product
@@ -21,6 +24,9 @@ interface ProductCardProps {
 function ProductCardBase({ product, onClick, tone = "light", presentation = "plain" }: ProductCardProps) {
   const onDark = tone === "dark"
   const inCatalog = presentation === "catalog"
+  const { locale } = useLocale()
+  // Canadian site: Canadian-sourced products carry a maple leaf, top-left.
+  const showLeaf = locale === "CAN" && isCanadianSourced(product)
   const [hoverColourName, setHoverColourName] = useState<string | null>(null)
   const [focusColourName, setFocusColourName] = useState<string | null>(null)
   const previewColour = product.colours.find((colour) => colour.name === (hoverColourName ?? focusColourName))
@@ -76,6 +82,11 @@ function ProductCardBase({ product, onClick, tone = "light", presentation = "pla
             className="object-contain"
             sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
           />
+        )}
+        {showLeaf && (
+          <span className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
+            <MapleLeaf className="h-5 w-5" label="Canadian sourced" />
+          </span>
         )}
         {/* Extremely light overlay for a studio-clean look */}
         <div className="absolute inset-0 bg-white/[0.04] pointer-events-none" />

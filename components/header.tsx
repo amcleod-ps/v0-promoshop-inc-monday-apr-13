@@ -13,6 +13,8 @@ import { useSiteText, useSiteContentMap } from "@/components/site-content-provid
 import { textFallback } from "@/lib/cms/text-slots"
 import { imageSizeKey, normalizeImageSize, pickBySize } from "@/lib/image-size"
 
+const CANADIAN_SOURCED_NAV = { name: "Canadian Sourced", href: "/canadian-sourced" }
+
 const navigation = [
   { name: "Home", href: "/" },
   { name: "Studio", href: "/studio" },
@@ -67,7 +69,12 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [accountError, setAccountError] = useState("")
   const pathname = usePathname()
-  const { config } = useLocale()
+  const { config, locale } = useLocale()
+  // The Canadian site adds "Canadian Sourced" between Studio and Brands.
+  const navItems =
+    locale === "CAN"
+      ? [...navigation.slice(0, 2), CANADIAN_SOURCED_NAV, ...navigation.slice(2)]
+      : navigation
   const { isAuthenticated, user, signOut } = useAuth()
   const handleSignOut = async () => {
     setAccountError("")
@@ -157,7 +164,7 @@ export function Header() {
       {accountError && <p role="alert" className="px-6 py-3 bg-red-50 text-[#b8322c]">{accountError}</p>}
 
       {/* Main nav */}
-      <nav className="mx-auto max-w-7xl flex items-center justify-between gap-3 px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
+      <nav className="mx-auto max-w-7xl flex items-center justify-between gap-2 px-6 py-1 lg:py-4 lg:px-8 border-b border-[#e5e5e5]">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0">
           {/* Declared dimensions must match the real 3:2 file ratio or the
@@ -175,14 +182,14 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex lg:items-center lg:gap-0 xl:gap-1">
-          {navigation.map((item) => {
+          {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`whitespace-nowrap text-xs xl:text-sm font-bold uppercase tracking-wide xl:tracking-wider px-1 xl:px-3 py-2 rounded-full transition-colors ${
+                className={`whitespace-nowrap text-[11px] xl:text-xs 2xl:text-[13px] font-bold uppercase tracking-normal xl:tracking-wide px-1 xl:px-1.5 2xl:px-2 py-2 rounded-full transition-colors ${
                   isActive
                     ? "text-[#b8322c] bg-[#ef473f]/5 underline underline-offset-8"
                     : "text-[#373a36] hover:text-[#b8322c]"
@@ -195,13 +202,13 @@ export function Header() {
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden lg:flex lg:items-center lg:gap-4">
+        <div className="hidden lg:flex lg:items-center lg:gap-2 xl:gap-4">
           <LocaleToggle />
           <Link
             href="/my-quote"
-            className="shimmer-cta relative flex items-center gap-2 whitespace-nowrap bg-[#b8322c] text-white px-4 xl:px-6 py-2.5 text-xs font-bold uppercase tracking-wide xl:tracking-wider rounded-full hover:bg-[#a62d27] transition-colors"
+            className="shimmer-cta relative flex items-center gap-2 whitespace-nowrap bg-[#b8322c] text-white px-3 xl:px-5 py-2.5 text-[11px] xl:text-xs font-bold uppercase tracking-wide xl:tracking-wider rounded-full hover:bg-[#a62d27] transition-colors"
           >
-            <ShoppingBag className="w-4 h-4 shrink-0 relative z-10" />
+            <ShoppingBag className="hidden xl:block w-4 h-4 shrink-0 relative z-10" />
             <span className="relative z-10">{quoteCta}</span>
           </Link>
         </div>
@@ -228,7 +235,7 @@ export function Header() {
       {mobileMenuOpen && (
         <div id="mobile-menu" className="max-h-[calc(100dvh-120px)] overflow-y-auto lg:hidden bg-white border-t border-[#e5e5e5]">
           <div className="space-y-1 px-6 py-4">
-            {navigation.map((item) => {
+            {navItems.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
