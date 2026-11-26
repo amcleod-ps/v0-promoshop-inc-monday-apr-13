@@ -7,6 +7,9 @@ import { getSupabaseBrands } from "@/lib/supabase/data"
 import { BRANDS } from "@/lib/brands"
 import { BrandsSearchClient } from "@/components/brands-search-client"
 import { getSiteContentMap, resolveSiteText } from "@/lib/supabase/content"
+import { getAllProducts } from "@/lib/supabase/products"
+import { PRODUCTS } from "@/lib/products"
+import { isCanadianSourced } from "@/lib/canadian-sourced"
 
 export const metadata: Metadata = {
   title: "Our Brands",
@@ -16,10 +19,18 @@ export const metadata: Metadata = {
 
 export default async function BrandsPage() {
   // Fetch brands and editable copy from Supabase
-  const [supabaseBrands, content] = await Promise.all([
+  const [supabaseBrands, content, liveProducts] = await Promise.all([
     getSupabaseBrands(),
     getSiteContentMap(),
+    getAllProducts(),
   ])
+  // A brand is "Canadian sourced" when any of its products is CAD-priced
+  // (see lib/canadian-sourced.ts); every other brand is listed as US sourced.
+  const canadianBrandNames = new Set(
+    (liveProducts ?? PRODUCTS)
+      .filter(isCanadianSourced)
+      .flatMap((product) => product.brands.map((name) => name.trim().toLowerCase())),
+  )
   const eyebrow = resolveSiteText(content, "brands.page.eyebrow", "Our Partners")
   const heading = resolveSiteText(content, "brands.page.heading", "Meet Our Brands")
   const intro = resolveSiteText(
@@ -37,7 +48,7 @@ export default async function BrandsPage() {
   // `null` = Supabase unreachable → static seed fallback. An empty list is a
   // real answer (every brand deactivated) and renders an empty listing
   // instead of resurrecting brands the admin removed.
-  const brands = supabaseBrands === null
+  const baseBrands = supabaseBrands === null
     ? BRANDS.map((b) => ({ ...b, logoUrl: b.logoUrl ?? null, website: b.website ?? null }))
     : supabaseBrands.map((b) => ({
         id: b.id,
@@ -49,6 +60,10 @@ export default async function BrandsPage() {
         categories: b.categories ?? [],
         featured: b.featured,
       }))
+  const brands = baseBrands.map((b) => ({
+    ...b,
+    canadianSourced: canadianBrandNames.has(b.name.trim().toLowerCase()),
+  }))
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a]">

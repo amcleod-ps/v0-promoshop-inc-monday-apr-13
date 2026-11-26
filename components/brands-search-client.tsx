@@ -9,6 +9,7 @@ import { brandLifestyleId } from "@/lib/image-registry"
 import { useImageSrc } from "@/hooks/use-image-src"
 import { useSiteText } from "@/components/site-content-provider"
 import { imageFitClass, imageFitKey, normalizeImageFit } from "@/lib/image-fit"
+import { MapleLeaf } from "@/components/maple-leaf"
 
 interface Brand {
   id: string
@@ -19,6 +20,8 @@ interface Brand {
   website?: string | null
   categories: string[]
   featured?: boolean
+  /** Has CAD-priced (Canadian-sourced) products; listed under that heading. */
+  canadianSourced?: boolean
 }
 
 interface BrandsSearchClientProps {
@@ -88,16 +91,21 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
     )
   }, [brands, searchTerm])
 
-  const featuredBrands = useMemo(() => {
-    return filteredBrands.filter((b) => b.featured)
-  }, [filteredBrands])
-
-  const otherBrands = useMemo(() => {
-    return filteredBrands.filter((b) => !b.featured)
-  }, [filteredBrands])
-
-  // If no featured brands, show all as a single grid
-  const displayBrands = featuredBrands.length > 0 ? featuredBrands : filteredBrands
+  // Two titled groups: Canadian-sourced brands first, then US-sourced. Within
+  // each, featured brands keep their place at the front.
+  const byFeatured = (list: Brand[]) => [...list.filter((b) => b.featured), ...list.filter((b) => !b.featured)]
+  const canadianBrands = useMemo(
+    () => byFeatured(filteredBrands.filter((b) => b.canadianSourced)),
+    [filteredBrands],
+  )
+  const usBrands = useMemo(
+    () => byFeatured(filteredBrands.filter((b) => !b.canadianSourced)),
+    [filteredBrands],
+  )
+  const groups = [
+    { id: "canadian-sourced-brands", title: "Canadian Sourced Brands", leaf: true, brands: canadianBrands },
+    { id: "us-sourced-brands", title: "US Sourced Brands", leaf: false, brands: usBrands },
+  ].filter((group) => group.brands.length > 0)
 
   return (
     <>
@@ -123,18 +131,23 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
         {filteredBrands.length} {filteredBrands.length === 1 ? "brand" : "brands"} found
       </p>
 
-      {/* Featured Brands */}
-      {displayBrands.length > 0 && (
-        <section className="pt-6 pb-12 px-6 lg:px-8">
+      {groups.map((group, index) => (
+        <section
+          key={group.id}
+          aria-labelledby={group.id}
+          className={`px-6 lg:px-8 ${index === 0 ? "pt-6 pb-12" : "py-12 border-t border-[#eee]"}`}
+        >
           <div className="mx-auto max-w-7xl">
-            {featuredBrands.length > 0 && (
-              <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-6">
-                Featured Brands
-              </h2>
-            )}
+            <h2
+              id={group.id}
+              className="mb-6 flex items-center gap-2.5 font-montserrat font-bold text-lg uppercase tracking-wider text-[#1a1a1a]"
+            >
+              {group.leaf && <MapleLeaf className="h-6 w-6" />}
+              {group.title}
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayBrands.map((brand) => (
+              {group.brands.map((brand) => (
                 <Link
                   key={brand.id}
                   href={`/brands/${brand.slug}`}
@@ -167,39 +180,7 @@ export function BrandsSearchClient({ brands }: BrandsSearchClientProps) {
             </div>
           </div>
         </section>
-      )}
-
-      {/* Other Brands */}
-      {otherBrands.length > 0 && featuredBrands.length > 0 && (
-        <section className="py-12 px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <h2 className="font-montserrat font-bold text-lg uppercase tracking-wider text-[#6b6b6b] mb-8">
-              All Brands
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {otherBrands.map((brand) => (
-                <Link
-                  key={brand.id}
-                  href={`/brands/${brand.slug}`}
-                  className="group bg-white border border-[#e5e5e5] rounded-lg p-8 hover:border-[#ef473f] hover:shadow-md transition-all duration-300"
-                >
-                  <BrandCardMedia brand={brand} />
-
-                  <h3 className="font-montserrat font-bold text-lg text-[#1a1a1a] mb-2 group-hover:text-[#b8322c] transition-colors">
-                    {brand.name}
-                  </h3>
-
-                  <div className="flex items-center gap-2 text-[#b8322c] text-sm font-semibold uppercase tracking-wider">
-                    View Products
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      ))}
 
       {/* No Results — "try a different search" only makes sense when the
           visitor actually searched; an empty catalog gets honest copy. */}
