@@ -17,7 +17,7 @@ import { buildCustomerPricingSummary } from "@/lib/pricing/customer"
 import { calculateSubtotalUsd } from "@/lib/pricing/money"
 import { formatPrice, tierPriceBasisLabel } from "@/lib/pricing/presentation"
 import { missingPricingNotice, productPricingNotice } from "@/lib/pricing/notices"
-import { pricingTotalEntries, productPricingSource, productsForLocale } from "@/lib/pricing/source"
+import { pricingTotalEntries, productPricingSource } from "@/lib/pricing/source"
 import { usePricingNotices } from "@/hooks/use-pricing-notices"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
 
@@ -58,12 +58,6 @@ export default function MyQuoteClient({
     isLoaded 
   } = useQuote()
   const { t, locale } = useLocale()
-  // The Canadian site hides USD-priced products from the add-product picker.
-  // Items already in the cart keep resolving against the full catalog.
-  const pickerProducts = useMemo(
-    () => productsForLocale(products, locale, pricing.tiersBySku),
-    [products, locale, pricing.tiersBySku],
-  )
   const router = useRouter()
   const pageEyebrow = useSiteText("quote.page.eyebrow", textFallback("quote.page.eyebrow"))
   const pageHeading = useSiteText("quote.page.heading", textFallback("quote.page.heading"))
@@ -462,10 +456,10 @@ export default function MyQuoteClient({
                         <div>
                           <label htmlFor="add-product" className={labelClass}>Product</label>
                           <select id="add-product" value={selectedProduct} onChange={(e) => { setSelectedProduct(e.target.value); setSelectedColour(""); setSelectedSize("") }} className={selectClass}>
-                            <option value="">{pickerProducts.length === 0 ? "No products available yet" : "Select a product"}</option>
-                            {pickerProducts.map((p) => (<option key={p.sku} value={p.sku}>{p.name}</option>))}
+                            <option value="">{products.length === 0 ? "No products available yet" : "Select a product"}</option>
+                            {products.map((p) => (<option key={p.sku} value={p.sku}>{p.name}</option>))}
                           </select>
-                          {pickerProducts.length === 0 && (
+                          {products.length === 0 && (
                             <p className="text-xs text-[#6b6b6b] mt-2 font-visby">
                               The {t("catalog")} is being stocked — use the notes on the Project Details tab to describe what you need.
                             </p>

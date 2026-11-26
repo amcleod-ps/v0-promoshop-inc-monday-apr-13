@@ -9,7 +9,6 @@ import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { ProductSort } from "@/components/studio/product-sort"
 import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
-import { productsForLocale } from "@/lib/pricing/source"
 import { useLocale } from "@/lib/locale-context"
 import { useSiteText } from "@/components/site-content-provider"
 import { textFallback } from "@/lib/cms/text-slots"
@@ -71,26 +70,8 @@ function FilterOption({
   )
 }
 
-export default function StudioClient({ products: allProducts, categories: allCategories, brands: allBrands, tags: allTags, pricing, initialCategory }: Props) {
+export default function StudioClient({ products, categories, brands, tags, pricing, initialCategory }: Props) {
   const { t, locale } = useLocale()
-  // The Canadian site hides USD-priced products; filter chips follow suit so
-  // no chip leads to an empty grid.
-  const products = useMemo(
-    () => productsForLocale(allProducts, locale, pricing.tiersBySku),
-    [allProducts, locale, pricing.tiersBySku],
-  )
-  const categories = useMemo(
-    () => allCategories.filter((c) => c === "All" || products.some((p) => p.category === c)),
-    [allCategories, products],
-  )
-  const brands = useMemo(
-    () => allBrands.filter((b) => b === "All" || products.some((p) => p.brands.includes(b))),
-    [allBrands, products],
-  )
-  const tags = useMemo(
-    () => allTags.filter((tg) => products.some((p) => (p.tags ?? []).includes(tg))),
-    [allTags, products],
-  )
   const pageEyebrow = useSiteText(
     "studio.page.eyebrow",
     `PromoShop Studio — Product ${t("Catalog")}`,

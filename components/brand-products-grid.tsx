@@ -7,7 +7,6 @@ import { ProductCard } from "@/components/studio/product-card"
 import { ProductDetailModal } from "@/components/studio/product-detail-modal"
 import { ProductSort } from "@/components/studio/product-sort"
 import { sortProductsByPrice, type ProductSortOrder } from "@/lib/pricing/catalog-sort"
-import { productsForLocale } from "@/lib/pricing/source"
 import { useLocale } from "@/lib/locale-context"
 import type { Product } from "@/lib/products"
 import type { CustomerPricingState } from "@/lib/supabase/pricing"
@@ -21,13 +20,8 @@ interface Props {
   pricing: CustomerPricingState
 }
 
-export function BrandProductsGrid({ products: allProducts, brandName, pricing }: Props) {
-  const { t, locale } = useLocale()
-  // The Canadian site hides USD-priced products.
-  const products = useMemo(
-    () => productsForLocale(allProducts, locale, pricing.tiersBySku),
-    [allProducts, locale, pricing.tiersBySku],
-  )
+export function BrandProductsGrid({ products, brandName, pricing }: Props) {
+  const { t } = useLocale()
   const [selected, setSelected] = useState<Product | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [sortOrder, setSortOrder] = useState<ProductSortOrder>("recommended")

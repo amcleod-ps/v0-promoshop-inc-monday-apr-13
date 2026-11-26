@@ -59,28 +59,3 @@ export function pricingTotalEntries(totals: PricingTotals): Array<[PricingCurren
     typeof totals[currency] === "string" ? [[currency, totals[currency]] as [PricingCurrency, string]] : [],
   )
 }
-
-/**
- * True when a product is priced in U.S. dollars: it is on the approved U.S.
- * source list, or the site has price tiers for it that display in USD. The
- * Canadian site hides these products so Canadian visitors only browse items
- * priced in CAD (or not priced yet). Items with no price stay visible.
- */
-export function hasUsdPricing(
-  product: { sku: string },
-  tiersBySku?: Readonly<Record<string, readonly unknown[] | undefined>>,
-): boolean {
-  if (productPriceCurrency(product.sku) !== "USD") return false
-  if (americanPriceSkus.has(normalizedSku(product.sku))) return true
-  return (tiersBySku?.[product.sku]?.length ?? 0) > 0
-}
-
-/** Products a visitor may browse on the given country site. */
-export function productsForLocale<T extends { sku: string }>(
-  products: readonly T[],
-  locale: "CAN" | "USA",
-  tiersBySku?: Readonly<Record<string, readonly unknown[] | undefined>>,
-): T[] {
-  if (locale !== "CAN") return [...products]
-  return products.filter((product) => !hasUsdPricing(product, tiersBySku))
-}
